@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>薄明と天球 — 日本の四季モデル</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@400;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -40,7 +40,6 @@
     letter-spacing:.01em;
     counter-reset:sec;
     -webkit-font-smoothing:antialiased;
-    -webkit-tap-highlight-color:transparent;
   }
   ::selection{background:rgba(245,197,66,.28)}
   /* 背景: 星 + 夕暮れのオーロラ */
@@ -159,7 +158,7 @@
   .chips button{
     font-family:inherit;font-size:12px;color:var(--ink-2);letter-spacing:.02em;
     background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:999px;
-    padding:4px 14px;cursor:pointer;transition:all .18s;touch-action:manipulation;
+    padding:4px 14px;cursor:pointer;transition:all .18s;
   }
   .chips button:hover{color:var(--ink);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.08)}
   .chips button.on{
@@ -175,7 +174,7 @@
     border:1px solid var(--hairline);min-height:420px;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
   }
-  #sphere{display:block;width:100%;height:100%;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+  #sphere{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
   #sphere:active{cursor:grabbing}
   .sphere-hint{
     position:absolute;left:14px;bottom:12px;font-size:11px;letter-spacing:.06em;
@@ -222,7 +221,7 @@
   .playrow button{
     font-family:inherit;background:var(--grad);color:#0a0f1c;border:none;border-radius:11px;
     padding:6px 20px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.06em;
-    box-shadow:0 2px 14px rgba(239,131,82,.35);transition:transform .15s;touch-action:manipulation;
+    box-shadow:0 2px 14px rgba(239,131,82,.35);transition:transform .15s;
   }
   .playrow button:hover{transform:translateY(-1px)}
   .playrow button.stop{background:rgba(255,255,255,.08);color:var(--ink);border:1px solid var(--hairline);box-shadow:none}
@@ -235,7 +234,7 @@
     background:var(--surface);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border:1px solid var(--hairline);border-radius:16px;
-    padding:15px 17px;cursor:pointer;touch-action:manipulation;
+    padding:15px 17px;cursor:pointer;
     transition:border-color .18s, transform .18s, box-shadow .18s;
   }
   .season:hover{border-color:rgba(255,255,255,.3);transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,.4)}
@@ -258,7 +257,7 @@
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border:1px solid var(--hairline);border-radius:18px;padding:16px 14px 12px;
   }
-  .chartwrap canvas{display:block;width:100%;touch-action:manipulation}
+  .chartwrap canvas{display:block;width:100%}
   .tooltip{
     position:absolute;pointer-events:none;z-index:5;display:none;
     background:rgba(9,13,26,.92);
@@ -292,6 +291,63 @@
   }
   .figure svg{display:block;width:100%;height:auto}
   .figcap{font-size:12px;color:var(--muted);text-align:center;padding:5px 8px 6px}
+  /* FPS視点 */
+  .fps-grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1.7fr);gap:14px;margin-top:16px}
+  @media(max-width:900px){.fps-grid{grid-template-columns:1fr}}
+  .map-card h3{font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.22em;margin-bottom:9px}
+  #mapWrap{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--hairline);height:290px;background:#0d1322}
+  #mapCanvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
+  .map-zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:4px}
+  .map-zoom button{
+    width:28px;height:28px;border-radius:8px;border:1px solid var(--hairline);
+    background:rgba(5,7,14,.6);color:var(--ink);font-size:16px;cursor:pointer;
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  }
+  .map-attr{position:absolute;right:6px;bottom:4px;font-size:10px;color:rgba(255,255,255,.8);background:rgba(5,7,14,.55);padding:1px 8px;border-radius:6px}
+  .map-card .statline{margin-top:6px}
+  .fps-col{display:flex;flex-direction:column;gap:12px}
+  .fps-wrap{
+    position:relative;border-radius:18px;overflow:hidden;flex:1;
+    border:1px solid var(--hairline);min-height:380px;
+    box-shadow:0 18px 50px rgba(0,0,0,.45);
+  }
+  #fpsCanvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+  #fpsCanvas:active{cursor:grabbing}
+  .fps-wrap::after{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+    background:
+      linear-gradient(180deg, rgba(5,7,14,.36) 0%, transparent 16%),
+      radial-gradient(135% 105% at 50% 42%, transparent 62%, rgba(5,7,14,.36) 100%);
+  }
+  .fps-wrap .sphere-hint{z-index:2}
+  .fps-hud{position:absolute;left:14px;top:12px;display:flex;gap:12px;align-items:center;pointer-events:none;z-index:2}
+  .fps-hud .clock{
+    font-family:'Outfit',sans-serif;font-size:24px;font-weight:600;letter-spacing:.04em;
+    color:#f2f5fc;padding:1px 14px;border-radius:12px;background:rgba(5,7,14,.48);
+    border:1px solid rgba(255,255,255,.12);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  }
+  .fps-sun{
+    position:absolute;right:14px;top:14px;z-index:2;pointer-events:none;
+    font-family:'Outfit','Zen Kaku Gothic New',sans-serif;font-size:12px;letter-spacing:.05em;
+    color:#f2f5fc;padding:4px 12px;border-radius:10px;background:rgba(5,7,14,.48);
+    border:1px solid rgba(255,255,255,.12);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  }
+  /* FPSのヒントはコンパスと重ならない位置(右下・少し上) */
+  .fps-wrap .sphere-hint{left:auto;right:14px;bottom:44px}
+  /* 狭い画面: HUDピルを縦に積む */
+  @media(max-width:640px){
+    .fps-hud .clock{font-size:18px}
+    .fps-sun{top:54px;right:auto;left:14px;font-size:11px}
+    .fps-wrap .sphere-hint{display:none}
+  }
+  .fps-times{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;padding:14px 18px}
+  @media(max-width:640px){.fps-times{grid-template-columns:1fr}}
+  .fps-times .ft{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:12.5px;align-content:start}
+  .fps-times .k{color:var(--ink-2)}
+  .fps-times .v{font-family:'Outfit',sans-serif;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+
   footer{
     margin-top:64px;font-size:12px;color:var(--muted);text-align:center;
     border-top:1px solid var(--hairline);padding-top:20px;letter-spacing:.06em;
@@ -300,20 +356,6 @@
     content:"TWILIGHT & CELESTIAL SPHERE";
     display:block;font-family:'Outfit',sans-serif;font-size:10px;letter-spacing:.42em;
     color:rgba(245,197,66,.65);margin-bottom:6px;
-  }
-
-  /* モバイル: 余白の詰め */
-  @media(max-width:600px){
-    .wrap{padding:28px 14px 60px}
-    header.hero{padding:36px 0 16px}
-  }
-  /* タッチ端末: 操作ターゲットの拡大 */
-  @media(pointer:coarse){
-    .chips button{padding:10px 16px;min-height:44px}
-    .playrow button{min-height:44px;padding:10px 22px}
-    input[type=range]{height:44px}
-    input[type=range]::-webkit-slider-thumb{width:26px;height:26px;margin-top:-11px}
-    input[type=range]::-moz-range-thumb{width:22px;height:22px}
   }
 </style>
 </head>
@@ -342,7 +384,7 @@
         <div class="chips" id="cityChips"></div>
       </div>
       <div class="ctl card">
-        <label>日付 <b id="dateVal">6/21(赤緯 +23.4°)</b></label>
+        <label>日付(2026年) <b id="dateVal">6/21(赤緯 +23.4°)</b></label>
         <input type="range" id="daySlider" min="1" max="365" step="1" value="172">
         <div class="chips" id="seasonChips"></div>
       </div>
@@ -395,10 +437,61 @@
     </div>
   </section>
 
+  <!-- ============ FPS視点(実地形) ============ -->
+  <section class="sec">
+    <h2>FPS視点 — 実際の地形で見る日の出と薄明</h2>
+    <p class="note">
+      地図をクリックして観測地点を選ぶと、国土地理院の標高データから周囲(約80km)の稜線を計算し、
+      その場に立った一人称視点で空と地形を再現します。ドラッグで見回せます。
+      このセクションの時刻は日本標準時(JST)で、経度と均時差を含めた実際の計算です。
+      山に遮られた分だけ「その場所の本当の日の出」が遅れる様子まで再現します(稜線の取得にはインターネット接続が必要)。
+    </p>
+    <div class="fps-grid">
+      <div class="card map-card">
+        <h3>観測地点(地図をクリックで選択)</h3>
+        <div id="mapWrap">
+          <canvas id="mapCanvas"></canvas>
+          <div class="map-zoom">
+            <button id="mapZoomIn" aria-label="拡大">+</button>
+            <button id="mapZoomOut" aria-label="縮小">−</button>
+          </div>
+          <div class="map-attr">地図・標高: 国土地理院</div>
+        </div>
+        <div class="chips" id="spotChips"></div>
+        <div class="statline"><span>地点</span><b id="spotInfo">--</b></div>
+        <div class="statline"><span>観測点の標高</span><b id="spotElev">--</b></div>
+        <div class="statline" id="terrainStatus" style="color:var(--muted);font-size:12px">地図から地点を選んでください</div>
+      </div>
+      <div class="fps-col">
+        <div class="fps-wrap">
+          <canvas id="fpsCanvas"></canvas>
+          <div class="fps-hud">
+            <span class="clock" id="fpsClock">--:--</span>
+            <span class="zone-chip" id="fpsZone">--</span>
+          </div>
+          <div class="fps-sun" id="fpsSunInfo">--</div>
+          <div class="sphere-hint">ドラッグ: 見回す / 時刻スライダー・再生と連動</div>
+        </div>
+        <div class="card fps-times">
+          <div class="ft">
+            <div class="k">日の出(地形がなければ)</div><div class="v" id="riseGeo">--:--</div>
+            <div class="k">この地形での日の出</div><div class="v" id="riseReal">--:--</div>
+            <div class="k">山による遅れ</div><div class="v" id="riseDelay">--</div>
+          </div>
+          <div class="ft">
+            <div class="k">日の入り(地形がなければ)</div><div class="v" id="setGeo">--:--</div>
+            <div class="k">この地形での日の入り</div><div class="v" id="setReal">--:--</div>
+            <div class="k">山による早まり</div><div class="v" id="setAdv">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ 四季の比較 ============ -->
   <section class="sec">
     <h2>四季の比較</h2>
-    <p class="note">現在の緯度 <span id="latEcho">35.7°N</span> での二分二至。カードをクリックすると日付が切り替わります。</p>
+    <p class="note">現在の緯度 <span id="latEcho">35.7°N</span> での二分二至。日付は2026年のもの(国立天文台 暦要項: 春分3/20・夏至6/21・秋分9/23・冬至12/22)。カードをクリックすると日付が切り替わります。</p>
     <div class="seasons" id="seasonCards"></div>
   </section>
 
@@ -518,8 +611,9 @@
         天球上の日周円そのものは常に天の赤道と平行のまま上下にスライドするだけですが、
         円が北や南にずれると地平線と交わる<strong>場所</strong>が変わり、球面の幾何学により、
         その場所での<strong>交差角 ψ</strong> も変わります。この角度は cos ψ = sin φ ÷ cos δ で決まり、
-        春分・秋分には ψ = 90° − φ(東京で約 54°)と一年で最も立った角度になり、
-        夏至・冬至にはどちらも約 50° まで浅くなります(「沈み込みの角度」の図で確認できます)。
+        春分・秋分には ψ = 90° − φ(東京で 54.3°)と一年で最も立った角度になり、
+        夏至・冬至にはどちらも 50.5° 前後まで浅くなります
+        (2026年の太陽赤緯 ±23.44° による値。「沈み込みの角度」の図で確認できます)。
       </p>
       <p>
         春分・秋分のころは、太陽が天の赤道上を最も立った角度でまっすぐ沈み込み、
@@ -556,7 +650,17 @@
         実際の時計の時刻(日本標準時)とは、経度差(明石 135°E からのずれ)と均時差により
         場所と季節に応じて最大 ±30 分ほどずれます。日の出・日の入りは太陽の上端が地平線に接する瞬間
         (太陽中心高度 −0.833°、大気差と視半径を考慮)、薄明の境界は太陽中心の幾何学的高度で定義しています。
-        赤緯は近似式(Spencer 1971)によります。標高・気象条件による違いは含みません。
+        太陽の赤緯と均時差は、2026年の太陽視黄経に基づく近似式(USNO低精度暦、黄道傾斜角 約23.44°)で
+        日ごとに計算しています。標高・気象条件による違いは含みません。
+      </p>
+      <p>
+        FPS視点セクションのみ、時刻を日本標準時(JST)で表示しています。経度差と均時差を含めた実際の計算で、
+        国立天文台「こよみの計算」の2026年・東京の値
+        (日の出/日の入り — 春分 5:45/17:52、夏至 4:25/19:00、秋分 5:29/17:37、冬至 6:47/16:32)と
+        ±1分以内で一致することを確認しています。
+        稜線は国土地理院の標高タイル(DEM10B、遠方は広域タイル)を約80km の範囲でサンプリングして計算し、
+        大気差は実効地球半径(k = 0.13)で近似しています。地形を考慮した日の出・日の入りは、
+        太陽の上端が稜線から顔を出す・隠れる瞬間(太陽中心高度が稜線高度 − 0.833° を横切る時刻)としています。
       </p>
     </div>
   </section>
@@ -571,12 +675,27 @@
 /* ================= 天文計算 ================= */
 const D2R = Math.PI/180, R2D = 180/Math.PI;
 
-function declination(N){ // Spencer 1971 (rad)
-  const g = 2*Math.PI/365*(N-1);
-  return 0.006918 - 0.399912*Math.cos(g) + 0.070257*Math.sin(g)
-       - 0.006758*Math.cos(2*g) + 0.000907*Math.sin(2*g)
-       - 0.002697*Math.cos(3*g) + 0.00148*Math.sin(3*g);
+// 2026年の太陽位置(USNO低精度暦: 太陽視黄経ベース、各日の12:00 JST時点で評価)
+// 国立天文台「こよみの計算」2026年・東京の日の出入り・南中と±1分以内で一致することを確認済み
+const JD2026 = 2461041.5; // 2026-01-01 00:00 UTC のユリウス日
+const _solarCache = new Array(367);
+function solar2026(N){
+  let s = _solarCache[N];
+  if (s) return s;
+  const n = JD2026 + (N-1) + 3/24 - 2451545.0; // J2000からの日数(12:00 JST)
+  const L = ((280.460 + 0.9856474*n)%360+360)%360;   // 平均黄経
+  const g = (357.528 + 0.9856003*n)*D2R;             // 平均近点角
+  const lam = (L + 1.915*Math.sin(g) + 0.020*Math.sin(2*g))*D2R; // 視黄経
+  const eps = (23.439 - 0.0000004*n)*D2R;            // 黄道傾斜角
+  const dec = Math.asin(Math.sin(eps)*Math.sin(lam));
+  const ra = Math.atan2(Math.cos(eps)*Math.sin(lam), Math.cos(lam))*R2D;
+  let e = L - ((ra%360)+360)%360;
+  e = ((e+180)%360+360)%360 - 180;
+  s = { dec, eotMin: 4*e }; // eotMin: 均時差(分, 視太陽時−平均太陽時)
+  _solarCache[N] = s;
+  return s;
 }
+function declination(N){ return solar2026(N).dec; }
 // 高度 hDeg に達する時角(度)。null=届かない / Infinity=常にその高度より上
 function hourAngleDeg(latDeg, dec, hDeg){
   const phi = latDeg*D2R, h = hDeg*D2R;
@@ -926,25 +1045,19 @@ function drawSphere(){
 }
 
 // ドラッグで視点回転
-let dragging = false, dragId = null, lastX = 0, lastY = 0;
+let dragging = false, lastX = 0, lastY = 0;
 sphereCanvas.addEventListener("pointerdown", e => {
-  if (dragging) return; // 2本目以降の指は無視
-  dragging = true; dragId = e.pointerId; lastX = e.clientX; lastY = e.clientY;
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
   sphereCanvas.setPointerCapture(e.pointerId);
 });
 sphereCanvas.addEventListener("pointermove", e => {
-  if (!dragging || e.pointerId !== dragId) return;
+  if (!dragging) return;
   state.yaw += (e.clientX - lastX)*0.006;
   state.pitch = Math.min(1.35, Math.max(0.06, state.pitch + (e.clientY - lastY)*0.005));
   lastX = e.clientX; lastY = e.clientY;
   drawSphere();
 });
-function endSphereDrag(e){
-  if (e.pointerId !== dragId) return;
-  dragging = false; dragId = null;
-}
-sphereCanvas.addEventListener("pointerup", endSphereDrag);
-sphereCanvas.addEventListener("pointercancel", endSphereDrag);
+sphereCanvas.addEventListener("pointerup", () => dragging = false);
 
 /* ================= 情報パネル ================= */
 function refreshPanel(){
@@ -983,7 +1096,18 @@ function refreshTime(){
   chip.style.background = ZONES[zone].band;
   chip.style.color = ZONES[zone].chipInk;
   if (zone === 4){ chip.style.border = "1px solid rgba(255,255,255,.25)"; } else chip.style.border = "none";
+  // FPS視点(JST表示・地点はマップのマーカー)
+  $("fpsClock").textContent = "JST " + fmtTime(toJST(state.t, fps.lon, state.N));
+  const fsun = sunAltAzAt(fps.marker.lat, dec, state.t);
+  $("fpsSunInfo").textContent =
+    `太陽 方位 ${fsun.az.toFixed(0)}° ・ 高度 ${fsun.alt >= 0 ? "+" : "−"}${Math.abs(fsun.alt).toFixed(1)}°`;
+  const fz = zoneOfAlt(fsun.alt);
+  const fchip = $("fpsZone");
+  fchip.textContent = ZONES[fz].name;
+  fchip.style.background = ZONES[fz].band;
+  fchip.style.color = ZONES[fz].chipInk;
   drawSphere();
+  drawFPS();
 }
 
 /* ================= 四季カード ================= */
@@ -1061,18 +1185,21 @@ function sinkCurves(){
 function drawAngleChart(){
   const wrap = $("angleWrap");
   const dpr = window.devicePixelRatio || 1;
-  const w = wrap.clientWidth - 28, hpx = 360;
-  angleCanvas.width = w*dpr; angleCanvas.height = hpx*dpr;
-  angleCanvas.style.height = hpx + "px";
-  actx.setTransform(dpr,0,0,dpr,0,0);
-  actx.clearRect(0,0,w,hpx);
-  const narrow = w < 520; // スマホ幅ではラベル余白を詰めて描画域を確保
-  const PAD = { l: 24, r: narrow ? 130 : 170, t: 46, b: 18 };
-  const pw = w - PAD.l - PAD.r, ph = hpx - PAD.t - PAD.b;
+  const w = wrap.clientWidth - 28;
+  const narrow = w < 560;
+  const PAD = { l: 24, r: narrow ? 122 : 170, t: 46, b: 18 };
   const curves = sinkCurves();
   let xMax = 25;
   for (const c of curves) if (c.pts && c.pts.length) xMax = Math.max(xMax, c.pts[c.pts.length-1].x);
   xMax = Math.min(xMax + 3, 85);
+  const pw = w - PAD.l - PAD.r;
+  // 高さは等スケールで必要な分だけ確保(狭い画面では自動的に低く)
+  const hpx = Math.round(Math.min(360, Math.max(220, 20*(pw/xMax) + PAD.t + PAD.b)));
+  angleCanvas.width = w*dpr; angleCanvas.height = hpx*dpr;
+  angleCanvas.style.height = hpx + "px";
+  actx.setTransform(dpr,0,0,dpr,0,0);
+  actx.clearRect(0,0,w,hpx);
+  const ph = hpx - PAD.t - PAD.b;
   const scl = Math.min(pw/xMax, ph/20); // 等スケール px/deg
   const X = xd => PAD.l + xd*scl, Y = alt => PAD.t + (-alt)*scl;
   const bandRight = w - 8;
@@ -1144,14 +1271,14 @@ function drawAngleChart(){
     labels[i].ly = Math.max(labels[i].ly, labels[i-1].ly + GAP);
   labels.forEach(L => {
     const { c, end, last18 } = L;
-    const lx = Math.min(X(end.x) + 14, w - (narrow ? 126 : 158));
+    const lx = Math.min(X(end.x) + 14, w - (PAD.r - 12));
     actx.strokeStyle = c.color; actx.globalAlpha = .6; actx.lineWidth = 1;
     actx.beginPath(); actx.moveTo(X(end.x), Y(end.alt)); actx.lineTo(lx - 4, L.ly + 6); actx.stroke();
     actx.globalAlpha = 1;
     actx.fillStyle = c.color;
     actx.fillRect(lx, L.ly - 5, 9, 9);
     actx.fillStyle = "#eef2fa";
-    actx.font = "bold 12px 'Zen Kaku Gothic New', sans-serif";
+    actx.font = `bold ${narrow ? 11 : 12}px 'Zen Kaku Gothic New', sans-serif`;
     actx.textAlign = "left"; actx.textBaseline = "middle";
     actx.fillText(`${c.name}  ψ ${c.psi != null ? c.psi.toFixed(1) : "--"}°`, lx + 14, L.ly);
     actx.font = "11px 'Zen Kaku Gothic New', sans-serif";
@@ -1259,15 +1386,11 @@ function yearPointer(e){
   const wrapRect = $("yearWrap").getBoundingClientRect();
   let tx = e.clientX - wrapRect.left + 16;
   if (tx > wrapRect.width - 210) tx -= 230;
-  tx = Math.max(4, tx);
   yearTip.style.left = tx + "px";
   yearTip.style.top = (e.clientY - wrapRect.top + 10) + "px";
 }
-// マウス: ホバーで表示・離れたら消す / タッチ: タップで表示、外をタップで消す
-yearCanvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse") yearPointer(e); });
-yearCanvas.addEventListener("pointerdown", yearPointer);
-yearCanvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") yearTip.style.display = "none"; });
-yearCanvas.addEventListener("pointercancel", () => yearTip.style.display = "none");
+yearCanvas.addEventListener("pointermove", yearPointer);
+yearCanvas.addEventListener("pointerleave", () => yearTip.style.display = "none");
 yearCanvas.addEventListener("click", e => {
   const rect = yearCanvas.getBoundingClientRect();
   const N = Math.round((e.clientX - rect.left - YPAD.l)/yearGeom.pw*364) + 1;
@@ -1371,20 +1494,549 @@ function durPointer(e){
   const wrapRect = $("durWrap").getBoundingClientRect();
   let tx = e.clientX - wrapRect.left + 16;
   if (tx > wrapRect.width - 170) tx -= 190;
-  tx = Math.max(4, tx);
   durTip.style.left = tx + "px";
   durTip.style.top = (e.clientY - wrapRect.top + 10) + "px";
 }
-// マウス: ホバーで表示・離れたら消す / タッチ: タップで表示、外をタップで消す
-durCanvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse") durPointer(e); });
-durCanvas.addEventListener("pointerdown", durPointer);
-durCanvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") durTip.style.display = "none"; });
-durCanvas.addEventListener("pointercancel", () => durTip.style.display = "none");
-// タッチでチャート外をタップしたらツールチップを閉じる(表示が固まらないように)
-document.addEventListener("pointerdown", e => {
-  if (e.target !== yearCanvas) yearTip.style.display = "none";
-  if (e.target !== durCanvas) durTip.style.display = "none";
+durCanvas.addEventListener("pointermove", durPointer);
+durCanvas.addEventListener("pointerleave", () => durTip.style.display = "none");
+
+/* ================= FPS視点(実地形・JST) ================= */
+const TILE = 256, REFF = 7395000; // 大気差込みの実効地球半径(k=0.13)
+const fps = {
+  lon: 139.767,
+  heading: 90, pitch: 6, fovX: 100,
+  profile: null, elev0: null,
+  map: { lat: 36.6, lon: 137.8, z: 5 },
+  marker: { lat: 35.681, lon: 139.767 }
+};
+const SPOTS = [
+  ["東京駅", 35.681, 139.767],
+  ["松本(盆地)", 36.238, 137.972],
+  ["富士吉田", 35.487, 138.807],
+  ["上高地(山中)", 36.249, 137.635],
+  ["那覇", 26.212, 127.679],
+  ["札幌", 43.062, 141.354]
+];
+// 均時差(分)は2026年の太陽位置から
+function eotMin(N){ return solar2026(N).eotMin; }
+const toJST = (tSolar, lon, N) => tSolar - (lon-135)/15 - eotMin(N)/60;
+function sunAltAzAt(lat, dec, t){
+  const v = sunVec(lat, dec, t);
+  return { alt: Math.asin(Math.max(-1,Math.min(1,v.u)))*R2D, az: (Math.atan2(v.e,v.n)*R2D+360)%360 };
+}
+// Webメルカトル
+function tileXY(lat, lon, z){
+  const n = 2**z, lr = lat*D2R;
+  return { x:(lon+180)/360*n, y:(1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n, n };
+}
+function tileToLatLon(x, y, z){
+  const n = 2**z;
+  return { lon: x/n*360-180, lat: Math.atan(Math.sinh(Math.PI*(1-2*y/n)))*R2D };
+}
+function destPoint(lat, lon, azDeg, d){
+  return {
+    lat: lat + d*Math.cos(azDeg*D2R)/111320,
+    lon: lon + d*Math.sin(azDeg*D2R)/(111320*Math.cos(lat*D2R))
+  };
+}
+
+/* ---- 地図(国土地理院 淡色タイル) ---- */
+const mapCanvas = $("mapCanvas"), mctx = mapCanvas.getContext("2d");
+const mapTiles = new Map();
+let mapDrawQueued = false;
+function scheduleMapDraw(){
+  if (mapDrawQueued) return;
+  mapDrawQueued = true;
+  requestAnimationFrame(() => { mapDrawQueued = false; drawMap(); });
+}
+function getMapTile(z, x, y){
+  const n = 2**z; x = ((x % n) + n) % n;
+  if (y < 0 || y >= n) return null;
+  const key = z + "/" + x + "/" + y;
+  let t = mapTiles.get(key);
+  if (!t){
+    t = { img: new Image(), ok: false };
+    t.img.onload = () => { t.ok = true; scheduleMapDraw(); };
+    t.img.onerror = () => {};
+    t.img.src = `https://cyberjapandata.gsi.go.jp/xyz/pale/${z}/${x}/${y}.png`;
+    mapTiles.set(key, t);
+  }
+  return t.ok ? t.img : null;
+}
+function drawMap(){
+  const wrap = $("mapWrap");
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  mapCanvas.width = w*dpr; mapCanvas.height = h*dpr;
+  mctx.setTransform(dpr,0,0,dpr,0,0);
+  mctx.fillStyle = "#0d1322"; mctx.fillRect(0,0,w,h);
+  const z = fps.map.z, c = tileXY(fps.map.lat, fps.map.lon, z);
+  const cpx = c.x*TILE, cpy = c.y*TILE;
+  for (let ty = Math.floor((cpy-h/2)/TILE); ty <= Math.floor((cpy+h/2)/TILE); ty++)
+    for (let tx = Math.floor((cpx-w/2)/TILE); tx <= Math.floor((cpx+w/2)/TILE); tx++){
+      const img = getMapTile(z, tx, ty);
+      if (img) mctx.drawImage(img, Math.round(tx*TILE-(cpx-w/2)), Math.round(ty*TILE-(cpy-h/2)));
+    }
+  // 選択マーカー
+  const m = tileXY(fps.marker.lat, fps.marker.lon, z);
+  const mx = m.x*TILE-(cpx-w/2), my = m.y*TILE-(cpy-h/2);
+  if (mx > -20 && mx < w+20 && my > -20 && my < h+20){
+    mctx.strokeStyle = "rgba(245,197,66,.65)"; mctx.lineWidth = 1.5;
+    mctx.beginPath(); mctx.arc(mx,my,11,0,2*Math.PI); mctx.stroke();
+    mctx.fillStyle = "#f5c542"; mctx.strokeStyle = "#0a0f1c"; mctx.lineWidth = 2;
+    mctx.beginPath(); mctx.arc(mx,my,6,0,2*Math.PI); mctx.fill(); mctx.stroke();
+  }
+}
+let mDrag = null;
+mapCanvas.addEventListener("pointerdown", e => {
+  mDrag = { x:e.clientX, y:e.clientY, moved:false };
+  mapCanvas.setPointerCapture(e.pointerId);
 });
+mapCanvas.addEventListener("pointermove", e => {
+  if (!mDrag) return;
+  const dx = e.clientX-mDrag.x, dy = e.clientY-mDrag.y;
+  if (Math.abs(dx)+Math.abs(dy) > 4) mDrag.moved = true;
+  if (mDrag.moved){
+    const z = fps.map.z, c = tileXY(fps.map.lat, fps.map.lon, z);
+    const p = tileToLatLon(c.x - dx/TILE, c.y - dy/TILE, z);
+    fps.map.lat = Math.max(-80, Math.min(80, p.lat)); fps.map.lon = p.lon;
+    mDrag.x = e.clientX; mDrag.y = e.clientY;
+    drawMap();
+  }
+});
+mapCanvas.addEventListener("pointerup", e => {
+  if (mDrag && !mDrag.moved){
+    const r = mapCanvas.getBoundingClientRect();
+    const z = fps.map.z, c = tileXY(fps.map.lat, fps.map.lon, z);
+    const p = tileToLatLon(c.x + (e.clientX-r.left-r.width/2)/TILE, c.y + (e.clientY-r.top-r.height/2)/TILE, z);
+    selectSpot(p.lat, p.lon, false);
+  }
+  mDrag = null;
+});
+$("mapZoomIn").onclick  = () => { fps.map.z = Math.min(13, fps.map.z+1); drawMap(); };
+$("mapZoomOut").onclick = () => { fps.map.z = Math.max(4,  fps.map.z-1); drawMap(); };
+const spotChips = $("spotChips");
+SPOTS.forEach(([name, la, lo]) => {
+  const b = document.createElement("button");
+  b.textContent = name;
+  b.dataset.lat = la; b.dataset.lon = lo;
+  b.onclick = () => selectSpot(la, lo, true);
+  spotChips.appendChild(b);
+});
+function selectSpot(la, lo, pan){
+  fps.marker = { lat: la, lon: lo };
+  fps.lon = lo;
+  state.lat = Math.round(la*10)/10;
+  latSlider.value = state.lat;
+  $("spotInfo").textContent = la.toFixed(3) + "°N, " + lo.toFixed(3) + "°E";
+  if (pan){ fps.map.lat = la; fps.map.lon = lo; if (fps.map.z < 9) fps.map.z = 9; }
+  startProfile();
+  refreshAll();
+}
+
+/* ---- 標高タイル(国土地理院 DEM) → 稜線プロファイル ---- */
+const demCache = new Map();
+function demLoad(url){
+  let p = demCache.get(url);
+  if (p) return p;
+  p = new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const cv = document.createElement("canvas");
+      cv.width = TILE; cv.height = TILE;
+      const c2 = cv.getContext("2d");
+      c2.drawImage(img, 0, 0);
+      try { resolve(c2.getImageData(0, 0, TILE, TILE)); } catch(e){ resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+  demCache.set(url, p);
+  return p;
+}
+const demUrl = (layer, z, x, y) => `https://cyberjapandata.gsi.go.jp/xyz/${layer}/${z}/${x}/${y}.png`;
+async function elevAt(lat, lon, layer, z, scale){
+  const c = tileXY(lat, lon, z);
+  const tx = Math.floor(c.x), ty = Math.floor(c.y);
+  if (ty < 0 || ty >= c.n) return 0;
+  const idata = await demLoad(demUrl(layer, z, ((tx%c.n)+c.n)%c.n, ty));
+  if (!idata) return 0;
+  const px = Math.min(TILE-1, Math.floor((c.x-tx)*TILE));
+  const py = Math.min(TILE-1, Math.floor((c.y-ty)*TILE));
+  const d = idata.data, i = (py*TILE+px)*4;
+  if (d[i+3] === 0) return 0;
+  let v = d[i]*65536 + d[i+1]*256 + d[i+2];
+  if (v === 8388608) return 0;        // 無効値(海など)
+  if (v > 8388608) v -= 16777216;
+  return v*0.01*scale;
+}
+let profileToken = 0;
+async function computeProfile(lat, lon, token, st){
+  const nearL = "dem_png", nearZ = 13;
+  const cN = tileXY(lat, lon, nearZ);
+  if (!(await demLoad(demUrl(nearL, nearZ, Math.floor(cN.x), Math.floor(cN.y))))) throw new Error("offline");
+  const e0 = await elevAt(lat, lon, nearL, nearZ, 1);
+  // 遠距離レイヤ: dem_png z9 が無ければ 全球版 demgm_png z8(単位を自己校正)
+  let farL = "dem_png", farZ = 9, farScale = 1;
+  const cF = tileXY(lat, lon, 9);
+  if (!(await demLoad(demUrl("dem_png", 9, Math.floor(cF.x), Math.floor(cF.y))))){
+    farL = "demgm_png"; farZ = 8;
+    const eF = await elevAt(lat, lon, farL, farZ, 1);
+    if (e0 > 80 && eF > 0.3 && e0/eF > 30 && e0/eF < 300) farScale = 100;
+  }
+  const h0 = e0 + 2; // 目の高さ
+  const dip = -Math.sqrt(2*Math.max(h0, 2)/REFF)*R2D;
+  const dists = [];
+  for (let d = 60;   d < 6000;  d *= 1.32) dists.push({ d, layer:nearL, z:nearZ, s:1 });
+  for (let d = 6000; d < 80000; d *= 1.22) dists.push({ d, layer:farL, z:farZ, s:farScale });
+  const prof = new Array(181).fill(dip);
+  for (let ia = 0; ia < 180; ia++){
+    if (token !== profileToken) throw new Error("cancel");
+    const az = ia*2;
+    let best = dip;
+    for (const sm of dists){
+      const p = destPoint(lat, lon, az, sm.d);
+      const e = await elevAt(p.lat, p.lon, sm.layer, sm.z, sm.s);
+      if (e <= 0) continue;
+      const a = Math.atan((e - h0)/sm.d - sm.d/(2*REFF))*R2D;
+      if (a > best) best = a;
+    }
+    prof[ia] = best;
+    if (ia % 20 === 0){
+      st.textContent = `稜線を計算中… ${Math.round(ia/180*100)}%`;
+      await new Promise(r => setTimeout(r));
+    }
+  }
+  prof[180] = prof[0];
+  return { profile: prof, elev0: e0 };
+}
+async function startProfile(){
+  const token = ++profileToken;
+  const st = $("terrainStatus");
+  st.textContent = "標高データを取得中…";
+  fps.profile = null; fps.elev0 = null;
+  $("spotElev").textContent = "--";
+  try {
+    const res = await computeProfile(fps.marker.lat, fps.marker.lon, token, st);
+    if (token !== profileToken) return;
+    fps.profile = res.profile; fps.elev0 = res.elev0;
+    const mx = Math.max(...res.profile);
+    st.textContent = `稜線を計算しました(見かけの最高稜線 ${mx.toFixed(1)}°)`;
+  } catch(err){
+    if (token !== profileToken || err.message === "cancel") return;
+    fps.profile = null; fps.elev0 = 0;
+    st.textContent = "標高データを取得できませんでした(オフライン?)。平坦な地平線で表示します";
+  }
+  $("spotElev").textContent = fps.elev0 == null ? "--" : Math.round(fps.elev0) + " m";
+  updateFpsTimes();
+  drawFPS();
+}
+function profAt(az){
+  if (!fps.profile){
+    return fps.elev0 != null ? -Math.sqrt(2*Math.max(fps.elev0+2, 2)/REFF)*R2D : 0;
+  }
+  az = ((az%360)+360)%360;
+  const i = az/2, i0 = Math.floor(i), f = i - i0;
+  return fps.profile[i0]*(1-f) + fps.profile[Math.min(180, i0+1)]*f;
+}
+
+/* ---- 地形を考慮した日の出・日の入り(太陽時→JST) ---- */
+function riseSetTerrain(lat, N){
+  const dec = declination(N);
+  let rise = null, set = null, prev = null;
+  for (let m = 0; m <= 1440; m++){
+    const t = m/60;
+    const s = sunAltAzAt(lat, dec, t);
+    const up = s.alt >= profAt(s.az) - 0.833;
+    if (prev !== null){
+      if (up && !prev && rise === null) rise = t;
+      if (!up && prev) set = t;
+    }
+    prev = up;
+  }
+  return { rise, set };
+}
+function updateFpsTimes(){
+  const N = state.N, lat = fps.marker.lat, lon = fps.lon;
+  const info = dayInfo(lat, N), H = info.H;
+  const ok = H.rise != null && isFinite(H.rise);
+  const special = H.rise === Infinity ? "沈まない" : H.rise === null ? "昇らない" : null;
+  const J = t => t == null ? null : toJST(t, lon, N);
+  const geoRise = ok ? 12 - H.rise/15 : null;
+  const geoSet  = ok ? 12 + H.rise/15 : null;
+  $("riseGeo").textContent = special ?? fmtTime(J(geoRise));
+  $("setGeo").textContent  = special ?? fmtTime(J(geoSet));
+  if (fps.profile){
+    const ev = riseSetTerrain(lat, N);
+    fps.evCache = { rise: ev.rise, set: ev.set };
+    $("riseReal").textContent = ev.rise != null ? fmtTime(J(ev.rise)) : (special ?? "--:--");
+    $("setReal").textContent  = ev.set  != null ? fmtTime(J(ev.set))  : (special ?? "--:--");
+    $("riseDelay").textContent = (ev.rise != null && geoRise != null) ? "+" + Math.max(0, Math.round((ev.rise-geoRise)*60)) + "分" : "--";
+    $("setAdv").textContent    = (ev.set  != null && geoSet  != null) ? "−" + Math.max(0, Math.round((geoSet-ev.set)*60)) + "分" : "--";
+  } else {
+    fps.evCache = { rise: geoRise, set: geoSet };
+    $("riseReal").textContent = "--:--"; $("setReal").textContent = "--:--";
+    $("riseDelay").textContent = "--"; $("setAdv").textContent = "--";
+  }
+}
+
+/* ---- FPS描画 ---- */
+const fpsCanvas = $("fpsCanvas"), fctx = fpsCanvas.getContext("2d");
+// 空の色: 太陽高度に応じた連続キーフレーム補間(上空/中空/地平線際)
+const SKY_KEYS = [
+  [ 15, [126,178,239],[168,204,246],[216,233,251]],
+  [  2, [104,155,226],[176,178,214],[247,196,148]],
+  [ -4, [ 58, 98,188],[128,104,152],[236,146,102]],
+  [-10, [ 24, 48,108],[ 66, 76,128],[112, 86,118]],
+  [-16, [ 10, 20, 58],[ 24, 34, 78],[ 44, 54, 94]],
+  [-24, [  4,  7, 16],[  8, 12, 26],[ 13, 19, 35]]
+];
+const lerpC = (a, b, f) => [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f];
+const cssC = c => `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+function skyColors(alt){
+  if (alt >= SKY_KEYS[0][0]) return SKY_KEYS[0].slice(1);
+  const last = SKY_KEYS[SKY_KEYS.length-1];
+  if (alt <= last[0]) return last.slice(1);
+  for (let i = 0; i < SKY_KEYS.length-1; i++){
+    const A = SKY_KEYS[i], B = SKY_KEYS[i+1];
+    if (alt <= A[0] && alt >= B[0]){
+      const f = (A[0]-alt)/(A[0]-B[0]);
+      return [lerpC(A[1],B[1],f), lerpC(A[2],B[2],f), lerpC(A[3],B[3],f)];
+    }
+  }
+  return last.slice(1);
+}
+const FPS_STARS = (() => {
+  let s = 42;
+  const rnd = () => (s = (s*1664525 + 1013904223) >>> 0) / 4294967296;
+  return Array.from({length: 380}, () => ({ az: rnd()*360, alt: Math.asin(rnd())*R2D, m: rnd() }));
+})();
+function haloText(c, text, x, y, fill, halo, size = 12, weight = "", align = "left"){
+  c.save();
+  c.font = `${weight} ${size}px 'Outfit','Zen Kaku Gothic New', sans-serif`;
+  c.textAlign = align; c.textBaseline = "middle";
+  c.lineJoin = "round"; c.lineWidth = 3;
+  c.strokeStyle = halo; c.strokeText(text, x, y);
+  c.fillStyle = fill; c.fillText(text, x, y);
+  c.restore();
+}
+// 薄明ゲージ(左下): 帯の色は年間チャートと共通
+function drawTwilightGauge(w, h, alt){
+  const x = 18, gw = 8, degPx = 5.5;
+  const yOf = a => (h - 181) + (4 - a)*degPx;   // +4°〜−18°
+  const py0 = yOf(4) - 22, py1 = h - 52;
+  fctx.save();
+  fctx.fillStyle = "rgba(5,7,14,.45)";
+  fctx.beginPath();
+  if (fctx.roundRect) fctx.roundRect(x-10, py0, gw+58, py1-py0, 9);
+  else fctx.rect(x-10, py0, gw+58, py1-py0);
+  fctx.fill();
+  haloText(fctx, "太陽高度", x-2, py0+11, "rgba(240,245,252,.75)", "rgba(5,9,20,.7)", 9);
+  const segs = [[4,0,ZONES[0].band],[0,-6,ZONES[1].band],[-6,-12,ZONES[2].band],[-12,-18,ZONES[3].band]];
+  for (const [a1,a2,col] of segs){
+    fctx.fillStyle = col;
+    fctx.fillRect(x, yOf(a1), gw, yOf(a2)-yOf(a1)-1);
+  }
+  fctx.fillStyle = ZONES[4].band;
+  fctx.fillRect(x, yOf(-18), gw, 6);
+  for (const a of [0,-6,-12,-18])
+    haloText(fctx, (a===0?"0°":a+"°"), x+gw+7, yOf(a), "rgba(240,245,252,.8)", "rgba(5,9,20,.7)", 9);
+  const ca = Math.max(-19.2, Math.min(4.2, alt));
+  fctx.fillStyle = "#f5c542"; fctx.strokeStyle = "rgba(5,9,20,.8)"; fctx.lineWidth = 1;
+  fctx.beginPath();
+  fctx.moveTo(x-8.5, yOf(ca)); fctx.lineTo(x-2.5, yOf(ca)-3.5); fctx.lineTo(x-2.5, yOf(ca)+3.5);
+  fctx.closePath(); fctx.fill(); fctx.stroke();
+  fctx.restore();
+}
+function drawFPS(){
+  const wrap = fpsCanvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth, h = Math.max(380, wrap.clientHeight);
+  fpsCanvas.width = w*dpr; fpsCanvas.height = h*dpr;
+  fctx.setTransform(dpr,0,0,dpr,0,0);
+  const lat = fps.marker.lat, dec = declination(state.N), t = state.t;
+  const sun = sunAltAzAt(lat, dec, t);
+  const dark = Math.min(1, Math.max(0, (-sun.alt - 2)/16)); // 0=明るい空 1=夜
+  const fovY = fps.fovX*h/w;
+  const azToX = az => { const d = ((az - fps.heading + 540)%360) - 180; return w/2 + d/fps.fovX*w; };
+  const altToY = alt => h/2 - (alt - fps.pitch)/fovY*h;
+
+  // 空(太陽高度に応じた連続グラデーション)
+  const [cTop, cMid, cBot] = skyColors(sun.alt);
+  const g = fctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0, cssC(cTop)); g.addColorStop(.55, cssC(cMid)); g.addColorStop(1, cssC(cBot));
+  fctx.fillStyle = g; fctx.fillRect(0,0,w,h);
+
+  // 朝焼け・夕焼けグロー(広い層 + 芯)
+  if (sun.alt > -16 && sun.alt < 14){
+    const gx = azToX(sun.az), gy = altToY(Math.max(sun.alt, -1));
+    const k = Math.max(0, 1 - Math.abs(sun.alt)/16);
+    let gl = fctx.createRadialGradient(gx, gy, 0, gx, gy, w*.6);
+    gl.addColorStop(0, `rgba(255,158,84,${.42*k})`); gl.addColorStop(1, "rgba(255,158,84,0)");
+    fctx.fillStyle = gl; fctx.fillRect(0,0,w,h);
+    gl = fctx.createRadialGradient(gx, gy, 0, gx, gy, w*.22);
+    gl.addColorStop(0, `rgba(255,214,140,${.5*k})`); gl.addColorStop(1, "rgba(255,214,140,0)");
+    fctx.fillStyle = gl; fctx.fillRect(0,0,w,h);
+  }
+
+  // 星(地平線際は減光)
+  if (sun.alt < -6){
+    const sa = Math.min(1, (-sun.alt - 6)/12);
+    fctx.fillStyle = "#eef2fa";
+    for (const s of FPS_STARS){
+      const x = azToX(s.az); if (x < -4 || x > w+4) continue;
+      const y = altToY(s.alt); if (y < -4 || y > h) continue;
+      const hf = Math.min(1, Math.max(.25, s.alt/12));
+      fctx.globalAlpha = sa*hf*(.2 + .8*s.m);
+      const sz = s.m > .92 ? 2 : s.m > .6 ? 1.5 : 1;
+      fctx.fillRect(x, y, sz, sz);
+    }
+    fctx.globalAlpha = 1;
+  }
+
+  // 太陽の1日の経路(点線 + 3時間ごとの目盛)
+  fctx.strokeStyle = `rgba(255,207,77,${.55 - .15*dark})`;
+  fctx.lineWidth = 1.5; fctx.setLineDash([2,6]);
+  fctx.beginPath();
+  let px = null;
+  for (let m = 0; m <= 288; m++){
+    const s2 = sunAltAzAt(lat, dec, m/12);
+    const x = azToX(s2.az), y = altToY(s2.alt);
+    if (px != null && Math.abs(x - px) < w/2) fctx.lineTo(x, y); else fctx.moveTo(x, y);
+    px = x;
+  }
+  fctx.stroke(); fctx.setLineDash([]);
+  for (let hh = 0; hh < 24; hh += 3){
+    const s2 = sunAltAzAt(lat, dec, hh);
+    const x = azToX(s2.az), y = altToY(s2.alt);
+    if (x < -24 || x > w+24 || y < -12 || y > h+12) continue;
+    fctx.fillStyle = "rgba(255,207,77,.9)";
+    fctx.strokeStyle = "rgba(5,9,20,.6)"; fctx.lineWidth = 1.5;
+    fctx.beginPath(); fctx.arc(x, y, 2.5, 0, 2*Math.PI); fctx.fill(); fctx.stroke();
+    haloText(fctx, hh + "時", x+6, y-8, "rgba(255,225,140,.95)", "rgba(5,9,20,.75)", 10);
+  }
+
+  // 太陽(視直径0.53° + 2層グロー、低空では暖色)
+  {
+    const x = azToX(sun.az), y = altToY(sun.alt);
+    const sr = Math.max(3.5, 0.267/fovY*h);
+    const warm = Math.min(1, Math.max(0, (12 - sun.alt)/14));
+    const gl = fctx.createRadialGradient(x, y, 0, x, y, sr*7);
+    gl.addColorStop(0, "rgba(255,240,190,.95)");
+    gl.addColorStop(.35, "rgba(255,210,120,.55)");
+    gl.addColorStop(1, "rgba(255,210,120,0)");
+    fctx.fillStyle = gl; fctx.beginPath(); fctx.arc(x, y, sr*7, 0, 2*Math.PI); fctx.fill();
+    fctx.fillStyle = warm > .6 ? "#ffd98e" : "#fff6cf";
+    fctx.beginPath(); fctx.arc(x, y, sr, 0, 2*Math.PI); fctx.fill();
+  }
+
+  // 地形シルエット(明るさに応じたヘイズ + リムライト)
+  const ridge = [];
+  for (let x = 0; x <= w; x += 2) ridge.push(altToY(profAt(fps.heading + (x - w/2)*fps.fovX/w)));
+  const ridgeLine = () => {
+    fctx.beginPath();
+    ridge.forEach((y, i) => i ? fctx.lineTo(i*2, y) : fctx.moveTo(0, y));
+  };
+  ridgeLine();
+  fctx.lineTo(w, h); fctx.lineTo(0, h); fctx.closePath();
+  const tg = fctx.createLinearGradient(0, h*.35, 0, h);
+  tg.addColorStop(0, cssC(lerpC([52,68,102],[10,14,28], dark)));
+  tg.addColorStop(1, cssC(lerpC([24,34,58],[4,6,12], dark)));
+  fctx.fillStyle = tg; fctx.fill();
+  ridgeLine();
+  fctx.strokeStyle = `rgba(200,215,240,${.38 - .18*dark})`;
+  fctx.lineWidth = 1.2; fctx.stroke();
+  // 太陽方向の暖色リム(低空時)
+  if (sun.alt > -14 && sun.alt < 8){
+    const sx = azToX(sun.az);
+    if (sx > -w*.2 && sx < w*1.2){
+      fctx.save();
+      const cw = w*.2;
+      fctx.beginPath(); fctx.rect(sx-cw, 0, cw*2, h); fctx.clip();
+      ridgeLine();
+      fctx.strokeStyle = `rgba(255,180,110,${.6*Math.max(0, 1 - Math.abs(sun.alt)/14)})`;
+      fctx.lineWidth = 1.6; fctx.stroke();
+      fctx.restore();
+    }
+  }
+
+  // 日の出・日の入りマーカー(この地形での時刻)
+  if (fps.evCache){
+    for (const [key, labelTxt] of [["rise","日の出"],["set","日の入り"]]){
+      const tv = fps.evCache[key];
+      if (tv == null) continue;
+      const s2 = sunAltAzAt(lat, dec, tv);
+      const x = azToX(s2.az); if (x < -30 || x > w+30) continue;
+      const y = altToY(profAt(s2.az));
+      fctx.save();
+      fctx.translate(x, y); fctx.rotate(Math.PI/4);
+      fctx.fillStyle = "#f5c542"; fctx.strokeStyle = "rgba(5,9,20,.75)"; fctx.lineWidth = 1.5;
+      fctx.fillRect(-3.5,-3.5,7,7); fctx.strokeRect(-3.5,-3.5,7,7);
+      fctx.restore();
+      haloText(fctx, `${labelTxt} ${fmtTime(toJST(tv, fps.lon, state.N))}`, x, y-16, "#ffe08a", "rgba(5,9,20,.8)", 11, "bold", "center");
+    }
+  }
+
+  // 高度0°の基準線
+  const y0 = altToY(0);
+  if (y0 > 0 && y0 < h){
+    fctx.strokeStyle = "rgba(240,245,252,.28)"; fctx.setLineDash([5,7]); fctx.lineWidth = 1;
+    fctx.beginPath(); fctx.moveTo(0, y0); fctx.lineTo(w, y0); fctx.stroke();
+    fctx.setLineDash([]);
+    haloText(fctx, "高度0°", w-10, y0-8, "rgba(240,245,252,.75)", "rgba(5,9,20,.7)", 9, "", "right");
+  }
+
+  // 薄明ゲージ(左下・帯色は年間チャートと共通)
+  drawTwilightGauge(w, h, sun.alt);
+
+  // コンパス(下端: ベースライン + 目盛 + 中央キャレット)
+  const baseY = h-14;
+  fctx.strokeStyle = "rgba(240,245,252,.28)"; fctx.lineWidth = 1;
+  fctx.beginPath(); fctx.moveTo(0, baseY); fctx.lineTo(w, baseY); fctx.stroke();
+  const DIRS = { 0:"北", 45:"北東", 90:"東", 135:"南東", 180:"南", 225:"南西", 270:"西", 315:"北西" };
+  for (let az = 0; az < 360; az += 15){
+    const x = azToX(az); if (x < -14 || x > w+14) continue;
+    const main = az%45 === 0;
+    fctx.strokeStyle = `rgba(240,245,252,${main ? .85 : .4})`;
+    fctx.lineWidth = main ? 1.5 : 1;
+    fctx.beginPath(); fctx.moveTo(x, baseY-(main?9:5)); fctx.lineTo(x, baseY); fctx.stroke();
+    if (az%90 === 0) haloText(fctx, DIRS[az], x, baseY-20, "#f5c542", "rgba(5,9,20,.8)", 12, "bold", "center");
+    else if (main) haloText(fctx, DIRS[az], x, baseY-18, "rgba(240,245,252,.75)", "rgba(5,9,20,.7)", 9.5, "", "center");
+  }
+  fctx.fillStyle = "#f5c542";
+  fctx.beginPath();
+  fctx.moveTo(w/2, baseY-10); fctx.lineTo(w/2-4, baseY-3); fctx.lineTo(w/2+4, baseY-3);
+  fctx.closePath(); fctx.fill();
+
+  // 中央レティクル
+  fctx.save();
+  fctx.strokeStyle = "rgba(5,9,20,.55)"; fctx.lineWidth = 3; fctx.lineCap = "round";
+  for (const pass of [0,1]){
+    if (pass){ fctx.strokeStyle = "rgba(240,245,252,.7)"; fctx.lineWidth = 1.2; }
+    fctx.beginPath();
+    fctx.moveTo(w/2-9, h/2); fctx.lineTo(w/2-3, h/2);
+    fctx.moveTo(w/2+3, h/2); fctx.lineTo(w/2+9, h/2);
+    fctx.moveTo(w/2, h/2-9); fctx.lineTo(w/2, h/2-3);
+    fctx.moveTo(w/2, h/2+3); fctx.lineTo(w/2, h/2+9);
+    fctx.stroke();
+  }
+  fctx.restore();
+}
+let fDrag = null;
+fpsCanvas.addEventListener("pointerdown", e => {
+  fDrag = { x: e.clientX, y: e.clientY };
+  fpsCanvas.setPointerCapture(e.pointerId);
+});
+fpsCanvas.addEventListener("pointermove", e => {
+  if (!fDrag) return;
+  const w = fpsCanvas.clientWidth || 1, h = fpsCanvas.clientHeight || 1;
+  fps.heading = ((fps.heading - (e.clientX - fDrag.x)*fps.fovX/w) % 360 + 360) % 360;
+  fps.pitch = Math.max(-15, Math.min(55, fps.pitch + (e.clientY - fDrag.y)*(fps.fovX*h/w)/h));
+  fDrag = { x: e.clientX, y: e.clientY };
+  drawFPS();
+});
+fpsCanvas.addEventListener("pointerup", () => fDrag = null);
 
 /* ================= 一括更新 ================= */
 function refreshChipStates(){
@@ -1394,6 +2046,9 @@ function refreshChipStates(){
     b.classList.toggle("on", +b.dataset.n === state.N));
   phenoChips.querySelectorAll("button").forEach(b =>
     b.classList.toggle("on", Math.abs(+b.dataset.lat - state.lat) < 0.05 && +b.dataset.n === state.N));
+  spotChips.querySelectorAll("button").forEach(b =>
+    b.classList.toggle("on",
+      Math.abs(+b.dataset.lat - fps.marker.lat) < 0.005 && Math.abs(+b.dataset.lon - fps.marker.lon) < 0.005));
 }
 function refreshAll(){
   $("latVal").textContent = state.lat.toFixed(1) + "°N";
@@ -1402,13 +2057,18 @@ function refreshAll(){
   refreshChipStates();
   refreshPanel();
   refreshSeasons();
+  updateFpsTimes();
+  drawMap();
   drawAngleChart();
   drawYearChart();
   drawDurChart();
-  refreshTime(); // 天球再描画を含む
+  refreshTime(); // 天球・FPS再描画を含む
 }
-window.addEventListener("resize", () => { drawSphere(); drawAngleChart(); drawYearChart(); drawDurChart(); });
+window.addEventListener("resize", () => { drawSphere(); drawFPS(); drawMap(); drawAngleChart(); drawYearChart(); drawDurChart(); });
 refreshAll();
+// 初期地点: 東京駅(稜線を自動計算)
+$("spotInfo").textContent = fps.marker.lat.toFixed(3) + "°N, " + fps.marker.lon.toFixed(3) + "°E";
+startProfile();
 </script>
 </body>
 </html>
