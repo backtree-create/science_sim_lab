@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>イオン3D LAB — 化学変化とイオン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@400;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --ink:#1c2430; --sub:#5b6a7d; --line:#e3e9f0; --bg:#f6f8fb; --panel:#ffffff;
+    --accent:#0e7490; --accent2:#6d28d9; --plus:#e0533d; --minus:#2563eb; --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    background:
+      radial-gradient(1100px 500px at 85% -10%, #e3f4f8 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #ece8fb 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    display:flex;flex-direction:column;
+    height:100vh;height:100dvh;overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{display:flex;align-items:center;gap:18px;padding:12px 22px 0;flex:none;}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-mark{
+    width:38px;height:38px;flex:none;
+    background:conic-gradient(from 210deg, var(--accent), var(--accent2), var(--accent));
+    clip-path:polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+    position:relative;
+  }
+  .logo-mark::after{content:"";position:absolute;inset:6px;background:#fff;
+    clip-path:polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);}
+  .logo-mark::before{content:"+−";position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;
+    font-family:'Outfit',sans-serif;font-weight:700;font-size:12px;color:var(--accent);letter-spacing:1px;}
+  .title h1{font-family:'Dela Gothic One',sans-serif;font-size:20px;letter-spacing:.04em;line-height:1.1;}
+  .title h1 span{color:var(--accent);}
+  .title p{font-size:10.5px;color:var(--sub);letter-spacing:.18em;margin-top:2px;}
+  .headnote{margin-left:auto;font-size:11px;color:var(--sub);}
+  nav{display:flex;gap:8px;padding:10px 22px 0;flex:none;}
+  .tab{
+    font-family:inherit;font-weight:700;font-size:13.5px;padding:9px 18px 8px;
+    border:1px solid var(--line);border-bottom:none;border-radius:12px 12px 0 0;
+    background:#eef2f7;color:var(--sub);cursor:pointer;transition:.15s;
+  }
+  .tab small{display:block;font-size:9px;font-weight:500;letter-spacing:.06em;color:#93a1b3;font-family:'Outfit',sans-serif;}
+  .tab.active{background:var(--panel);color:var(--ink);box-shadow:0 -3px 0 var(--accent) inset;}
+  .tab.active small{color:var(--accent);}
+  main{flex:1;display:flex;gap:14px;padding:0 22px;min-height:0;}
+  .stage{
+    flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);
+    border-radius:0 var(--radius) var(--radius) var(--radius);
+    box-shadow:0 8px 30px rgba(28,36,48,.06);
+    position:relative;overflow:hidden;display:flex;flex-direction:column;
+  }
+  .stage-head{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);flex:none;}
+  .stage-head .name{font-weight:700;font-size:14.5px;}
+  .stage-head .hint{margin-left:auto;font-size:10.5px;color:var(--sub);display:flex;gap:12px;}
+  .hint b{color:var(--accent);font-weight:700;}
+  #view3d{flex:1;position:relative;min-height:0;background:linear-gradient(180deg,#152838 0%, #0d1b26 100%);}
+  #view3d canvas{display:block;width:100%;height:100%;}
+  .view-tools{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:5;}
+  .vtool{
+    min-width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--sub);
+    font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:11px;cursor:pointer;
+    box-shadow:0 2px 6px rgba(28,36,48,.07);padding:0 8px;
+  }
+  .vtool:hover{color:var(--accent);border-color:var(--accent);}
+  .cam-note{
+    position:absolute;left:14px;bottom:12px;font-size:10.5px;color:#8896a8;background:#ffffffcc;
+    border:1px solid var(--line);border-radius:8px;padding:4px 10px;z-index:5;pointer-events:none;
+  }
+  .toast{
+    position:absolute;left:50%;top:16px;transform:translateX(-50%);
+    background:#10202bde;color:#e7f5f9;font-size:12.5px;font-weight:500;
+    padding:8px 18px;border-radius:999px;z-index:6;pointer-events:none;
+    opacity:0;transition:opacity .3s;max-width:86%;text-align:center;
+  }
+  .toast.show{opacity:1;}
+  aside{width:292px;flex:none;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-bottom:2px;}
+  aside::-webkit-scrollbar{width:6px;}
+  aside::-webkit-scrollbar-thumb{background:#d4dde6;border-radius:3px;}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:0 6px 20px rgba(28,36,48,.05);padding:12px 13px 13px;flex:none;
+  }
+  .card h3{
+    font-size:10.5px;letter-spacing:.14em;color:var(--sub);font-weight:700;margin-bottom:9px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .card h3::before{content:"";width:8px;height:8px;border-radius:3px;background:linear-gradient(135deg,var(--accent),var(--accent2));}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{
+    font-size:12px;font-weight:500;border:1px solid var(--line);border-radius:9px;
+    padding:6px 10px;background:#f8fafc;cursor:pointer;font-family:inherit;transition:.12s;
+  }
+  .chip:hover{border-color:#b8c6d4;}
+  .chip.on{background:#e6f4f7;border-color:var(--accent);color:var(--accent);font-weight:700;}
+  .chip.ghost{color:#9aa8ba;background:#fff;}
+  .chip.ghost.on{background:#f3effc;border-color:var(--accent2);color:var(--accent2);}
+  .row{display:flex;align-items:center;gap:10px;margin-top:8px;}
+  .row label{font-size:12px;color:var(--sub);flex:none;min-width:56px;}
+  input[type=range]{flex:1;accent-color:var(--accent);}
+  .val{font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;color:var(--accent);min-width:44px;text-align:right;}
+  .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .seg button{
+    flex:1;border:none;background:#f8fafc;color:var(--sub);font-family:inherit;
+    font-size:12px;font-weight:500;padding:7px 4px;cursor:pointer;transition:.12s;
+  }
+  .seg button+button{border-left:1px solid var(--line);}
+  .seg button.on{background:var(--accent);color:#fff;font-weight:700;}
+  .bigbtn{
+    width:100%;margin-top:10px;border:none;border-radius:11px;padding:10px;
+    background:linear-gradient(135deg,var(--accent),#155e75);color:#fff;font-family:inherit;
+    font-weight:700;font-size:13px;letter-spacing:.08em;cursor:pointer;
+    box-shadow:0 4px 12px rgba(14,116,144,.3);transition:.12s;
+  }
+  .bigbtn:active{transform:translateY(1px);}
+  .bigbtn:disabled{background:#c3ced9;box-shadow:none;cursor:default;}
+  .subbtn{
+    width:100%;margin-top:8px;border:1px solid var(--line);border-radius:11px;padding:8px;
+    background:#fff;color:var(--sub);font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;transition:.12s;
+  }
+  .subbtn:hover{color:var(--accent);border-color:var(--accent);}
+  .meter{display:flex;align-items:baseline;gap:8px;font-family:'Outfit',sans-serif;}
+  .meter .num{font-size:28px;font-weight:700;color:var(--ink);}
+  .meter .unit{font-size:12px;color:var(--sub);font-family:'Zen Kaku Gothic New',sans-serif;}
+  .phbar{margin-top:8px;height:10px;border-radius:6px;
+    background:linear-gradient(90deg,#e0533d,#f4a83a,#8bc34a,#2563eb,#6d28d9);position:relative;}
+  .phbar i{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:var(--ink);transition:left .3s;}
+  .legend{display:flex;flex-direction:column;gap:5px;font-size:12px;}
+  .legend .li{display:flex;align-items:center;gap:8px;color:var(--sub);}
+  .dot{width:13px;height:13px;border-radius:50%;flex:none;box-shadow:inset -2px -3px 4px rgba(0,0,0,.18);}
+  .cnt{margin-left:auto;font-family:'Outfit',sans-serif;font-weight:700;color:var(--ink);}
+  .note{font-size:11.5px;color:var(--sub);line-height:1.55;margin-top:6px;}
+  .result{
+    font-size:12px;color:var(--ink);line-height:1.6;margin-top:8px;background:#f4f8fb;
+    border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:20px;
+  }
+  .eqband{
+    margin:12px 22px 14px;background:#10202b;border-radius:var(--radius);color:#e7f5f9;
+    display:flex;align-items:center;gap:18px;padding:11px 20px;flex:none;
+    box-shadow:0 10px 26px rgba(16,32,43,.25);min-height:52px;
+  }
+  .eqband .tag{
+    flex:none;font-size:10px;font-weight:700;letter-spacing:.18em;color:#67e8f9;
+    border:1px solid #164e63;background:#0b2a35;border-radius:999px;padding:5px 12px;
+  }
+  .eq{
+    font-family:'Outfit','Zen Kaku Gothic New',sans-serif;font-size:16px;font-weight:600;
+    letter-spacing:.03em;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .eq .hl{color:#67e8f9;}
+  .eq .dim{color:#7fa3b3;font-size:13px;font-weight:400;}
+  .eqnote{margin-left:auto;font-size:11px;color:#7fa3b3;flex:none;}
+  .mod-ui{display:none;}
+  .mod-ui.show{display:flex;flex-direction:column;gap:10px;}
+  .band-ui{display:none;}
+  .band-ui.show{display:flex;align-items:center;gap:18px;flex:1;}
+  /* graph canvas */
+  #niGraph{width:100%;height:150px;display:block;background:#fbfdff;border:1px solid var(--line);border-radius:10px;}
+  /* evaporation overlay */
+  .overlay{
+    position:absolute;inset:0;background:#10202b66;z-index:20;display:none;
+    align-items:center;justify-content:center;
+  }
+  .overlay.show{display:flex;}
+  .ovcard{
+    background:#fff;border-radius:16px;max-width:430px;width:88%;padding:22px 24px;
+    box-shadow:0 24px 60px rgba(16,32,43,.4);
+  }
+  .ovcard h4{font-size:15px;margin-bottom:10px;color:var(--ink);}
+  .ovcard p{font-size:13px;color:var(--sub);line-height:1.7;}
+  .ovcard .cry{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0;}
+  .ovcard .cry span{
+    width:22px;height:22px;background:#f4f7fa;border:2px solid #c7d3de;border-radius:5px;
+    transform:rotate(45deg);display:inline-block;
+  }
+  footer{padding:0 24px 10px;font-size:10px;color:#9aa8ba;text-align:right;flex:none;}
+  #view3d canvas{touch-action:none;user-select:none;-webkit-user-select:none;}
+  .tab,.chip,.seg button,.bigbtn,.subbtn,.vtool{touch-action:manipulation;}
+
+  /* ===== tablet / smartphone ===== */
+  @media (max-width:1080px){
+    aside{width:250px;}
+    .eq{font-size:14px;}
+  }
+  @media (max-width:900px){
+    body{height:auto;min-height:100vh;min-height:100dvh;overflow-y:auto;overflow-x:hidden;}
+    header{padding:10px 14px 0;}
+    .headnote{display:none;}
+    nav{padding:10px 14px 0;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;}
+    nav::-webkit-scrollbar{display:none;}
+    .tab{flex:none;padding:9px 14px 8px;font-size:13px;}
+    main{flex-direction:column;padding:0 12px;min-height:auto;gap:10px;}
+    .stage{flex:none;height:46vh;height:46dvh;min-height:300px;border-radius:0 var(--radius) var(--radius) var(--radius);}
+    .stage-head .hint{display:none;}
+    aside{width:100%;overflow:visible;padding-bottom:0;}
+    .mod-ui.show{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;align-items:start;}
+    .eqband{margin:10px 12px 12px;padding:10px 14px;gap:12px;flex-wrap:wrap;}
+    .eq{font-size:13.5px;gap:8px;}
+    .eqnote{display:none;}
+    footer{display:none;}
+  }
+  @media (max-width:520px){
+    .title h1{font-size:17px;}
+    .title p{font-size:9.5px;letter-spacing:.12em;}
+    .logo-mark{width:32px;height:32px;}
+    .tab small{display:none;}
+    .stage{height:44vh;height:44dvh;min-height:260px;}
+    .mod-ui.show{grid-template-columns:1fr;}
+    .eqband .tag{display:none;}
+  }
+  /* larger touch targets on touch devices */
+  @media (pointer:coarse){
+    .chip{padding:9px 13px;font-size:13px;}
+    .seg button{padding:10px 6px;font-size:12.5px;}
+    .bigbtn{padding:13px;}
+    .subbtn{padding:11px;}
+    .vtool{min-width:42px;height:42px;font-size:12px;}
+    input[type=range]{height:28px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark"></div>
+    <div class="title">
+      <h1>イオン<span>3D</span> LAB</h1>
+      <p>中3化学 — 化学変化とイオン</p>
+    </div>
+  </div>
+  <div class="headnote">実験を自分で操作して、目に見えないイオンの世界を観察しよう</div>
+</header>
+
+<nav id="tabs">
+  <button class="tab active" data-m="m1">電離<small>IONIZATION</small></button>
+  <button class="tab" data-m="m2">電気分解<small>ELECTROLYSIS</small></button>
+  <button class="tab" data-m="m3">中和・滴定<small>NEUTRALIZATION</small></button>
+  <button class="tab" data-m="m4">化学電池<small>CHEMICAL CELL</small></button>
+</nav>
+
+<main>
+  <section class="stage">
+    <div class="stage-head">
+      <span class="name" id="stageName">電離シミュレーター</span>
+      <span class="hint"><span><b>ドラッグ</b> 回転</span><span><b>ホイール</b> ズーム</span></span>
+    </div>
+    <div id="view3d">
+      <div class="view-tools" id="viewTools">
+        <button class="vtool" id="btnViewReset">視点リセット</button>
+      </div>
+      <div class="cam-note" id="camNote">カメラ:ドラッグで自由回転</div>
+      <div class="toast" id="toast"></div>
+      <div class="overlay" id="ovEvap">
+        <div class="ovcard">
+          <h4>蒸発皿で水を蒸発させた結果</h4>
+          <div class="cry" id="evapCrystals"></div>
+          <p id="evapText"></p>
+          <button class="subbtn" onclick="document.getElementById('ovEvap').classList.remove('show')">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside id="sidePanel">
+
+    <!-- ===== M1 電離 ===== -->
+    <div class="mod-ui show" id="ui-m1">
+      <div class="card">
+        <h3>試薬棚 — 溶かす物質</h3>
+        <div class="chips" id="m1subs">
+          <button class="chip on" data-s="NaCl">塩化ナトリウム</button>
+          <button class="chip" data-s="HCl">塩酸(HCl)</button>
+          <button class="chip" data-s="NaOH">水酸化ナトリウム</button>
+          <button class="chip" data-s="CuCl2">塩化銅</button>
+          <button class="chip ghost" data-s="sugar">砂糖</button>
+          <button class="chip ghost" data-s="ethanol">エタノール</button>
+        </div>
+        <button class="bigbtn" id="m1add">水に入れる</button>
+        <button class="subbtn" id="m1reset">ビーカーを洗う(リセット)</button>
+      </div>
+      <div class="card">
+        <h3>電流チェック</h3>
+        <div class="seg" id="m1elecSeg">
+          <button class="on" data-v="in">電極を入れる</button>
+          <button data-v="out">外す</button>
+        </div>
+        <div class="row"><label>豆電球</label><span id="m1bulb" style="font-size:12px;font-weight:700;color:var(--sub)">—</span></div>
+      </div>
+      <div class="card">
+        <h3>表示設定</h3>
+        <div class="seg" id="m1waterSeg">
+          <button class="on" data-v="off">イオンのみ</button>
+          <button data-v="on">水分子も表示</button>
+        </div>
+        <div class="row"><label>再生速度</label><input type="range" id="m1speed" min="0.2" max="3" step="0.1" value="1"><span class="val" id="m1speedVal">×1.0</span></div>
+      </div>
+      <div class="card">
+        <h3>ビーカー内の粒子</h3>
+        <div class="legend" id="m1legend"><div class="li" style="color:#9aa8ba">まだ何も入っていません</div></div>
+      </div>
+    </div>
+
+    <!-- ===== M2 電気分解 ===== -->
+    <div class="mod-ui" id="ui-m2">
+      <div class="card">
+        <h3>水溶液を選ぶ</h3>
+        <div class="chips" id="m2sol">
+          <button class="chip on" data-s="CuCl2">塩化銅水溶液</button>
+          <button class="chip" data-s="HCl">うすい塩酸</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>電源装置</h3>
+        <div class="row"><label>電圧</label><input type="range" id="m2volt" min="0" max="6" step="0.5" value="3"><span class="val" id="m2voltVal">3.0V</span></div>
+        <div class="seg" id="m2power" style="margin-top:8px">
+          <button data-v="on">電流を流す</button>
+          <button class="on" data-v="off">止める</button>
+        </div>
+        <button class="subbtn" id="m2swap">+−を入れかえる</button>
+        <button class="subbtn" id="m2reset">リセット</button>
+      </div>
+      <div class="card">
+        <h3>気体の検知ツール</h3>
+        <div class="chips" id="m2tools">
+          <button class="chip" data-t="ink">赤インク</button>
+          <button class="chip" data-t="match">マッチの火</button>
+          <button class="chip" data-t="senko">火のついた線香</button>
+        </div>
+        <div class="result" id="m2result">気体がたまったらツールで調べてみよう</div>
+      </div>
+      <div class="card">
+        <h3>電極のようす</h3>
+        <div class="legend" id="m2legend"></div>
+      </div>
+    </div>
+
+    <!-- ===== M3 中和 ===== -->
+    <div class="mod-ui" id="ui-m3">
+      <div class="card">
+        <h3>ビーカーの中身</h3>
+        <div class="chips" id="m3acid">
+          <button class="chip on" data-s="HCl">うすい塩酸</button>
+          <button class="chip" data-s="H2SO4">うすい硫酸</button>
+        </div>
+        <div class="seg" id="m3ind" style="margin-top:8px">
+          <button class="on" data-v="btb">BTB</button>
+          <button data-v="pp">フェノールフタレイン</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>ビュレット操作 — NaOH水溶液</h3>
+        <button class="bigbtn" id="m3drop">1滴落とす</button>
+        <div class="seg" id="m3flow" style="margin-top:8px">
+          <button class="on" data-v="stop">閉じる</button>
+          <button data-v="cont">連続で滴下</button>
+        </div>
+        <div class="row"><label>滴下量</label><span class="meter"><span class="num" id="m3vol">0.0</span><span class="unit">mL</span></span></div>
+        <button class="subbtn" id="m3reset">リセット</button>
+      </div>
+      <div class="card">
+        <h3>pHメーター</h3>
+        <span class="meter"><span class="num" id="m3ph">1.0</span><span class="unit" id="m3phState">pH — 酸性</span></span>
+        <div class="phbar"><i id="m3phNeedle" style="left:4%"></i></div>
+      </div>
+      <div class="card">
+        <h3>イオン数の変化</h3>
+        <canvas id="niGraph" width="264" height="150"></canvas>
+        <div class="legend" id="m3legend" style="margin-top:8px"></div>
+        <button class="subbtn" id="m3evap">蒸発皿で結晶を取り出す</button>
+      </div>
+    </div>
+
+    <!-- ===== M4 化学電池 ===== -->
+    <div class="mod-ui" id="ui-m4">
+      <div class="card">
+        <h3>電池の種類</h3>
+        <div class="seg" id="m4type">
+          <button class="on" data-v="daniell">ダニエル電池</button>
+          <button data-v="volta">ボルタ電池</button>
+        </div>
+        <div class="note" id="m4typeNote">2種類の水溶液をセロハン膜で仕切った改良型の電池</div>
+      </div>
+      <div class="card">
+        <h3>電池を組む — 金属板</h3>
+        <div class="row" style="margin-top:0"><label>左の板</label></div>
+        <div class="chips" id="m4metalL">
+          <button class="chip on" data-s="Zn">亜鉛 Zn</button>
+          <button class="chip" data-s="Mg">マグネシウム</button>
+          <button class="chip" data-s="Fe">鉄 Fe</button>
+        </div>
+        <div class="row"><label>右の板</label></div>
+        <div class="chips" id="m4metalR">
+          <button class="chip on" data-s="Cu">銅 Cu</button>
+          <button class="chip" data-s="Zn">亜鉛 Zn</button>
+        </div>
+        <div class="note" id="m4combiNote"></div>
+      </div>
+      <div class="card" id="m4memCard">
+        <h3>セロハン膜</h3>
+        <div class="seg" id="m4membrane">
+          <button class="on" data-v="on">あり</button>
+          <button data-v="off">なし(仕切りを外す)</button>
+        </div>
+        <div class="result" id="m4memNote">イオンが膜を通って、電気の偏りを解消します</div>
+      </div>
+      <div class="card">
+        <h3>電圧計・つなぐもの</h3>
+        <span class="meter"><span class="num" id="m4volt">1.1</span><span class="unit">V</span></span>
+        <div class="seg" id="m4load" style="margin-top:8px">
+          <button class="on" data-v="prop">プロペラ</button>
+          <button data-v="meter">電圧計のみ</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>時間のはやさ</h3>
+        <div class="row" style="margin-top:0"><label>スピード</label><input type="range" id="m4time" min="1" max="10" step="1" value="3"><span class="val" id="m4timeVal">×3</span></div>
+        <div class="note">はやくすると、亜鉛板が細り銅板に銅が付着していく変化がよく見えます</div>
+        <button class="subbtn" id="m4reset">リセット</button>
+      </div>
+    </div>
+
+  </aside>
+</main>
+
+<div class="eqband">
+  <span class="tag" id="eqTag">電離式</span>
+  <span class="eq" id="eqBody"><span class="dim">物質を選んで「水に入れる」を押そう</span></span>
+  <span class="eqnote" id="eqNote"></span>
+</div>
+
+<footer>イオン3D LAB v1.0 — 実験操作型シミュレーター(Three.js)</footer>
+
+<script>
+'use strict';
+/* ============================================================
+   イオン3D LAB — core
+   ============================================================ */
+const $  = (s)=>document.querySelector(s);
+const $$ = (s)=>Array.from(document.querySelectorAll(s));
+
+/* ---------- toast ---------- */
+let toastTimer=null;
+function toast(msg, ms=2600){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'), ms);
+}
+
+/* ---------- ion visual definitions ---------- */
+const IONDEF = {
+  'Na+':  {color:0xf59e0b, r:0.42, label:'Na⁺',  name:'ナトリウムイオン'},
+  'Cl-':  {color:0x22c55e, r:0.50, label:'Cl⁻',  name:'塩化物イオン'},
+  'H+':   {color:0xe0533d, r:0.34, label:'H⁺',   name:'水素イオン'},
+  'OH-':  {color:0x2563eb, r:0.46, label:'OH⁻',  name:'水酸化物イオン'},
+  'Cu2+': {color:0x0891b2, r:0.48, label:'Cu²⁺', name:'銅イオン'},
+  'Zn2+': {color:0x64748b, r:0.48, label:'Zn²⁺', name:'亜鉛イオン'},
+  'Mg2+': {color:0x34d399, r:0.44, label:'Mg²⁺', name:'マグネシウムイオン'},
+  'Fe2+': {color:0x92663d, r:0.46, label:'Fe²⁺', name:'鉄イオン'},
+  'SO42-':{color:0xa78bfa, r:0.55, label:'SO₄²⁻',name:'硫酸イオン'},
+  'mol':  {color:0xcbd5e1, r:0.50, label:'分子', name:'分子(電離しない)'},
+  'e-':   {color:0xfacc15, r:0.20, label:'e⁻',  name:'電子'},
+  'H2O':  {color:0x93c5fd, r:0.30, label:'',     name:'水分子'},
+};
+const CSS_COLOR = {};
+Object.keys(IONDEF).forEach(k=>{ CSS_COLOR[k]='#'+IONDEF[k].color.toString(16).padStart(6,'0'); });
+
+/* ---------- three.js setup ---------- */
+const viewEl = $('#view3d');
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+viewEl.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1e2b);
+scene.fog = new THREE.Fog(0x0e1e2b, 45, 95);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+
+/* lights */
+scene.add(new THREE.HemisphereLight(0xdfeaf5, 0x2a3a4a, 1.0));
+const dl = new THREE.DirectionalLight(0xffffff, 0.85);
+dl.position.set(10,18,12); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x93c5fd, 0.3);
+dl2.position.set(-12,8,-10); scene.add(dl2);
+
+/* ground (subtle) */
+{
+  const g = new THREE.Mesh(
+    new THREE.CircleGeometry(40, 48),
+    new THREE.MeshStandardMaterial({color:0x14293a, roughness:1, metalness:0})
+  );
+  g.rotation.x = -Math.PI/2; g.position.y = -6.01; scene.add(g);
+  const grid = new THREE.GridHelper(46, 23, 0x24445e, 0x1b3348);
+  grid.position.y=-6.0; scene.add(grid);
+}
+
+/* ---------- simple orbit control ---------- */
+const cam = {
+  target: new THREE.Vector3(0,0,0),
+  theta: 0.35, phi: 1.18, dist: 26,
+  def:{theta:0.35, phi:1.18, dist:26, target:new THREE.Vector3(0,0,0)},
+  apply(){
+    this.phi = Math.max(0.15, Math.min(Math.PI-0.6, this.phi));
+    this.dist = Math.max(9, Math.min(60, this.dist));
+    camera.position.set(
+      this.target.x + this.dist*Math.sin(this.phi)*Math.sin(this.theta),
+      this.target.y + this.dist*Math.cos(this.phi),
+      this.target.z + this.dist*Math.sin(this.phi)*Math.cos(this.theta)
+    );
+    camera.lookAt(this.target);
+  },
+  reset(){
+    this.theta=this.def.theta; this.phi=this.def.phi; this.dist=this.def.dist;
+    this.target.copy(this.def.target); this.apply();
+  },
+  setHome(theta,phi,dist,target){
+    this.def={theta,phi,dist,target:target.clone()};
+    this.reset();
+  }
+};
+/* pointer input: 1 pointer = rotate, 2 pointers = pinch zoom (mouse/touch/pen共通) */
+const pointers=new Map();
+let pinchDist=0;
+const cvsEl=renderer.domElement;
+cvsEl.addEventListener('pointerdown', e=>{
+  cvsEl.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2){
+    const p=[...pointers.values()];
+    pinchDist=Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y);
+  }
+});
+cvsEl.addEventListener('pointermove', e=>{
+  const p=pointers.get(e.pointerId);
+  if(!p) return;
+  if(pointers.size===1){
+    cam.theta -= (e.clientX-p.x)*0.006;
+    cam.phi   -= (e.clientY-p.y)*0.006;
+    cam.apply();
+  }
+  p.x=e.clientX; p.y=e.clientY;
+  if(pointers.size===2){
+    const q=[...pointers.values()];
+    const d=Math.hypot(q[0].x-q[1].x, q[0].y-q[1].y);
+    if(pinchDist>0 && d>0){ cam.dist *= pinchDist/d; cam.apply(); }
+    pinchDist=d;
+  }
+});
+function endPointer(e){ pointers.delete(e.pointerId); pinchDist=0; }
+cvsEl.addEventListener('pointerup', endPointer);
+cvsEl.addEventListener('pointercancel', endPointer);
+cvsEl.addEventListener('wheel', e=>{
+  e.preventDefault();
+  cam.dist *= (1 + Math.sign(e.deltaY)*0.08);
+  cam.apply();
+},{passive:false});
+$('#btnViewReset').addEventListener('click', ()=>cam.reset());
+
+/* touch-device hint wording */
+if(window.matchMedia && window.matchMedia('(pointer:coarse)').matches){
+  const h=document.querySelector('.stage-head .hint');
+  if(h) h.innerHTML='<span><b>スワイプ</b> 回転</span><span><b>ピンチ</b> ズーム</span>';
+}
+
+let lastW=0,lastH=0;
+function resize(){
+  const w=viewEl.clientWidth, h=viewEl.clientHeight;
+  if(w===0||h===0||(w===lastW&&h===lastH)) return;
+  lastW=w; lastH=h;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+/* ---------- label sprites ---------- */
+function makeTextSprite(text, opt={}){
+  const fs = opt.fontSize||46;
+  const pad = opt.pad!==undefined?opt.pad:16;
+  const cvs=document.createElement('canvas');
+  const ctx=cvs.getContext('2d');
+  ctx.font=`700 ${fs}px Outfit, "Zen Kaku Gothic New", sans-serif`;
+  const tw=ctx.measureText(text).width;
+  cvs.width=Math.ceil(tw+pad*2); cvs.height=fs+pad*2;
+  const c2=cvs.getContext('2d');
+  if(opt.bg){
+    c2.fillStyle=opt.bg;
+    const r=14;
+    c2.beginPath();
+    c2.moveTo(r,0); c2.lineTo(cvs.width-r,0); c2.quadraticCurveTo(cvs.width,0,cvs.width,r);
+    c2.lineTo(cvs.width,cvs.height-r); c2.quadraticCurveTo(cvs.width,cvs.height,cvs.width-r,cvs.height);
+    c2.lineTo(r,cvs.height); c2.quadraticCurveTo(0,cvs.height,0,cvs.height-r);
+    c2.lineTo(0,r); c2.quadraticCurveTo(0,0,r,0); c2.fill();
+  }
+  c2.font=`700 ${fs}px Outfit, "Zen Kaku Gothic New", sans-serif`;
+  c2.textAlign='center'; c2.textBaseline='middle';
+  c2.fillStyle=opt.color||'#ffffff';
+  c2.fillText(text, cvs.width/2, cvs.height/2+2);
+  const tex=new THREE.CanvasTexture(cvs);
+  tex.minFilter=THREE.LinearFilter;
+  const mat=new THREE.SpriteMaterial({map:tex, depthTest:opt.depthTest!==false, transparent:true});
+  const sp=new THREE.Sprite(mat);
+  const s=opt.scale||1;
+  sp.scale.set(s*cvs.width/cvs.height, s, 1);
+  return sp;
+}
+
+/* ---------- ion particle ---------- */
+const sphereGeoCache={};
+function sphereGeo(r){
+  const key=Math.round(r*100);
+  if(!sphereGeoCache[key]) sphereGeoCache[key]=new THREE.SphereGeometry(r, 20, 16);
+  return sphereGeoCache[key];
+}
+function makeIon(sym, opt={}){
+  const def=IONDEF[sym];
+  const g=new THREE.Group();
+  const mat=new THREE.MeshStandardMaterial({
+    color:def.color, roughness:0.35, metalness:0.05,
+    emissive:def.color, emissiveIntensity:0.12,
+    transparent:true, opacity:1
+  });
+  const mesh=new THREE.Mesh(sphereGeo(def.r*(opt.scale||1)), mat);
+  g.add(mesh);
+  if(def.label){
+    const sp=makeTextSprite(def.label,{fontSize:44,color:'#ffffff',scale:(opt.labelScale||0.62),depthTest:false});
+    sp.position.set(0,0,0);
+    sp.renderOrder=10;
+    g.add(sp);
+  }
+  g.userData={sym, mesh, mat,
+    vel:new THREE.Vector3((Math.random()-0.5)*0.8,(Math.random()-0.5)*0.5,(Math.random()-0.5)*0.8),
+    alive:true, fade:0, mode:'free'
+  };
+  return g;
+}
+
+/* random walk inside a bounding function */
+function brown(ion, dt, speed, bounds){
+  const u=ion.userData;
+  u.vel.x += (Math.random()-0.5)*2.2*dt;
+  u.vel.y += (Math.random()-0.5)*1.6*dt;
+  u.vel.z += (Math.random()-0.5)*2.2*dt;
+  u.vel.clampLength(0, 1.4);
+  ion.position.addScaledVector(u.vel, dt*speed*2.2);
+  bounds(ion);
+}
+function clampCyl(ion, cx, cz, R, y0, y1){
+  const dx=ion.position.x-cx, dz=ion.position.z-cz;
+  const d=Math.hypot(dx,dz);
+  if(d>R){ ion.position.x=cx+dx/d*R; ion.position.z=cz+dz/d*R;
+    ion.userData.vel.x*=-0.6; ion.userData.vel.z*=-0.6; }
+  if(ion.position.y<y0){ ion.position.y=y0; ion.userData.vel.y*=-0.6; }
+  if(ion.position.y>y1){ ion.position.y=y1; ion.userData.vel.y*=-0.6; }
+}
+function clampBox(ion, x0,x1,y0,y1,z0,z1){
+  const u=ion.userData;
+  if(ion.position.x<x0){ion.position.x=x0;u.vel.x*=-0.6;}
+  if(ion.position.x>x1){ion.position.x=x1;u.vel.x*=-0.6;}
+  if(ion.position.y<y0){ion.position.y=y0;u.vel.y*=-0.6;}
+  if(ion.position.y>y1){ion.position.y=y1;u.vel.y*=-0.6;}
+  if(ion.position.z<z0){ion.position.z=z0;u.vel.z*=-0.6;}
+  if(ion.position.z>z1){ion.position.z=z1;u.vel.z*=-0.6;}
+}
+
+/* ---------- lab glassware ---------- */
+function makeBeaker(R=6, H=8, opt={}){
+  const g=new THREE.Group();
+  const glassMat=new THREE.MeshPhysicalMaterial({
+    color:0xaecfe4, roughness:0.06, metalness:0,
+    transparent:true, opacity:0.13, side:THREE.DoubleSide, depthWrite:false
+  });
+  const wall=new THREE.Mesh(new THREE.CylinderGeometry(R,R,H,40,1,true), glassMat);
+  wall.position.y=H/2; g.add(wall);
+  const bottom=new THREE.Mesh(new THREE.CylinderGeometry(R,R,0.2,40), glassMat.clone());
+  bottom.position.y=0.1; g.add(bottom);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(R,0.12,10,40), new THREE.MeshStandardMaterial({color:0x8fb4c9,roughness:.4}));
+  rim.rotation.x=Math.PI/2; rim.position.y=H; g.add(rim);
+  /* liquid — fills from the bottom of the beaker */
+  const liqMat=new THREE.MeshPhysicalMaterial({
+    color:opt.liquid!==undefined?opt.liquid:0xcfe8f7,
+    roughness:0.15, transparent:true, opacity:opt.liquidOpacity!==undefined?opt.liquidOpacity:0.5,
+    depthWrite:false
+  });
+  const lh=opt.liquidH!==undefined?opt.liquidH:H*0.62;
+  const liq=new THREE.Mesh(new THREE.CylinderGeometry(R*0.97,R*0.97,lh,40), liqMat);
+  liq.position.y=lh/2+0.2; g.add(liq);
+  /* surface ring for visibility of the water level */
+  const surf=new THREE.Mesh(new THREE.TorusGeometry(R*0.97,0.06,8,40),
+    new THREE.MeshStandardMaterial({color:0xdfeef8, roughness:.3, transparent:true, opacity:.5}));
+  surf.rotation.x=Math.PI/2; surf.position.y=lh+0.2; g.add(surf);
+  g.userData={R,H,liq,liqMat,liquidH:lh,surfaceY:lh+0.2};
+  return g;
+}
+
+/* glow halo sprite (for lit bulb etc.) */
+function makeGlow(color='#ffd54f', size=4){
+  const cvs=document.createElement('canvas'); cvs.width=cvs.height=128;
+  const c=cvs.getContext('2d');
+  const gr=c.createRadialGradient(64,64,4,64,64,62);
+  gr.addColorStop(0, color+'ee'); gr.addColorStop(0.4, color+'66'); gr.addColorStop(1, color+'00');
+  c.fillStyle=gr; c.fillRect(0,0,128,128);
+  const tex=new THREE.CanvasTexture(cvs); tex.minFilter=THREE.LinearFilter;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false}));
+  sp.scale.set(size,size,1); sp.renderOrder=9;
+  return sp;
+}
+
+/* electrode: rod — returned as a Group whose origin is the BOTTOM of the rod,
+   so `electrode.position.set(x, bottomY, z)` places it without breaking alignment */
+function makeElectrode(len=9, color=0x4b5b6b, radius=0.28){
+  const g=new THREE.Group();
+  const m=new THREE.Mesh(
+    new THREE.CylinderGeometry(radius,radius,len,16),
+    new THREE.MeshStandardMaterial({color, roughness:.5, metalness:.35})
+  );
+  m.position.y=len/2;
+  g.add(m);
+  g.userData.mesh=m; g.userData.len=len;
+  return g;
+}
+
+/* wire along points */
+function makeWire(points, color=0x6b7c8e, r=0.1){
+  const curve=new THREE.CatmullRomCurve3(points);
+  const geo=new THREE.TubeGeometry(curve, 40, r, 8, false);
+  const m=new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.6}));
+  m.userData.curve=curve;
+  return m;
+}
+
+/* bubbles */
+function makeBubbleSystem(group){
+  return {group, list:[],
+    spawn(x,y,z,r=0.14){
+      const b=new THREE.Mesh(sphereGeo(r),
+        new THREE.MeshPhysicalMaterial({color:0xffffff, roughness:0, transparent:true, opacity:0.55}));
+      b.position.set(x,y,z);
+      b.userData={vy:0.9+Math.random()*0.6, wob:Math.random()*6.28};
+      this.group.add(b); this.list.push(b);
+    },
+    tick(dt, surfaceY, onPop){
+      for(let i=this.list.length-1;i>=0;i--){
+        const b=this.list[i];
+        b.userData.wob+=dt*4;
+        b.position.y+=b.userData.vy*dt;
+        b.position.x+=Math.sin(b.userData.wob)*0.008;
+        if(b.position.y>=surfaceY){
+          this.group.remove(b); this.list.splice(i,1);
+          if(onPop) onPop(b);
+        }
+      }
+    },
+    clear(){ this.list.forEach(b=>this.group.remove(b)); this.list.length=0; }
+  };
+}
+
+/* dispose helper */
+function disposeGroup(g){
+  g.traverse(o=>{
+    if(o.geometry && !Object.values(sphereGeoCache).includes(o.geometry)) o.geometry.dispose();
+    if(o.material){
+      (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+        if(m.map) m.map.dispose();
+        m.dispose();
+      });
+    }
+  });
+}
+
+/* ---------- equation band ---------- */
+function setEq(tag, html, note=''){
+  $('#eqTag').textContent=tag;
+  $('#eqBody').innerHTML=html;
+  $('#eqNote').textContent=note;
+}
+
+/* ---------- seg helper ---------- */
+function bindSeg(id, fn){
+  const seg=$(id);
+  seg.addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    fn(b.dataset.v, b);
+  });
+}
+function bindChips(id, fn, opt={}){
+  const box=$(id);
+  box.addEventListener('click', e=>{
+    const b=e.target.closest('.chip'); if(!b) return;
+    if(!opt.multi){ box.querySelectorAll('.chip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }
+    fn(b.dataset.s||b.dataset.t, b);
+  });
+}
+function legendRow(sym, count, extra=''){
+  const d=IONDEF[sym];
+  return `<div class="li"><span class="dot" style="background:${CSS_COLOR[sym]}"></span>${d.label} ${d.name}${extra}<span class="cnt">${count}</span></div>`;
+}
+
+/* ---------- module manager ---------- */
+const MODULES={};
+let current=null, currentId=null;
+const stageNames={m1:'電離シミュレーター', m2:'電気分解ラボ', m3:'中和・滴定ラボ', m4:'化学電池ラボ'};
+const camNotes={
+  m1:'カメラ:ドラッグで自由回転 / ホイールでズーム',
+  m2:'電極付近にズームすると電子の受け渡しが見えます',
+  m3:'コックを開いて滴下 — グラフは右パネルに連動',
+  m4:'金属板の表面にズームすると原子⇄イオンの変化が見えます'
+};
+function setCamNote(id){
+  const coarse=window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+  $('#camNote').textContent=coarse
+    ? camNotes[id].replace('ドラッグ','スワイプ').replace('ホイール','ピンチ')
+    : camNotes[id];
+}
+function switchModule(id){
+  if(currentId===id) return;
+  if(current){ current.dispose(); }
+  currentId=id;
+  $$('.mod-ui').forEach(u=>u.classList.remove('show'));
+  $('#ui-'+id).classList.add('show');
+  $('#stageName').textContent=stageNames[id];
+  setCamNote(id);
+  $$('#tabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.m===id));
+  current=MODULES[id];
+  current.build();
+}
+$('#tabs').addEventListener('click', e=>{
+  const t=e.target.closest('.tab'); if(!t) return;
+  switchModule(t.dataset.m);
+});
+
+/* ---------- main loop ---------- */
+const clock=new THREE.Clock();
+function loop(){
+  requestAnimationFrame(loop);
+  const dt=Math.min(clock.getDelta(), 0.05);
+  if(current && current.tick) current.tick(dt);
+  resize();
+  renderer.render(scene, camera);
+}
+/* ============================================================
+   MODULE 1 : 電離シミュレーター
+   ============================================================ */
+MODULES.m1=(()=>{
+  const SUBS={
+    NaCl:  {name:'塩化ナトリウム', ions:[['Na+',8],['Cl-',8]], elec:true,  water:0xcfe8f7,
+            eq:'NaCl <span class="dim">→</span> <span class="hl">Na⁺</span> + <span class="hl">Cl⁻</span>',
+            note:'結晶がくずれて陽イオンと陰イオンに分かれる(電離)'},
+    HCl:   {name:'塩酸', ions:[['H+',8],['Cl-',8]], elec:true, water:0xcfe8f7,
+            eq:'HCl <span class="dim">→</span> <span class="hl">H⁺</span> + <span class="hl">Cl⁻</span>',
+            note:'気体の塩化水素が水にとけて電離した水溶液'},
+    NaOH:  {name:'水酸化ナトリウム', ions:[['Na+',8],['OH-',8]], elec:true, water:0xcfe8f7,
+            eq:'NaOH <span class="dim">→</span> <span class="hl">Na⁺</span> + <span class="hl">OH⁻</span>',
+            note:'アルカリ性 — OH⁻(水酸化物イオン)が生じる'},
+    CuCl2: {name:'塩化銅', ions:[['Cu2+',6],['Cl-',12]], elec:true, water:0xa8d8ea,
+            eq:'CuCl₂ <span class="dim">→</span> <span class="hl">Cu²⁺</span> + <span class="hl">2Cl⁻</span>',
+            note:'Cl⁻はCu²⁺の2倍できる — 水溶液は青色になる'},
+    sugar: {name:'砂糖', ions:[['mol',10]], elec:false, water:0xcfe8f7,
+            eq:'砂糖 <span class="dim">→</span> 分子のまま水にとける <span class="dim">(電離しない)</span>',
+            note:'イオンに分かれないので電流は流れない(非電解質)'},
+    ethanol:{name:'エタノール', ions:[['mol',10]], elec:false, water:0xcfe8f7,
+            eq:'エタノール <span class="dim">→</span> 分子のまま水にとける <span class="dim">(電離しない)</span>',
+            note:'イオンに分かれないので電流は流れない(非電解質)'},
+  };
+  let root, beaker, ions=[], waters=[], crystal=null, crystalT=0;
+  let sel='NaCl', dissolved=null, electrodesIn=true, speed=1, showWater=false;
+  let elecGroup, bulb, bulbLight, bulbGlow, wireL, wireR;
+  const R=6, LIQ_H=5.6, LIQ_Y0=0.4;
+
+  function build(){
+    root=new THREE.Group(); scene.add(root);
+    beaker=makeBeaker(R, 8, {liquid:SUBS[sel].water, liquidH:LIQ_H});
+    root.add(beaker);
+    /* electrodes + bulb circuit */
+    elecGroup=new THREE.Group();
+    const eL=makeElectrode(9); eL.position.set(-3.4,1.2,0); elecGroup.add(eL);
+    const eR=makeElectrode(9); eR.position.set( 3.4,1.2,0); elecGroup.add(eR);
+    wireL=makeWire([new THREE.Vector3(-3.4,10.2,0), new THREE.Vector3(-3.4,12.3,0), new THREE.Vector3(-1.6,12.9,0), new THREE.Vector3(-0.25,12.95,0)], 0x9fb0c0, 0.16);
+    wireR=makeWire([new THREE.Vector3( 3.4,10.2,0), new THREE.Vector3( 3.4,12.3,0), new THREE.Vector3( 1.6,12.9,0), new THREE.Vector3( 0.25,12.95,0)], 0x9fb0c0, 0.16);
+    elecGroup.add(wireL, wireR);
+    bulb=new THREE.Mesh(sphereGeo(0.9),
+      new THREE.MeshStandardMaterial({color:0x5f6f7d, emissive:0xf5c518, emissiveIntensity:0, roughness:.25, transparent:true, opacity:.5}));
+    bulb.position.set(0,14.1,0); elecGroup.add(bulb);
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(0.36,0.44,0.9,12),
+      new THREE.MeshStandardMaterial({color:0xb9c6d2, metalness:.7, roughness:.35}));
+    base.position.set(0,13.0,0); elecGroup.add(base);
+    bulbLight=new THREE.PointLight(0xffd54f, 0, 16); bulbLight.position.set(0,14.1,0); elecGroup.add(bulbLight);
+    bulbGlow=makeGlow('#ffd54f', 5.5); bulbGlow.position.set(0,14.1,0); bulbGlow.visible=false; elecGroup.add(bulbGlow);
+    const lbl=makeTextSprite('豆電球',{fontSize:36,color:'#5b6a7d',bg:'#ffffffdd',scale:1.1,depthTest:false});
+    lbl.position.set(2.6,14.2,0); elecGroup.add(lbl);
+    root.add(elecGroup);
+    elecGroup.visible=electrodesIn;
+
+    cam.setHome(0.35, 1.15, 26, new THREE.Vector3(0,6,0));
+    setEq('電離式','<span class="dim">物質を選んで「水に入れる」を押そう</span>','');
+    updateBulb(); updateLegend();
+  }
+
+  function addSubstance(){
+    if(crystal){ toast('とけている途中です'); return; }
+    reset(false);
+    dissolved=sel;
+    const def=SUBS[sel];
+    beaker.userData.liqMat.color.set(def.water);
+    /* falling crystal */
+    if(sel==='HCl'||sel==='ethanol'){
+      crystal=new THREE.Mesh(new THREE.SphereGeometry(0.8,16,12),
+        new THREE.MeshPhysicalMaterial({color:0xdbeafe, roughness:.1, transparent:true, opacity:.8}));
+    }else{
+      const g=new THREE.Group();
+      for(let i=0;i<5;i++){
+        const c=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.55,0.55),
+          new THREE.MeshStandardMaterial({color: sel==='CuCl2'?0x7fd0c8:0xf4f7fa, roughness:.3}));
+        c.position.set((Math.random()-.5)*0.9,(Math.random()-.5)*0.9,(Math.random()-.5)*0.9);
+        c.rotation.set(Math.random(),Math.random(),Math.random());
+        g.add(c);
+      }
+      crystal=g;
+    }
+    crystal.position.set(0,11,0); crystalT=0;
+    root.add(crystal);
+    setEq('電離式', def.eq, def.note);
+    toast(def.name+'を水に入れた');
+  }
+
+  function spawnIons(){
+    const def=SUBS[dissolved];
+    def.ions.forEach(([sym,n])=>{
+      for(let i=0;i<n;i++){
+        const ion=makeIon(sym);
+        ion.position.set((Math.random()-.5)*2,(LIQ_Y0+LIQ_H)*0.6,(Math.random()-.5)*2);
+        root.add(ion); ions.push(ion);
+      }
+    });
+    updateLegend(); updateBulb();
+  }
+
+  function updateBulb(){
+    const on = electrodesIn && dissolved && SUBS[dissolved].elec && ions.length>0;
+    bulb.material.emissiveIntensity = on?1.2:0;
+    bulb.material.color.set(on?0xfff2b0:0x5f6f7d);   /* 消灯時は暗いガラス玉 */
+    bulb.material.opacity = on?0.95:0.5;
+    bulbLight.intensity = on?1.6:0;
+    bulbGlow.visible = on;
+    const t=$('#m1bulb');
+    if(!electrodesIn){ t.textContent='電極が入っていません'; t.style.color='var(--sub)'; }
+    else if(!dissolved||ions.length===0){ t.textContent='— 水だけでは流れない'; t.style.color='var(--sub)'; }
+    else if(on){ t.textContent='点灯 — 電解質です'; t.style.color='var(--accent)'; }
+    else { t.textContent='つかない — 非電解質'; t.style.color='var(--plus)'; }
+  }
+
+  function updateLegend(){
+    const box=$('#m1legend');
+    if(!dissolved||ions.length===0){
+      box.innerHTML='<div class="li" style="color:#9aa8ba">まだ何も入っていません</div>'; return;
+    }
+    const counts={};
+    ions.forEach(i=>counts[i.userData.sym]=(counts[i.userData.sym]||0)+1);
+    box.innerHTML=Object.keys(counts).map(s=>legendRow(s,counts[s])).join('');
+  }
+
+  function reset(showToast=true){
+    ions.forEach(i=>{root.remove(i); disposeGroup(i);}); ions=[];
+    waters.forEach(w=>{root.remove(w); disposeGroup(w);}); waters=[];
+    if(crystal){root.remove(crystal); disposeGroup(crystal); crystal=null;}
+    dissolved=null;
+    beaker.userData.liqMat.color.set(0xcfe8f7);
+    setEq('電離式','<span class="dim">物質を選んで「水に入れる」を押そう</span>','');
+    updateLegend(); updateBulb();
+    if(showToast) toast('ビーカーを洗いました');
+  }
+
+  function setWaterMol(on){
+    showWater=on;
+    if(on && waters.length===0){
+      for(let i=0;i<26;i++){
+        const w=new THREE.Group();
+        const o=new THREE.Mesh(sphereGeo(0.3), new THREE.MeshStandardMaterial({color:0x93c5fd, roughness:.4, transparent:true, opacity:.5}));
+        const h1=new THREE.Mesh(sphereGeo(0.16),new THREE.MeshStandardMaterial({color:0xdbeafe, roughness:.4, transparent:true, opacity:.5}));
+        const h2=h1.clone(); h1.position.set(0.28,0.18,0); h2.position.set(-0.28,0.18,0);
+        w.add(o,h1,h2);
+        w.position.set((Math.random()-.5)*10, LIQ_Y0+Math.random()*LIQ_H, (Math.random()-.5)*10);
+        w.userData={vel:new THREE.Vector3((Math.random()-.5)*.5,(Math.random()-.5)*.3,(Math.random()-.5)*.5), sym:'H2O', mesh:null};
+        root.add(w); waters.push(w);
+      }
+    }
+    waters.forEach(w=>w.visible=on);
+  }
+
+  function tick(dt){
+    const surfY=LIQ_Y0+LIQ_H;
+    if(crystal){
+      crystalT+=dt;
+      if(crystal.position.y>surfY-1.2){ crystal.position.y-=dt*6; }
+      else{
+        crystal.scale.multiplyScalar(1-dt*0.9);
+        crystal.rotation.y+=dt;
+        if(crystal.scale.x<0.25){
+          root.remove(crystal); disposeGroup(crystal); crystal=null;
+          spawnIons();
+        }
+      }
+    }
+    ions.forEach(ion=>{
+      brown(ion, dt, speed, i=>clampCyl(i,0,0,R-0.9,LIQ_Y0+0.4,surfY-0.3));
+    });
+    waters.forEach(w=>{
+      if(!w.visible) return;
+      w.rotation.y+=dt*0.6;
+      brown(w, dt, speed*0.7, i=>clampCyl(i,0,0,R-0.7,LIQ_Y0+0.3,surfY-0.2));
+    });
+    if(bulb.material.emissiveIntensity>0){
+      bulb.material.emissiveIntensity=1.1+Math.sin(clock.elapsedTime*6)*0.15;
+    }
+  }
+
+  function dispose(){ scene.remove(root); disposeGroup(root); ions=[]; waters=[]; crystal=null; }
+
+  /* UI bindings (once) */
+  bindChips('#m1subs', s=>{ sel=s; });
+  $('#m1add').addEventListener('click', addSubstance);
+  $('#m1reset').addEventListener('click', ()=>reset(true));
+  bindSeg('#m1elecSeg', v=>{ electrodesIn=(v==='in'); elecGroup.visible=electrodesIn; updateBulb(); });
+  bindSeg('#m1waterSeg', v=>setWaterMol(v==='on'));
+  $('#m1speed').addEventListener('input', e=>{
+    speed=parseFloat(e.target.value);
+    $('#m1speedVal').textContent='×'+speed.toFixed(1);
+  });
+
+  return {build, tick, dispose};
+})();
+/* ============================================================
+   MODULE 2 : 電気分解ラボ
+   ============================================================ */
+MODULES.m2=(()=>{
+  const SOL={
+    CuCl2:{
+      name:'塩化銅水溶液', water:0x9fd8ee, ions:[['Cu2+',7],['Cl-',14]],
+      cathode:{prod:'Cu', label:'銅が付着', deposit:true, gas:false},
+      anode:{prod:'Cl2', label:'塩素が発生', deposit:false, gas:true},
+      eq:'CuCl₂ <span class="dim">→</span> Cu²⁺ + 2Cl⁻ <span class="dim">/ −極:</span> <span class="hl">Cu²⁺ + 2e⁻ → Cu</span> <span class="dim">+極:</span> <span class="hl">2Cl⁻ → Cl₂ + 2e⁻</span>',
+      note:'青色がだんだんうすくなっていく'
+    },
+    HCl:{
+      name:'うすい塩酸', water:0xd7e9f5, ions:[['H+',10],['Cl-',10]],
+      cathode:{prod:'H2', label:'水素が発生', deposit:false, gas:true},
+      anode:{prod:'Cl2', label:'塩素が発生(水にとけやすく少なめ)', deposit:false, gas:true, few:true},
+      eq:'HCl <span class="dim">→</span> H⁺ + Cl⁻ <span class="dim">/ −極:</span> <span class="hl">2H⁺ + 2e⁻ → H₂</span> <span class="dim">+極:</span> <span class="hl">2Cl⁻ → Cl₂ + 2e⁻</span>',
+      note:'体積は 水素 > 塩素(塩素は水にとける)'
+    }
+  };
+  let root, beaker, ions=[], bubbles, deposit, depositN=0;
+  let sol='CuCl2', on=false, volt=3, swap=false; /* swap=false: 左=+極 */
+  let elecL, elecR, plusLbl, minusLbl, psBox, psTxt, electrons=[], wl, wr;
+  let gasCount={cathode:0, anode:0};
+  const R=6.4, LIQ_H=5.2, LIQ_Y0=0.2;
+  const EX=3.6; /* electrode |x| */
+
+  const anodeX =()=> swap? EX:-EX;   /* +極のx */
+  const cathodeX=()=> swap?-EX: EX;  /* −極のx */
+
+  function build(){
+    root=new THREE.Group(); scene.add(root);
+    const def=SOL[sol];
+    beaker=makeBeaker(R, 8.4, {liquid:def.water, liquidH:LIQ_H});
+    root.add(beaker);
+    /* electrodes (carbon) */
+    elecL=makeElectrode(10, 0x3d4b59, 0.32); elecL.position.set(-EX,0.9,0); root.add(elecL);
+    elecR=makeElectrode(10, 0x3d4b59, 0.32); elecR.position.set( EX,0.9,0); root.add(elecR);
+    /* power supply box */
+    psBox=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.BoxGeometry(5.6,2.6,2.2),
+      new THREE.MeshStandardMaterial({color:0xffffff, roughness:.35}));
+    const face=new THREE.Mesh(new THREE.BoxGeometry(5.62,1.1,2.22),
+      new THREE.MeshStandardMaterial({color:0x10202b, roughness:.5}));
+    face.position.y=0.35;
+    psBox.add(body,face);
+    psTxt=makeTextSprite('電源装置 3.0V',{fontSize:40,color:'#67e8f9',bg:'#10202b',scale:1.15,depthTest:false});
+    psTxt.position.set(0,0.4,1.35); psBox.add(psTxt);
+    psBox.position.set(0,14.6,0); root.add(psBox);
+    /* wires */
+    wl=makeWire([new THREE.Vector3(-EX,10.9,0), new THREE.Vector3(-EX,13.4,0), new THREE.Vector3(-2.4,14.2,0)], 0xe0533d, 0.15);
+    wr=makeWire([new THREE.Vector3( EX,10.9,0), new THREE.Vector3( EX,13.4,0), new THREE.Vector3( 2.4,14.2,0)], 0x2563eb, 0.15);
+    root.add(wl,wr);
+    plusLbl=makeTextSprite('+極',{fontSize:42,color:'#ffffff',bg:'#e0533d',scale:1.0,depthTest:false});
+    minusLbl=makeTextSprite('−極',{fontSize:42,color:'#ffffff',bg:'#2563eb',scale:1.0,depthTest:false});
+    root.add(plusLbl, minusLbl);
+    /* deposit (copper coating) */
+    deposit=new THREE.Mesh(new THREE.CylinderGeometry(0.41,0.41,0.01,16),
+      new THREE.MeshStandardMaterial({color:0xc96f4a, roughness:.4, metalness:.5}));
+    deposit.visible=false; root.add(deposit);
+    bubbles=makeBubbleSystem(root);
+    /* ions */
+    spawnIons();
+    placePolarity();
+    cam.setHome(0.0, 1.12, 30, new THREE.Vector3(0,7,0));
+    setEq('反応のようす', def.eq, def.note);
+    updateLegend();
+    $('#m2result').textContent='気体がたまったらツールで調べてみよう';
+  }
+
+  function spawnIons(){
+    SOL[sol].ions.forEach(([sym,n])=>{
+      for(let i=0;i<n;i++){
+        const ion=makeIon(sym);
+        ion.position.set((Math.random()-.5)*9, LIQ_Y0+0.5+Math.random()*(LIQ_H-1), (Math.random()-.5)*9);
+        root.add(ion); ions.push(ion);
+      }
+    });
+  }
+
+  function placePolarity(){
+    plusLbl.position.set(anodeX()*1.32, 11.6, 0);
+    minusLbl.position.set(cathodeX()*1.32, 11.6, 0);
+    wl.material.color.set(swap?0x2563eb:0xe0533d);
+    wr.material.color.set(swap?0xe0533d:0x2563eb);
+    deposit.position.set(cathodeX(), LIQ_Y0+0.6, 0);
+  }
+
+  function updateLegend(){
+    const def=SOL[sol];
+    $('#m2legend').innerHTML=
+      `<div class="li"><span class="dot" style="background:#e0533d"></span>+極 : ${def.anode.label}<span class="cnt">${def.anode.prod}</span></div>`+
+      `<div class="li"><span class="dot" style="background:#2563eb"></span>−極 : ${def.cathode.label}<span class="cnt">${def.cathode.prod}</span></div>`+
+      `<div class="li" style="margin-top:4px"><span class="dot" style="background:${CSS_COLOR[def.ions[0][0]]}"></span>${IONDEF[def.ions[0][0]].label} 残り<span class="cnt" id="m2c0">${count(def.ions[0][0])}</span></div>`+
+      `<div class="li"><span class="dot" style="background:${CSS_COLOR[def.ions[1][0]]}"></span>${IONDEF[def.ions[1][0]].label} 残り<span class="cnt" id="m2c1">${count(def.ions[1][0])}</span></div>`;
+  }
+  function count(sym){ return ions.filter(i=>i.userData.sym===sym && i.userData.alive).length; }
+
+  function makeElectron(){
+    const e=makeIon('e-',{labelScale:0.4});
+    e.userData.t=Math.random();
+    electrons.push(e); root.add(e);
+  }
+
+  function tick(dt){
+    const surfY=LIQ_Y0+LIQ_H;
+    const def=SOL[sol];
+    const drift=on? volt*0.55 : 0;
+    ions.forEach(ion=>{
+      const u=ion.userData;
+      if(!u.alive){
+        u.fade+=dt*2;
+        u.mat.opacity=Math.max(0,1-u.fade);
+        ion.children.forEach(c=>{if(c.material)c.material.opacity=Math.max(0,1-u.fade);});
+        if(u.fade>=1){ ion.visible=false; }
+        return;
+      }
+      brown(ion, dt, 1, i=>clampCyl(i,0,0,R-0.9,LIQ_Y0+0.4,surfY-0.3));
+      if(on && volt>0){
+        const positive=u.sym.includes('+');
+        const tx=positive? cathodeX() : anodeX();
+        ion.position.x += Math.sign(tx-ion.position.x)*drift*dt;
+        /* reaction near electrode */
+        if(Math.abs(ion.position.x-tx)<0.9 && Math.hypot(ion.position.z)<1.4){
+          if(positive){
+            u.alive=false;
+            if(def.cathode.deposit){ depositN++; growDeposit(); }
+            else { gasCount.cathode++; bubbles.spawn(tx+(Math.random()-.5)*0.5, ion.position.y, (Math.random()-.5)*0.5); }
+          }else{
+            u.alive=false;
+            gasCount.anode++;
+            if(!def.anode.few || Math.random()<0.45)
+              bubbles.spawn(tx+(Math.random()-.5)*0.5, ion.position.y, (Math.random()-.5)*0.5);
+          }
+          refreshCounts();
+          /* fade water color as Cu2+ depletes */
+          if(sol==='CuCl2'){
+            const remain=count('Cu2+')/7;
+            const c=new THREE.Color(0x9fd8ee).lerp(new THREE.Color(0xdfeef7), 1-remain);
+            beaker.userData.liqMat.color.copy(c);
+          }
+          if(ions.every(i=>!i.userData.alive)){
+            toast('イオンがなくなり、電流が流れなくなった(電気分解の終わり)');
+          }
+        }
+      }
+    });
+    bubbles.tick(dt, surfY);
+    /* electrons on wires */
+    if(on && volt>0){
+      if(electrons.length<8 && Math.random()<dt*6) makeElectron();
+      electrons.forEach(e=>{
+        e.userData.t+=dt*(0.12+volt*0.05);
+        if(e.userData.t>1) e.userData.t-=1;
+        const t=e.userData.t;
+        /* path: cathode-side wire up, across supply, down anode-side wire */
+        const cw = (cathodeX()<0)? wl.userData.curve : wr.userData.curve;
+        const aw = (cathodeX()<0)? wr.userData.curve : wl.userData.curve;
+        let p;
+        if(t<0.4){ p=cw.getPoint(1-t/0.4); }           /* electrode → supply */
+        else if(t<0.6){ const k=(t-0.4)/0.2;           /* across supply */
+          p=cw.getPoint(0).clone().lerp(aw.getPoint(0), k); }
+        else { p=aw.getPoint((t-0.6)/0.4); }           /* supply → anode…実際は−極から出る向き */
+        e.position.copy(p).add(new THREE.Vector3(0,0,0.35));
+      });
+    }else{
+      electrons.forEach(e=>{root.remove(e); disposeGroup(e);});
+      electrons=[];
+    }
+  }
+
+  function growDeposit(){
+    deposit.visible=true;
+    const h=Math.min(3.4, depositN*0.35);
+    deposit.scale.set(1,1,1);
+    deposit.geometry.dispose();
+    deposit.geometry=new THREE.CylinderGeometry(0.42,0.42,h,16);
+    deposit.position.set(cathodeX(), LIQ_Y0+0.5+h/2, 0);
+  }
+  function refreshCounts(){
+    const def=SOL[sol];
+    const c0=$('#m2c0'), c1=$('#m2c1');
+    if(c0) c0.textContent=count(def.ions[0][0]);
+    if(c1) c1.textContent=count(def.ions[1][0]);
+  }
+
+  function inspect(tool){
+    const def=SOL[sol];
+    const hasA=gasCount.anode>2, hasC=gasCount.cathode>2 && def.cathode.gas;
+    if(!hasA && !hasC && depositN<2){ $('#m2result').textContent='まだ調べられるほど変化がありません。電流を流してしばらく待とう'; return; }
+    let r=[];
+    if(tool==='ink'){
+      if(hasA) r.push('+極の気体に近づけると…赤インクの色が消えた!(漂白作用 → 塩素 Cl₂)');
+      if(hasC) r.push('−極の気体では色は変わらない');
+      if(def.cathode.deposit && depositN>1) r.push('−極には赤茶色の固体。こすると金属光沢 → 銅 Cu');
+    }else if(tool==='match'){
+      if(hasC && def.cathode.prod==='H2') r.push('−極の気体に火を近づけると…ポンと音を立てて燃えた!(水素 H₂)');
+      else if(def.cathode.deposit) r.push('−極は気体ではなく固体(銅)が付着している');
+      if(hasA) r.push('+極の気体は燃えない(塩素)');
+    }else{
+      r.push('線香の火は激しくは燃えない → 酸素ではない');
+    }
+    $('#m2result').innerHTML=r.join('<br>');
+  }
+
+  function reset(){
+    dispose(); build();
+    gasCount={cathode:0,anode:0}; depositN=0;
+    on=false;
+    $('#m2power').querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.v==='off'));
+    toast('リセットしました');
+  }
+
+  function dispose(){
+    scene.remove(root); disposeGroup(root);
+    ions=[]; electrons=[]; if(bubbles) bubbles.list.length=0;
+    depositN=0; gasCount={cathode:0,anode:0};
+  }
+
+  /* UI */
+  bindChips('#m2sol', s=>{ sol=s; reset(); });
+  $('#m2volt').addEventListener('input', e=>{
+    volt=parseFloat(e.target.value);
+    $('#m2voltVal').textContent=volt.toFixed(1)+'V';
+    if(psTxt){
+      const np=makeTextSprite('電源装置 '+volt.toFixed(1)+'V',{fontSize:40,color:'#67e8f9',bg:'#10202b',scale:1.15,depthTest:false});
+      np.position.copy(psTxt.position);
+      psBox.remove(psTxt); psTxt.material.map.dispose(); psTxt.material.dispose();
+      psTxt=np; psBox.add(psTxt);
+    }
+  });
+  bindSeg('#m2power', v=>{
+    on=(v==='on');
+    if(on&&volt===0) toast('電圧が0Vです — スライダーを上げよう');
+  });
+  $('#m2swap').addEventListener('click', ()=>{
+    swap=!swap; placePolarity();
+    toast('+−を入れかえました — 反応する電極も入れかわる');
+  });
+  $('#m2reset').addEventListener('click', reset);
+  bindChips('#m2tools', t=>inspect(t));
+
+  return {build, tick, dispose};
+})();
+/* ============================================================
+   MODULE 3 : 中和・滴定ラボ
+   ============================================================ */
+MODULES.m3=(()=>{
+  const ACID={
+    HCl:  {name:'うすい塩酸', h:10, anion:'Cl-', anionN:10,
+           salt:'塩化ナトリウム NaCl',
+           eq:(st)=>'HCl + NaOH <span class="dim">→</span> NaCl + H₂O <span class="dim">/</span> <span class="hl">H⁺ + OH⁻ → H₂O</span>'},
+    H2SO4:{name:'うすい硫酸', h:10, anion:'SO42-', anionN:5,
+           salt:'硫酸ナトリウム Na₂SO₄',
+           eq:(st)=>'H₂SO₄ + 2NaOH <span class="dim">→</span> Na₂SO₄ + 2H₂O <span class="dim">/</span> <span class="hl">H⁺ + OH⁻ → H₂O</span>'},
+  };
+  let root, beaker, burette, drops=[], ions=[], flashes=[];
+  let acid='HCl', ind='btb', flow='stop', dropTimer=0;
+  let st; /* state: nH,nA,nNa,nOH, totalDrops, history[] */
+  const R=5.6, LIQ_H=4.6, LIQ_Y0=0.2;
+  let graphCtx;
+
+  function initState(){
+    const a=ACID[acid];
+    st={nH:a.h, nA:a.anionN, nNa:0, nOH:0, drops:0, history:[]};
+    pushHistory();
+  }
+  function pushHistory(){
+    st.history.push({d:st.drops, H:st.nH, A:st.nA, Na:st.nNa, OH:st.nOH});
+    if(st.history.length>60) st.history.shift();
+  }
+
+  function build(){
+    root=new THREE.Group(); scene.add(root);
+    initState();
+    beaker=makeBeaker(R, 7, {liquid:0xf7e28b, liquidH:LIQ_H, liquidOpacity:0.55});
+    root.add(beaker);
+    /* burette */
+    burette=new THREE.Group();
+    const tube=new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.55,9,20,1,true),
+      new THREE.MeshPhysicalMaterial({color:0xdfeaf2, roughness:.06, transparent:true, opacity:.3, side:THREE.DoubleSide, depthWrite:false}));
+    tube.position.y=15.5; burette.add(tube);
+    const naoh=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,6.5,20),
+      new THREE.MeshPhysicalMaterial({color:0xbcd4f5, roughness:.2, transparent:true, opacity:.5, depthWrite:false}));
+    naoh.position.y=16.6; burette.add(naoh); burette.userData={naoh};
+    const tip=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.12,1.3,16),
+      new THREE.MeshPhysicalMaterial({color:0xdfeaf2, roughness:.06, transparent:true, opacity:.4}));
+    tip.position.y=10.4; burette.add(tip);
+    const cock=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.4,0.4),
+      new THREE.MeshStandardMaterial({color:0xe0533d, roughness:.4}));
+    cock.position.set(0,11.2,0); burette.add(cock); burette.userData.cock=cock;
+    const bl=makeTextSprite('NaOH水溶液',{fontSize:36,color:'#5b6a7d',bg:'#ffffffdd',scale:1.05,depthTest:false});
+    bl.position.set(2.7,16.5,0); burette.add(bl);
+    root.add(burette);
+    /* ions */
+    for(let i=0;i<st.nH;i++) addIonMesh('H+');
+    for(let i=0;i<st.nA;i++) addIonMesh(ACID[acid].anion);
+    cam.setHome(0.25, 1.1, 27, new THREE.Vector3(0,7.5,0));
+    setEq('中和', ACID[acid].eq(st), '滴下のたびに H⁺ + OH⁻ → H₂O');
+    graphCtx=$('#niGraph').getContext('2d');
+    refreshAll();
+  }
+
+  function addIonMesh(sym){
+    const ion=makeIon(sym);
+    ion.position.set((Math.random()-.5)*8, LIQ_Y0+0.5+Math.random()*(LIQ_H-1), (Math.random()-.5)*8);
+    root.add(ion); ions.push(ion);
+    return ion;
+  }
+  function removeIonMesh(sym){
+    const idx=ions.findIndex(i=>i.userData.sym===sym);
+    if(idx>=0){ const ion=ions[idx]; ions.splice(idx,1); root.remove(ion); disposeGroup(ion); return ion.position.clone(); }
+    return null;
+  }
+
+  function oneDrop(){
+    /* drop animation object */
+    const d=new THREE.Mesh(sphereGeo(0.22),
+      new THREE.MeshPhysicalMaterial({color:0x7cb0e8, roughness:.1, transparent:true, opacity:.85}));
+    d.position.set(0,9.6,0);
+    root.add(d); drops.push(d);
+    /* cock wiggle */
+    burette.userData.cock.rotation.z=0.5;
+    setTimeout(()=>{ if(burette.userData.cock) burette.userData.cock.rotation.z=0; },160);
+  }
+
+  function applyDrop(){
+    st.drops++;
+    st.nNa++;
+    addIonMesh('Na+');
+    if(st.nH>0){
+      st.nH--;
+      const p=removeIonMesh('H+');
+      if(p){ waterFlash(p); }
+    }else{
+      st.nOH++;
+      addIonMesh('OH-');
+    }
+    pushHistory();
+    refreshAll();
+    if(st.nH===0 && st.nOH===0){
+      toast('ちょうど中和した!(中和点) — H⁺もOH⁻もない');
+    }else if(st.nH===0 && st.nOH===1){
+      toast('中和点をこえた — これ以上中和は起こらず、OH⁻が増えていく');
+    }
+  }
+
+  function waterFlash(p){
+    /* H2O molecule appears briefly */
+    const w=new THREE.Group();
+    const o=new THREE.Mesh(sphereGeo(0.34), new THREE.MeshStandardMaterial({color:0x60a5fa, roughness:.3, transparent:true, opacity:.95}));
+    const h1=new THREE.Mesh(sphereGeo(0.18),new THREE.MeshStandardMaterial({color:0xdbeafe, roughness:.3, transparent:true, opacity:.95}));
+    const h2=h1.clone(); h1.position.set(0.32,0.22,0); h2.position.set(-0.32,0.22,0);
+    const lbl=makeTextSprite('H₂O',{fontSize:38,color:'#2563eb',bg:'#ffffffcc',scale:0.8,depthTest:false});
+    lbl.position.y=0.8;
+    w.add(o,h1,h2,lbl);
+    w.position.copy(p);
+    w.userData={life:1.6};
+    root.add(w); flashes.push(w);
+  }
+
+  function solutionColor(){
+    if(ind==='btb'){
+      if(st.nH>0)  return {c:0xf7e28b, o:0.55};   /* yellow */
+      if(st.nOH>0) return {c:0x7cb0e8, o:0.55};   /* blue */
+      return {c:0x9fd8a0, o:0.55};                /* green */
+    }else{
+      if(st.nOH>0) return {c:0xf5b8d0, o:0.5};    /* pink */
+      return {c:0xe8f1f8, o:0.28};                /* colorless */
+    }
+  }
+  function phValue(){
+    if(st.nH>0)  return Math.max(1, 7-6*st.nH/ACID[acid].h);
+    if(st.nOH>0) return Math.min(13, 7+6*st.nOH/10);
+    return 7;
+  }
+
+  function refreshAll(){
+    /* liquid */
+    const sc=solutionColor();
+    beaker.userData.liqMat.color.set(sc.c);
+    beaker.userData.liqMat.opacity=sc.o;
+    /* volume */
+    $('#m3vol').textContent=(st.drops*0.2).toFixed(1);
+    burette.userData.naoh.scale.y=Math.max(0.15, 1-st.drops*0.012);
+    /* pH */
+    const ph=phValue();
+    $('#m3ph').textContent=ph.toFixed(1);
+    $('#m3phState').textContent='pH — '+(st.nH>0?'酸性':(st.nOH>0?'アルカリ性':'中性'));
+    $('#m3phNeedle').style.left=(ph/14*96+2)+'%';
+    /* legend */
+    const a=ACID[acid].anion;
+    $('#m3legend').innerHTML=
+      legendRow('H+',st.nH)+legendRow(a,st.nA)+legendRow('Na+',st.nNa)+legendRow('OH-',st.nOH);
+    drawGraph();
+  }
+
+  function drawGraph(){
+    const ctx=graphCtx; if(!ctx) return;
+    const W=264,Hh=150, L=30, B=Hh-22, T=12, Rr=W-10;
+    /* 表示サイズ×DPRでバッキングストアを同期(論理座標は264x150のまま) */
+    const cvs=ctx.canvas;
+    const cw=cvs.clientWidth||W, ch=cvs.clientHeight||Hh;
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    if(cvs.width!==Math.round(cw*dpr)||cvs.height!==Math.round(ch*dpr)){
+      cvs.width=Math.round(cw*dpr); cvs.height=Math.round(ch*dpr);
+    }
+    ctx.setTransform(dpr*cw/W,0,0,dpr*ch/Hh,0,0);
+    ctx.clearRect(0,0,W,Hh);
+    ctx.strokeStyle='#c7d3de'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(L,T); ctx.lineTo(L,B); ctx.lineTo(Rr,B); ctx.stroke();
+    ctx.fillStyle='#8896a8'; ctx.font='9px "Zen Kaku Gothic New"';
+    ctx.fillText('イオン数',4,T+8); ctx.fillText('滴下量 →',Rr-44,B+14);
+    const maxD=Math.max(20, st.drops+4);
+    const maxN=Math.max(12, st.nNa+2, ACID[acid].h+2);
+    const X=d=>L+(Rr-L)*d/maxD;
+    const Y=n=>B-(B-T)*n/maxN;
+    const series=[['H','#e0533d'],['A','#22c55e'],['Na','#f59e0b'],['OH','#2563eb']];
+    if(acid==='H2SO4') series[1][1]='#a78bfa';
+    series.forEach(([k,col])=>{
+      ctx.strokeStyle=col; ctx.lineWidth=2;
+      ctx.beginPath();
+      st.history.forEach((h,i)=>{
+        const x=X(h.d), y=Y(h[k]);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+    });
+    /* neutral point */
+    const np=st.history.find(h=>h.H===0);
+    if(np){
+      ctx.strokeStyle='#8896a8'; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(X(np.d),T); ctx.lineTo(X(np.d),B); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillText('中和点', X(np.d)-14, T+8);
+    }
+  }
+
+  function evaporate(){
+    const salts=st.nNa; /* Na+ paired with anion on evaporation */
+    const box=$('#evapCrystals'); box.innerHTML='';
+    const n=Math.min(14, acid==='H2SO4'? Math.floor(st.nNa/2):Math.min(st.nNa, st.nA));
+    for(let i=0;i<n;i++) box.appendChild(Object.assign(document.createElement('span')));
+    let txt;
+    if(st.drops===0){
+      txt='まだ何も滴下していないので、蒸発させると塩化水素は空気中へ出ていき、ほとんど何も残らない。';
+    }else if(n===0){
+      txt='結晶はほとんど残らなかった。';
+    }else{
+      txt=`白い結晶が残った!これは中和でできた塩「${ACID[acid].salt}」。水が蒸発すると、水溶液中のイオンが結びついて結晶になる。`;
+      if(st.nOH>0) txt+=' 加えすぎたNaOHも混ざっている。';
+    }
+    $('#evapText').textContent=txt;
+    $('#ovEvap').classList.add('show');
+  }
+
+  function tick(dt){
+    const surfY=LIQ_Y0+LIQ_H;
+    /* falling drops */
+    for(let i=drops.length-1;i>=0;i--){
+      const d=drops[i];
+      d.position.y-=dt*12;
+      if(d.position.y<=surfY){
+        root.remove(d); drops.splice(i,1);
+        applyDrop();
+      }
+    }
+    /* continuous flow */
+    if(flow==='cont'){
+      dropTimer+=dt;
+      if(dropTimer>0.45){ dropTimer=0; oneDrop(); }
+    }
+    ions.forEach(ion=>brown(ion, dt, 1, i=>clampCyl(i,0,0,R-0.9,LIQ_Y0+0.4,surfY-0.3)));
+    for(let i=flashes.length-1;i>=0;i--){
+      const w=flashes[i];
+      w.userData.life-=dt;
+      w.position.y+=dt*0.4;
+      if(w.userData.life<0){ root.remove(w); disposeGroup(w); flashes.splice(i,1); }
+    }
+  }
+
+  function reset(){
+    dispose(); build();
+    flow='stop'; dropTimer=0;
+    $('#m3flow').querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.v==='stop'));
+  }
+  function dispose(){
+    scene.remove(root); disposeGroup(root);
+    ions=[]; drops=[]; flashes=[];
+  }
+
+  /* UI */
+  bindChips('#m3acid', s=>{ acid=s; reset(); });
+  bindSeg('#m3ind', v=>{ ind=v; refreshAll();
+    toast(v==='btb'?'BTB:酸性=黄 / 中性=緑 / アルカリ性=青':'フェノールフタレイン:アルカリ性だけ赤色'); });
+  $('#m3drop').addEventListener('click', ()=>oneDrop());
+  bindSeg('#m3flow', v=>{ flow=v; });
+  $('#m3reset').addEventListener('click', reset);
+  $('#m3evap').addEventListener('click', evaporate);
+  window.addEventListener('resize', ()=>{ if(currentId==='m3'&&st) drawGraph(); });
+
+  return {build, tick, dispose};
+})();
+/* ============================================================
+   MODULE 4 : 化学電池ラボ(ダニエル電池 / ボルタ電池)
+   ============================================================ */
+MODULES.m4=(()=>{
+  const METAL={
+    Zn:{name:'亜鉛', color:0x9aa8ba, ion:'Zn2+', tend:2},
+    Mg:{name:'マグネシウム', color:0xd6dde4, ion:'Mg2+', tend:3},
+    Fe:{name:'鉄', color:0x8a7f74, ion:'Fe2+', tend:1},
+    Cu:{name:'銅', color:0xc96f4a, ion:'Cu2+', tend:0},
+  };
+  /* 電圧テーブル(教育用の目安値) */
+  function baseVolt(l,r){
+    const diff=METAL[l].tend-METAL[r].tend;
+    const table={1:0.8, 2:1.1, 3:2.7};
+    if(diff===0) return 0;
+    return table[Math.abs(diff)]||0.5;
+  }
+  let root, ionsL=[], ionsR=[], electrons=[], plateL, plateR, membrane, propeller;
+  let liqL, liqR, wireLm, wireRm, minusLbl, plusLbl, motorG, bubbles;
+  let mode='daniell';           /* daniell | volta */
+  let mL='Zn', mR='Cu', mem=true, load='prop', tspeed=3, memFailT=0;
+  let depositH=0, plateThin=0, pol=0, polToastDone=false, infoT=0;
+  const W=13, D=7, LIQ_H=5.4, LIQ_Y0=0.2;
+
+  function currentVolt(){
+    let v=baseVolt(mL,mR);
+    if(mode==='daniell' && !mem && memFailT>4) v=0;
+    if(mode==='volta') v=v*(1-pol);
+    return v;
+  }
+  function polarity(){
+    if(METAL[mL].tend===METAL[mR].tend) return null;
+    return METAL[mL].tend>METAL[mR].tend ? 'L':'R';
+  }
+
+  function build(){
+    root=new THREE.Group(); scene.add(root);
+    memFailT=0; depositH=0; plateThin=0; pol=0; polToastDone=false; infoT=0;
+    /* vessel */
+    const glass=new THREE.MeshPhysicalMaterial({color:0xaecfe4, roughness:.06, transparent:true, opacity:.14, side:THREE.DoubleSide, depthWrite:false});
+    const vessel=new THREE.Mesh(new THREE.BoxGeometry(W,7,D), glass);
+    vessel.position.y=3.5; root.add(vessel);
+
+    if(mode==='daniell'){
+      /* two liquids */
+      liqL=new THREE.Mesh(new THREE.BoxGeometry(W/2-0.15, LIQ_H, D-0.2),
+        new THREE.MeshPhysicalMaterial({color:0xe2ecf5, roughness:.15, transparent:true, opacity:.5, depthWrite:false}));
+      liqL.position.set(-W/4, LIQ_H/2+0.18, 0); root.add(liqL);
+      liqR=new THREE.Mesh(new THREE.BoxGeometry(W/2-0.15, LIQ_H, D-0.2),
+        new THREE.MeshPhysicalMaterial({color:0x8ec4e8, roughness:.15, transparent:true, opacity:.55, depthWrite:false}));
+      liqR.position.set(W/4, LIQ_H/2+0.18, 0); root.add(liqR);
+      const solL=makeTextSprite('硫酸亜鉛水溶液',{fontSize:34,color:'#5b6a7d',bg:'#ffffffdd',scale:1.0,depthTest:false});
+      solL.position.set(-W/4,-1.0,0); root.add(solL);
+      const solR=makeTextSprite('硫酸銅水溶液',{fontSize:34,color:'#5b6a7d',bg:'#ffffffdd',scale:1.0,depthTest:false});
+      solR.position.set(W/4,-1.0,0); root.add(solR);
+      /* membrane */
+      membrane=new THREE.Mesh(new THREE.BoxGeometry(0.18, 6.4, D-0.3),
+        new THREE.MeshPhysicalMaterial({color:0xfde68a, roughness:.4, transparent:true, opacity:.55}));
+      membrane.position.set(0,3.4,0); root.add(membrane);
+      const memLbl=makeTextSprite('セロハン膜',{fontSize:34,color:'#b45309',bg:'#fff7e0dd',scale:1.0,depthTest:false});
+      memLbl.position.set(0,7.6,0); membrane.userData={lbl:memLbl}; root.add(memLbl);
+      membrane.visible=mem; memLbl.visible=mem;
+      /* ions */
+      for(let i=0;i<4;i++) addIonL(METAL[mL].ion);
+      for(let i=0;i<4;i++) addIonL('SO42-');
+      for(let i=0;i<6;i++) addIonR('Cu2+');
+      for(let i=0;i<6;i++) addIonR('SO42-');
+    }else{
+      /* volta: one liquid = dilute hydrochloric acid */
+      liqL=new THREE.Mesh(new THREE.BoxGeometry(W-0.3, LIQ_H, D-0.2),
+        new THREE.MeshPhysicalMaterial({color:0xcfe3f2, roughness:.15, transparent:true, opacity:.38, depthWrite:false}));
+      liqL.position.set(0, LIQ_H/2+0.18, 0); root.add(liqL);
+      liqR=null; membrane=null;
+      const sol=makeTextSprite('うすい塩酸',{fontSize:34,color:'#5b6a7d',bg:'#ffffffdd',scale:1.0,depthTest:false});
+      sol.position.set(0,-1.0,0); root.add(sol);
+      for(let i=0;i<8;i++) addIonL('H+');
+      for(let i=0;i<8;i++) addIonL('Cl-');
+    }
+
+    /* plates */
+    plateL=makePlate(mL); plateL.position.set(-W/4,0,0); root.add(plateL);
+    plateR=makePlate(mR); plateR.position.set( W/4,0,0); root.add(plateR);
+    /* motor + propeller */
+    motorG=new THREE.Group();
+    const mbody=new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.0,1.2,20),
+      new THREE.MeshStandardMaterial({color:0xffffff, roughness:.3}));
+    mbody.rotation.x=Math.PI/2; motorG.add(mbody);
+    propeller=new THREE.Group();
+    for(let i=0;i<3;i++){
+      const blade=new THREE.Mesh(new THREE.BoxGeometry(0.28,2.2,0.06),
+        new THREE.MeshStandardMaterial({color:0x0e7490, roughness:.35}));
+      blade.position.y=1.1;
+      const arm=new THREE.Group(); arm.add(blade);
+      arm.rotation.z=i*Math.PI*2/3;
+      propeller.add(arm);
+    }
+    propeller.position.z=0.75; motorG.add(propeller);
+    motorG.position.set(0,12.6,0); root.add(motorG);
+    /* wires */
+    wireLm=makeWire([new THREE.Vector3(-W/4,6.6,0), new THREE.Vector3(-W/4,12.2,0), new THREE.Vector3(-1.2,12.6,0)], 0x9fb0c0, 0.15);
+    wireRm=makeWire([new THREE.Vector3( W/4,6.6,0), new THREE.Vector3( W/4,12.2,0), new THREE.Vector3( 1.2,12.6,0)], 0x9fb0c0, 0.15);
+    root.add(wireLm, wireRm);
+    minusLbl=makeTextSprite('−極',{fontSize:42,color:'#ffffff',bg:'#2563eb',scale:1.0,depthTest:false});
+    plusLbl =makeTextSprite('+極',{fontSize:42,color:'#ffffff',bg:'#e0533d',scale:1.0,depthTest:false});
+    root.add(minusLbl, plusLbl);
+    bubbles=makeBubbleSystem(root);
+    placePolarity();
+    /* membrane card visibility */
+    $('#m4memCard').style.display = mode==='daniell' ? '' : 'none';
+    $('#m4typeNote').textContent = mode==='daniell'
+      ? '2種類の水溶液をセロハン膜で仕切った改良型の電池'
+      : '最初の化学電池 — うすい塩酸に2種類の金属板を入れたもの';
+    cam.setHome(0.15, 1.12, 30, new THREE.Vector3(0,6,0));
+    updateInfo();
+  }
+
+  function makePlate(m){
+    const g=new THREE.Group();
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(0.5,7.2,3.2),
+      new THREE.MeshStandardMaterial({color:METAL[m].color, roughness:.4, metalness:.55}));
+    mesh.position.y=3.6; g.add(mesh);
+    const lbl=makeTextSprite(m+'板',{fontSize:40,color:'#ffffff',bg:'#33415588',scale:1.0,depthTest:false});
+    lbl.position.set(0,7.9,0); g.add(lbl);
+    const dep=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.01,3.3),
+      new THREE.MeshStandardMaterial({color:0xc96f4a, roughness:.35, metalness:.5}));
+    dep.visible=false; g.add(dep);
+    g.userData={mesh, dep, lbl};
+    return g;
+  }
+
+  function addIonL(sym){ const i=makeIon(sym);
+    if(mode==='volta') i.position.set((Math.random()-.5)*(W-2.5), LIQ_Y0+0.5+Math.random()*(LIQ_H-1), (Math.random()-.5)*5);
+    else i.position.set(-W/4+(Math.random()-.5)*4.5, LIQ_Y0+0.5+Math.random()*(LIQ_H-1), (Math.random()-.5)*5);
+    root.add(i); ionsL.push(i); return i; }
+  function addIonR(sym){ const i=makeIon(sym);
+    i.position.set(W/4+(Math.random()-.5)*4.5, LIQ_Y0+0.5+Math.random()*(LIQ_H-1), (Math.random()-.5)*5);
+    root.add(i); ionsR.push(i); return i; }
+
+  function placePolarity(){
+    const p=polarity();
+    minusLbl.visible=plusLbl.visible=(p!==null);
+    if(p==='L'){ minusLbl.position.set(-W/4-1.6,8.6,0); plusLbl.position.set(W/4+1.6,8.6,0); }
+    else if(p==='R'){ minusLbl.position.set(W/4+1.6,8.6,0); plusLbl.position.set(-W/4-1.6,8.6,0); }
+  }
+
+  function updateInfo(){
+    const v=currentVolt();
+    $('#m4volt').textContent=v.toFixed(1);
+    const p=polarity();
+    let note;
+    if(p===null){
+      note='同じ金属どうしでは電圧が生まれず、電流は流れない。';
+    }else{
+      const neg=p==='L'?mL:mR, pos=p==='L'?mR:mL;
+      note=`イオンになりやすいのは${METAL[neg].name}(${neg})。${neg}板が−極、${pos}板が+極になる。`;
+      if(Math.abs(METAL[mL].tend-METAL[mR].tend)===3) note+=' イオンへのなりやすさの差が大きいほど電圧も大きい。';
+    }
+    $('#m4combiNote').textContent=note;
+    if(mode==='daniell'){
+      $('#m4memNote').textContent= mem
+        ? 'イオンがセロハン膜を通って、電気の偏りを解消します'
+        : '仕切りがないと、Cu²⁺が直接'+(p==='L'?mL:mR)+'板と反応してしまい、電流はすぐ流れなくなります';
+    }
+    const negM = p==='L'?mL:mR;
+    if(p===null){
+      setEq('電極の反応','<span class="dim">電圧0V — 金属の組み合わせを変えてみよう</span>',
+        '電子は−極→+極 / 電流は+極→−極');
+    }else if(mode==='daniell'){
+      setEq('電極の反応',
+        `<span class="dim">−極:</span> <span class="hl">${negM} → ${IONDEF[METAL[negM].ion].label} + 2e⁻</span> <span class="dim">+極:</span> <span class="hl">Cu²⁺ + 2e⁻ → Cu</span>`,
+        '電子は−極→+極 / 電流は+極→−極');
+    }else{
+      setEq('電極の反応',
+        `<span class="dim">−極:</span> <span class="hl">${negM} → ${IONDEF[METAL[negM].ion].label} + 2e⁻</span> <span class="dim">+極:</span> <span class="hl">2H⁺ + 2e⁻ → H₂</span>`,
+        '+極からは水素の泡 — たまると電圧が下がる(分極)');
+    }
+  }
+
+  function tick(dt){
+    const v=currentVolt();
+    const p=polarity();
+    const speed=tspeed;
+    const surfY=LIQ_Y0+LIQ_H;
+    if(mode==='daniell' && !mem && p!==null){
+      memFailT+=dt;
+      if(memFailT>4 && memFailT<4.2){
+        toast('電流が流れなくなった…仕切りがないと電池としてはたらき続けられない');
+        updateInfo();
+      }
+    }
+    /* propeller */
+    if(load==='prop' && v>0.05) propeller.rotation.z += dt*(2+v*6);
+    /* electrons */
+    if(v>0.05 && p!==null){
+      if(electrons.length<7 && Math.random()<dt*5){
+        const e=makeIon('e-',{labelScale:0.4});
+        e.userData.t=Math.random(); electrons.push(e); root.add(e);
+      }
+      electrons.forEach(e=>{
+        e.userData.t+=dt*(0.1+v*0.06);
+        if(e.userData.t>1) e.userData.t-=1;
+        const t=e.userData.t;
+        const negW = p==='L'? wireLm.userData.curve : wireRm.userData.curve;
+        const posW = p==='L'? wireRm.userData.curve : wireLm.userData.curve;
+        let pt;
+        if(t<0.42) pt=negW.getPoint(t/0.42);
+        else if(t<0.58) pt=negW.getPoint(1).clone().lerp(posW.getPoint(1),(t-0.42)/0.16);
+        else pt=posW.getPoint(1-(t-0.58)/0.42);
+        e.position.copy(pt).add(new THREE.Vector3(0,0,0.4));
+      });
+    }else{
+      electrons.forEach(e=>{root.remove(e); disposeGroup(e);}); electrons=[];
+    }
+
+    if(v>0.05 && p!==null){
+      const negPlate = p==='L'? plateL:plateR;
+      const negMetal = p==='L'? mL:mR;
+      const posPlate = p==='L'? plateR:plateL;
+      const px = p==='L'? W/4 : -W/4;
+      const nx = p==='L'? -W/4 : W/4;
+
+      /* − plate dissolves in both cell types */
+      const negPool = mode==='volta'? ionsL : (p==='L'? ionsL:ionsR);
+      if(Math.random()<dt*speed*0.13 && negPool.filter(i=>i.userData.sym===METAL[negMetal].ion).length<10){
+        const i=mode==='volta'? addIonL(METAL[negMetal].ion) : (p==='L'?addIonL:addIonR)(METAL[negMetal].ion);
+        i.position.set(nx+(nx<0?0.6:-0.6), LIQ_Y0+0.6+Math.random()*3.5, (Math.random()-.5)*2.5);
+        plateThin=Math.min(0.35, plateThin+0.012);
+        negPlate.userData.mesh.scale.x=1-plateThin;
+      }
+
+      if(mode==='daniell'){
+        const posIons  = p==='L'? ionsR:ionsL;
+        /* Cu2+ absorbed at + plate → deposit */
+        posIons.forEach(ion=>{
+          if(ion.userData.sym!=='Cu2+'||!ion.userData.alive) return;
+          ion.position.x += Math.sign(px-ion.position.x)*dt*speed*0.32;
+          if(Math.abs(ion.position.x-px)<0.7){
+            ion.userData.alive=false; ion.visible=false;
+            depositH=Math.min(5.5, depositH+0.5);
+            const dep=posPlate.userData.dep;
+            dep.visible=true;
+            dep.geometry.dispose();
+            dep.geometry=new THREE.BoxGeometry(0.62, depositH, 3.3);
+            dep.position.y=LIQ_Y0+0.3+depositH/2;
+            const remain=posIons.filter(i=>i.userData.sym==='Cu2+'&&i.userData.alive).length/6;
+            (p==='L'?liqR:liqL).material.color.copy(new THREE.Color(0x8ec4e8).lerp(new THREE.Color(0xd9e8f4),1-remain));
+            if(remain===0) toast('Cu²⁺がなくなった — 電池のはたらきが弱くなる(リセットで最初から)');
+          }
+        });
+        /* SO4 crossing membrane */
+        if(mem){
+          const so4=(p==='L'?ionsR:ionsL).filter(i=>i.userData.sym==='SO42-'&&i.userData.alive);
+          so4.forEach(ion=>{
+            if(Math.random()<dt*speed*0.02){ ion.userData.crossing=true; }
+            if(ion.userData.crossing){
+              ion.position.x += (p==='L'?-1:1)*dt*speed*0.5;
+              if((p==='L'&&ion.position.x<-1.5)||(p==='R'&&ion.position.x>1.5)){
+                ion.userData.crossing=false;
+                const from=(p==='L'?ionsR:ionsL), to=(p==='L'?ionsL:ionsR);
+                from.splice(from.indexOf(ion),1); to.push(ion);
+              }
+            }
+          });
+        }
+      }else{
+        /* volta: H+ moves to + plate → H2 bubbles, polarization builds */
+        ionsL.forEach(ion=>{
+          if(ion.userData.sym!=='H+') return;
+          ion.position.x += Math.sign(px-ion.position.x)*dt*speed*0.3;
+          if(Math.abs(ion.position.x-px)<0.75){
+            bubbles.spawn(px+(px>0?-0.55:0.55), ion.position.y, (Math.random()-.5)*2.2, 0.16);
+            pol=Math.min(0.55, pol+0.012*speed);
+            /* H+ is plentiful in the acid — respawn elsewhere */
+            ion.position.set((Math.random()-.5)*(W-3), LIQ_Y0+0.6+Math.random()*(LIQ_H-1.2), (Math.random()-.5)*5);
+          }
+        });
+        if(pol>0.3 && !polToastDone){
+          polToastDone=true;
+          toast('水素の泡が+極の表面をおおい、電圧が下がってきた(分極 — ボルタ電池の弱点)');
+        }
+      }
+    }
+    bubbles.tick(dt, surfY);
+    /* throttled voltage display refresh (volta polarization) */
+    infoT+=dt;
+    if(infoT>0.5){ infoT=0; $('#m4volt').textContent=currentVolt().toFixed(1); }
+    /* brownian */
+    if(mode==='daniell'){
+      const bL=i=>clampBox(i,-W/2+0.7, mem?-0.5:W/2-0.7, LIQ_Y0+0.4, surfY-0.3, -D/2+0.6, D/2-0.6);
+      const bR=i=>clampBox(i, mem?0.5:-W/2+0.7, W/2-0.7, LIQ_Y0+0.4, surfY-0.3, -D/2+0.6, D/2-0.6);
+      ionsL.forEach(ion=>{ if(ion.userData.alive&&!ion.userData.crossing) brown(ion,dt,1,bL); });
+      ionsR.forEach(ion=>{ if(ion.userData.alive&&!ion.userData.crossing) brown(ion,dt,1,bR); });
+    }else{
+      const bAll=i=>clampBox(i,-W/2+0.7, W/2-0.7, LIQ_Y0+0.4, surfY-0.3, -D/2+0.6, D/2-0.6);
+      ionsL.forEach(ion=>{ if(ion.userData.alive) brown(ion,dt,1,bAll); });
+    }
+  }
+
+  function reset(){ dispose(); build(); }
+  function dispose(){
+    scene.remove(root); disposeGroup(root);
+    ionsL=[]; ionsR=[]; electrons=[];
+    if(bubbles) bubbles.list.length=0;
+  }
+
+  /* UI */
+  bindSeg('#m4type', v=>{
+    mode=v;
+    if(mode==='volta'){ if(mR===mL){ mR = mL==='Cu' ? 'Zn':'Cu'; } }
+    reset();
+    toast(mode==='volta'
+      ? 'ボルタ電池:うすい塩酸に2種類の金属板 — +極から水素の泡が出る'
+      : 'ダニエル電池:2種類の水溶液をセロハン膜で仕切った改良型');
+  });
+  bindChips('#m4metalL', s=>{ mL=s; reset(); });
+  bindChips('#m4metalR', s=>{ mR=s; reset(); });
+  bindSeg('#m4membrane', v=>{
+    mem=(v==='on'); memFailT=0;
+    if(membrane){ membrane.visible=mem; membrane.userData.lbl.visible=mem; }
+    updateInfo();
+    if(!mem) toast('仕切りを外した — しばらく観察してみよう');
+  });
+  bindSeg('#m4load', v=>{ load=v; });
+  $('#m4time').addEventListener('input', e=>{
+    tspeed=parseInt(e.target.value);
+    $('#m4timeVal').textContent='×'+tspeed;
+  });
+  $('#m4reset').addEventListener('click', ()=>{ reset(); toast('リセットしました'); });
+
+  return {build, tick, dispose};
+})();
+/* ============================================================
+   boot
+   ============================================================ */
+window.addEventListener('load', ()=>{
+  resize();
+  current=MODULES.m1; currentId='m1';
+  setCamNote('m1');
+  current.build();
+  loop();
+});
+</script>
+</body>
+</html>
