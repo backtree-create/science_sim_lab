@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>日本の四季と天気 3Dシミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f5fa;
+  --bg2:#ffffff;
+  --panel:#ffffff;
+  --panel2:#eef1f7;
+  --line: rgba(30,41,59,0.12);
+  --text:#1c2536;
+  --muted:#5b6b85;
+  --high:#b9791a;
+  --high-soft: rgba(185,121,26,0.12);
+  --low:#1c76c9;
+  --low-soft: rgba(28,118,201,0.12);
+  --typhoon:#d84850;
+  --typhoon-soft: rgba(216,72,80,0.12);
+  --jet:#8a4fd1;
+  --jet-soft: rgba(138,79,209,0.12);
+  --airmass:#2f9955;
+  --airmass-soft: rgba(47,153,85,0.12);
+  --radius:16px;
+  --shadow: 0 1px 2px rgba(20,30,50,0.04), 0 6px 20px rgba(20,30,50,0.06);
+  --font-d:'Zen Kaku Gothic New',sans-serif;
+  --font-b:'Zen Kaku Gothic New','Hiragino Sans',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font-b);}
+body{overflow-x:hidden;-webkit-tap-highlight-color:transparent;}
+::selection{background:var(--jet);color:#ffffff;}
+a{color:inherit;}
+button{font-family:var(--font-b);cursor:pointer;touch-action:manipulation;}
+h1,h2,h3{font-family:var(--font-d);margin:0;}
+.hidden{display:none !important;}
+
+/* ---------- HOME ---------- */
+#home{position:relative;min-height:100vh;min-height:100dvh;overflow:hidden;}
+.iso-field{position:absolute;inset:0;z-index:0;pointer-events:none;}
+.iso-cluster{position:absolute;width:900px;height:900px;border-radius:50%;animation:drift 34s ease-in-out infinite;}
+.iso-cluster.high{top:-260px;left:-220px;animation-delay:0s;}
+.iso-cluster.low{bottom:-320px;right:-260px;animation-delay:-16s;}
+.iso-ring{position:absolute;inset:0;border-radius:50%;border:1px solid var(--line);}
+.iso-cluster.high .iso-ring{border-color:rgba(185,121,26,0.24);}
+.iso-cluster.low .iso-ring{border-color:rgba(28,118,201,0.22);}
+@keyframes drift{
+  0%{transform:translate(0,0) rotate(0deg);}
+  50%{transform:translate(40px,-25px) rotate(6deg);}
+  100%{transform:translate(0,0) rotate(0deg);}
+}
+.badge-HL{position:absolute;font-family:var(--font-d);font-weight:900;font-size:64px;opacity:.13;filter:blur(0.3px);}
+.badge-HL.high{color:var(--high);top:18%;left:9%;}
+.badge-HL.low{color:var(--low);bottom:14%;right:11%;}
+
+.home-inner{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:56px 24px 80px;}
+.home-head{text-align:left;margin-bottom:8px;}
+.eyebrow{font-family:var(--font-m);letter-spacing:.14em;font-size:12px;color:var(--jet);text-transform:uppercase;}
+.home-head h1{font-size:clamp(30px,5vw,52px);line-height:1.25;font-weight:900;margin:10px 0 14px;}
+.home-head p{max-width:640px;color:var(--muted);font-size:15.5px;line-height:1.9;}
+
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:40px;}
+.sim-card{position:relative;background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:var(--radius);padding:22px 20px 20px;text-align:left;overflow:hidden;transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;box-shadow:var(--shadow);}
+.sim-card:hover{transform:translateY(-4px);border-color:var(--jet);box-shadow:var(--shadow);}
+.sim-card .tag{display:inline-block;font-family:var(--font-m);font-size:11px;letter-spacing:.08em;padding:3px 9px;border-radius:20px;margin-bottom:14px;}
+.sim-card h3{font-size:19px;margin-bottom:8px;line-height:1.4;}
+.sim-card p{color:var(--muted);font-size:13.5px;line-height:1.7;margin:0 0 18px;min-height:66px;}
+.sim-card .go{font-family:var(--font-m);font-size:12.5px;display:inline-flex;align-items:center;gap:6px;color:var(--text);opacity:.85;}
+.sim-card .glow{position:absolute;width:220px;height:220px;border-radius:50%;filter:blur(60px);opacity:.2;top:-80px;right:-80px;pointer-events:none;}
+.sim-card.c-high .tag{background:var(--high-soft);color:var(--high);}
+.sim-card.c-high .glow{background:var(--high);}
+.sim-card.c-jet .tag{background:var(--jet-soft);color:var(--jet);}
+.sim-card.c-jet .glow{background:var(--jet);}
+.sim-card.c-typhoon .tag{background:var(--typhoon-soft);color:var(--typhoon);}
+.sim-card.c-typhoon .glow{background:var(--typhoon);}
+.sim-card.c-air .tag{background:var(--airmass-soft);color:var(--airmass);}
+.sim-card.c-air .glow{background:var(--airmass);}
+.sim-card.c-struct .tag{background:var(--low-soft);color:var(--low);}
+.sim-card.c-struct .glow{background:var(--low);}
+.sim-card{width:100%;border:1px solid var(--line);background-clip:padding-box;}
+.sim-card-btn{all:unset;display:block;width:100%;}
+
+.links-section{margin-top:64px;border-top:1px solid var(--line);padding-top:30px;}
+.links-section h2{font-size:16px;letter-spacing:.02em;margin-bottom:6px;}
+.links-section .sub{color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.8;}
+.link-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;}
+.ext-link{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 15px;text-decoration:none;font-size:13.5px;color:var(--text);transition:border-color .2s;}
+.ext-link:hover{border-color:var(--jet);}
+.ext-link .src{display:block;font-family:var(--font-m);font-size:10.5px;color:var(--muted);margin-top:3px;}
+.ext-link .arrow{color:var(--muted);font-size:14px;}
+.footnote{margin-top:26px;font-size:11.5px;color:var(--muted);line-height:1.8;}
+
+/* ---------- SIM SCREENS ---------- */
+.sim-screen{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg);}
+.sim-header{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--line);background:var(--bg2);position:sticky;top:0;z-index:5;flex-wrap:wrap;}
+.back-btn{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 14px;font-size:13px;}
+.back-btn:hover{border-color:var(--jet);}
+.sim-header h2{font-size:16px;flex:1;min-width:160px;}
+.sim-header .theme-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:8px;}
+.info-toggle{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:9px 12px;font-size:12.5px;}
+.info-toggle:hover{color:var(--text);}
+
+.sim-body{flex:1;display:grid;grid-template-columns:1fr 300px;min-height:0;}
+@media (max-width:880px){.sim-body{grid-template-columns:1fr;}}
+.canvas-mount{position:relative;min-height:56vh;min-height:56dvh;background:radial-gradient(ellipse at 50% 25%, #eef3fb 0%, #dbe3ee 82%);}
+.canvas-mount canvas{display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none;}
+.hint{position:absolute;left:14px;bottom:12px;font-family:var(--font-m);font-size:11px;color:#eef1f7;background:rgba(28,37,54,0.72);padding:6px 10px;border-radius:8px;pointer-events:none;}
+
+.side-panel{border-left:1px solid var(--line);background:var(--bg2);padding:18px 18px 30px;overflow-y:auto;max-height:calc(100vh - 60px);max-height:calc(100dvh - 60px);}
+@media (max-width:880px){.side-panel{border-left:none;border-top:1px solid var(--line);max-height:none;}}
+.panel-block{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 15px 16px;margin-bottom:14px;box-shadow:var(--shadow);}
+.panel-block h4{font-size:12.5px;letter-spacing:.05em;color:var(--muted);margin-bottom:12px;font-family:var(--font-m);text-transform:uppercase;}
+.ctl{margin-bottom:14px;}
+.ctl:last-child{margin-bottom:0;}
+.ctl label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px;}
+.ctl label .v{font-family:var(--font-m);color:var(--jet);}
+input[type=range]{width:100%;accent-color:var(--jet);}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 12px;font-size:12.5px;flex:1;min-width:70px;text-align:center;}
+.btn:hover{border-color:var(--jet);}
+.btn.active{background:var(--jet);border-color:var(--jet);color:#ffffff;font-weight:700;}
+.btn.small{flex:none;padding:8px 11px;}
+.checkline{display:flex;align-items:center;gap:9px;font-size:13px;}
+.checkline input{accent-color:var(--jet);width:16px;height:16px;}
+.legend{display:flex;flex-direction:column;gap:8px;font-size:12.5px;}
+.legend .row{display:flex;align-items:center;gap:9px;color:var(--muted);}
+.legend .sw{width:12px;height:12px;border-radius:4px;flex:none;}
+.info-text{font-size:13px;line-height:1.85;color:#33415a;}
+.info-text b{color:var(--text);}
+.info-text .note{display:block;margin-top:10px;font-size:11.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:9px;}
+.readout{font-family:var(--font-m);font-size:12px;color:var(--muted);}
+.readout b{color:var(--text);}
+
+/* ---------- MOBILE / TABLET ---------- */
+@media (max-width:900px){
+  .home-inner{padding:40px 18px 64px;}
+}
+@media (max-width:600px){
+  .home-inner{padding:28px 14px 48px;}
+  .sim-header{padding:12px 12px;gap:8px;}
+  .side-panel{padding:14px 12px 26px;}
+  .canvas-mount{min-height:48vh;min-height:48dvh;}
+}
+@media (pointer:coarse){
+  .btn,.back-btn,.info-toggle{min-height:44px;}
+  input[type=range]{height:36px;padding:6px 0;}
+  .checkline input{width:22px;height:22px;}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+<!-- ============ HOME ============ -->
+<section id="home" class="screen">
+  <div class="iso-field">
+    <div class="iso-cluster high">
+      <div class="iso-ring" style="inset:0;"></div>
+      <div class="iso-ring" style="inset:70px;"></div>
+      <div class="iso-ring" style="inset:150px;"></div>
+      <div class="iso-ring" style="inset:240px;"></div>
+      <div class="iso-ring" style="inset:340px;"></div>
+    </div>
+    <div class="iso-cluster low">
+      <div class="iso-ring" style="inset:0;"></div>
+      <div class="iso-ring" style="inset:60px;"></div>
+      <div class="iso-ring" style="inset:130px;"></div>
+      <div class="iso-ring" style="inset:210px;"></div>
+      <div class="iso-ring" style="inset:300px;"></div>
+    </div>
+    <div class="badge-HL high">H</div>
+    <div class="badge-HL low">L</div>
+  </div>
+
+  <div class="home-inner">
+    <div class="home-head">
+      <div class="eyebrow">3D Interactive &middot; 中学理科「日本の天気」</div>
+      <h1>日本の四季と気圧配置<br>3Dシミュレーター</h1>
+      <p>高気圧・低気圧の風の流れ、偏西風、台風の進路、気団と季節の関係を、実際に手を動かして立体的に確かめよう。カードを選んで始めよう。</p>
+    </div>
+
+    <div class="card-grid">
+      <button class="sim-card-btn" data-nav="sim-pressure">
+        <div class="sim-card c-high">
+          <div class="glow"></div>
+          <span class="tag">01 ／ 高気圧と低気圧</span>
+          <h3>高気圧・低気圧の立体的な風</h3>
+          <p>北半球では高気圧から時計回りに風が吹き出し、低気圧には反時計回りに吹き込む。上昇気流・下降気流との関係を3Dで観察。</p>
+          <span class="go">シミュレーターを開く →</span>
+        </div>
+      </button>
+
+      <button class="sim-card-btn" data-nav="sim-jet">
+        <div class="sim-card c-jet">
+          <div class="glow"></div>
+          <span class="tag">02 ／ 偏西風</span>
+          <h3>偏西風とジェット気流</h3>
+          <p>中緯度の上空を蛇行しながら吹く強い西風。天気が西から東へ変わる理由と、冬に強く南下・夏に弱く北上する季節変化を見る。</p>
+          <span class="go">シミュレーターを開く →</span>
+        </div>
+      </button>
+
+      <button class="sim-card-btn" data-nav="sim-typhoon">
+        <div class="sim-card c-typhoon">
+          <div class="glow"></div>
+          <span class="tag">03 ／ 台風の進路</span>
+          <h3>台風の季節ごとの軌道</h3>
+          <p>太平洋高気圧の縁を回り込みながら北上し、偏西風にとらえられて東へ転向する台風。月ごとの典型的な進路の違いを比較。</p>
+          <span class="go">シミュレーターを開く →</span>
+        </div>
+      </button>
+
+      <button class="sim-card-btn" data-nav="sim-airmass">
+        <div class="sim-card c-air">
+          <div class="glow"></div>
+          <span class="tag">04 ／ 気団と季節</span>
+          <h3>気団がつくる季節の気圧配置</h3>
+          <p>シベリア・オホーツク海・小笠原・揚子江の4つの気団の勢力争いが、西高東低や南高北低、梅雨前線をどう生み出すのか。</p>
+          <span class="go">シミュレーターを開く →</span>
+        </div>
+      </button>
+
+      <button class="sim-card-btn" data-nav="sim-structure">
+        <div class="sim-card c-struct">
+          <div class="glow"></div>
+          <span class="tag">05 ／内部構造</span>
+          <h3>台風の立体構造をのぞく</h3>
+          <p>台風の目・壁雲・スパイラルバンドと、上空で時計回りに広がる吹き出しを断面表示で観察できる。</p>
+          <span class="go">シミュレーターを開く →</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="links-section">
+      <h2>本物の天気図・衛星画像を見てみよう</h2>
+      <div class="sub">シミュレーターで仕組みを理解したら、今日の実際の空とくらべてみよう。すべて外部サイトが新しいタブで開きます。</div>
+      <div class="link-grid">
+        <a class="ext-link" href="https://www.jma.go.jp/bosai/weather_map/" target="_blank" rel="noopener">
+          <span>実況天気図（気象庁）<span class="src">jma.go.jp/bosai/weather_map</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="ext-link" href="https://www.jma.go.jp/bosai/typhoon/" target="_blank" rel="noopener">
+          <span>台風情報（気象庁）<span class="src">jma.go.jp/bosai/typhoon</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="ext-link" href="https://www.jma.go.jp/bosai/map.html" target="_blank" rel="noopener">
+          <span>防災気象情報マップ（気象庁）<span class="src">jma.go.jp/bosai/map.html</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="ext-link" href="https://www.data.jma.go.jp/mscweb/ja/" target="_blank" rel="noopener">
+          <span>気象衛星センター（ひまわり画像）<span class="src">data.jma.go.jp/mscweb</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="ext-link" href="https://himawari9.nict.go.jp/" target="_blank" rel="noopener">
+          <span>ひまわりリアルタイム画像（NICT）<span class="src">himawari9.nict.go.jp</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="ext-link" href="https://tenki.jp/bousai/typhoon/" target="_blank" rel="noopener">
+          <span>台風の最新位置・進路予想（tenki.jp）<span class="src">tenki.jp/bousai/typhoon</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="ext-link" href="https://www.windy.com" target="_blank" rel="noopener">
+          <span>風・気圧の世界地図（Windy）<span class="src">windy.com</span></span>
+          <span class="arrow">↗</span>
+        </a>
+      </div>
+      <div class="footnote">※このアプリの3D映像は、しくみを理解するための模式的なモデルです。台風の進路や気団の勢力範囲は年によって変化するため、実際の予報は気象庁など公的機関の発表を確認してください。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 01 低気圧と高気圧 ============ -->
+<section id="sim-pressure" class="screen sim-screen hidden">
+  <div class="sim-header">
+    <button class="back-btn" data-nav="home">← ホーム</button>
+    <h2><span class="theme-dot" style="background:var(--high)"></span>高気圧・低気圧の立体的な風の流れ</h2>
+    <button class="info-toggle" data-toggle="#p-info">説明を見る</button>
+  </div>
+  <div class="sim-body">
+    <div class="canvas-mount" id="mount-pressure">
+      <div class="hint">ドラッグで回転／ホイールで拡大縮小</div>
+    </div>
+    <div class="side-panel">
+      <div class="panel-block" id="p-info">
+        <h4>仕組み</h4>
+        <div class="info-text">
+          北半球では、地球の自転による<b>コリオリの力</b>のせいで風がまっすぐ吹かず、曲げられる。<br><br>
+          <b>高気圧</b>：中心で空気が沈み込み（下降気流）、地表では時計回りに渦を巻きながら外側へ吹き出す。下降気流は雲をつくりにくいため、晴れやすい。<br><br>
+          <b>低気圧</b>：地表では反時計回りに渦を巻きながら中心へ吹き込み、中心で空気が上昇する（上昇気流）。上昇気流は雲や雨をつくる。
+          <span class="note">※矢印は風向きの模式図、粒子はおおまかな空気の流れのイメージです。実際の風は地形や高度でさらに複雑に変化します。</span>
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4>操作</h4>
+        <div class="ctl">
+          <label>高気圧と低気圧の距離<span class="v" id="p-dist-v">18</span></label>
+          <input type="range" id="p-dist" min="10" max="28" step="1" value="18">
+        </div>
+        <div class="ctl">
+          <label>風の強さ<span class="v" id="p-speed-v">1.0</span></label>
+          <input type="range" id="p-speed" min="0.3" max="2.2" step="0.1" value="1.0">
+        </div>
+        <div class="ctl">
+          <label class="checkline"><input type="checkbox" id="p-vert" checked>上昇・下降気流と雲を表示</label>
+        </div>
+        <div class="ctl">
+          <button class="btn small" id="p-play">一時停止</button>
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4>凡例</h4>
+        <div class="legend">
+          <div class="row"><span class="sw" style="background:var(--high)"></span>高気圧（下降気流・時計回り）</div>
+          <div class="row"><span class="sw" style="background:var(--low)"></span>低気圧（上昇気流・反時計回り）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 偏西風 ============ -->
+<section id="sim-jet" class="screen sim-screen hidden">
+  <div class="sim-header">
+    <button class="back-btn" data-nav="home">← ホーム</button>
+    <h2><span class="theme-dot" style="background:var(--jet)"></span>偏西風とジェット気流</h2>
+    <button class="info-toggle" data-toggle="#j-info">説明を見る</button>
+  </div>
+  <div class="sim-body">
+    <div class="canvas-mount" id="mount-jet">
+      <div class="hint">ドラッグで回転／ホイールで拡大縮小</div>
+    </div>
+    <div class="side-panel">
+      <div class="panel-block" id="j-info">
+        <h4>仕組み</h4>
+        <div class="info-text" id="j-info-text">
+          偏西風は中緯度の上空を一年中吹いている強い西風で、南北に蛇行しながら地球を取り巻いている。その中でも特に速い流れを<b>ジェット気流</b>と呼ぶ。日本付近の低気圧や高気圧、前線は、この上空の流れに乗って西から東へ移動するため、天気も西から東へ変わっていく。左端の目盛りは地上からの高度の目安で、ジェット気流はおよそ高度9〜13kmという、旅客機が飛ぶ高さ付近を流れている。
+          <span class="note">赤道と極の温度差が大きい冬ほどジェット気流は強く、日本に近い南寄りを流れる。夏は温度差が小さくなるため弱まり、北へ退く。</span>
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4>季節を選ぶ</h4>
+        <div class="btn-row">
+          <button class="btn" data-season="winter">冬</button>
+          <button class="btn active" data-season="shoulder">春・秋</button>
+          <button class="btn" data-season="summer">夏</button>
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4>蛇行の大きさ（手動調整）</h4>
+        <div class="ctl">
+          <label>蛇行の振幅<span class="v" id="j-amp-v">3.5</span></label>
+          <input type="range" id="j-amp" min="1" max="8" step="0.5" value="3.5">
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4 id="j-stat-label">現在の設定：春・秋</h4>
+        <div class="readout" id="j-readout">緯度位置：中間／風速：中程度</div>
+      </div>
+      <div class="panel-block">
+        <h4>凡例</h4>
+        <div class="legend">
+          <div class="row"><span class="sw" style="background:var(--jet)"></span>ジェット気流（上空の強風帯）</div>
+          <div class="row"><span class="sw" style="background:var(--low)"></span>ジェット気流に流される地上の低気圧</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 台風の進路 ============ -->
+<section id="sim-typhoon" class="screen sim-screen hidden">
+  <div class="sim-header">
+    <button class="back-btn" data-nav="home">← ホーム</button>
+    <h2><span class="theme-dot" style="background:var(--typhoon)"></span>台風の季節ごとの軌道と偏西風</h2>
+    <button class="info-toggle" data-toggle="#t-info">説明を見る</button>
+  </div>
+  <div class="sim-body">
+    <div class="canvas-mount" id="mount-typhoon">
+      <div class="hint">ドラッグで回転／ホイールで拡大縮小</div>
+    </div>
+    <div class="side-panel">
+      <div class="panel-block" id="t-info">
+        <h4>仕組み</h4>
+        <div class="info-text">
+          台風は自分の力では進めず、まわりの風に流されて動く。まず<b>太平洋高気圧</b>のふちを時計回りに回り込むように北西へ進み、その後、上空の<b>偏西風（ジェット気流）</b>にとらえられると進路を東寄りに変える（転向）。太平洋高気圧の張り出し方と偏西風の南北の位置は季節で変わるため、台風の進みやすいコースも季節ごとに変化する。
+          <span class="note">これは代表的な傾向を示した模式図です。実際の進路は年によって大きく異なります。最新の進路は気象庁などで確認しましょう。</span>
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4>時期を選ぶ</h4>
+        <div class="btn-row">
+          <button class="btn" data-month="early">5〜6月</button>
+          <button class="btn active" data-month="peak">7〜8月</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn" data-month="autumn">9月</button>
+          <button class="btn" data-month="late">10月〜</button>
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4 id="t-stat-label">7〜8月の傾向</h4>
+        <div class="info-text" id="t-desc" style="font-size:12.5px;"></div>
+      </div>
+      <div class="panel-block">
+        <div class="ctl"><button class="btn small" id="t-play">台風を進める ▶</button></div>
+      </div>
+      <div class="panel-block">
+        <h4>凡例</h4>
+        <div class="legend">
+          <div class="row"><span class="sw" style="background:var(--high)"></span>太平洋高気圧</div>
+          <div class="row"><span class="sw" style="background:var(--jet)"></span>偏西風（ジェット気流）</div>
+          <div class="row"><span class="sw" style="background:var(--typhoon)"></span>台風の進路</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 気団と季節 ============ -->
+<section id="sim-airmass" class="screen sim-screen hidden">
+  <div class="sim-header">
+    <button class="back-btn" data-nav="home">← ホーム</button>
+    <h2><span class="theme-dot" style="background:var(--airmass)"></span>気団と季節ごとの気圧配置</h2>
+    <button class="info-toggle" data-toggle="#a-info">説明を見る</button>
+  </div>
+  <div class="sim-body">
+    <div class="canvas-mount" id="mount-airmass">
+      <div class="hint">ドラッグで回転／ホイールで拡大縮小</div>
+    </div>
+    <div class="side-panel">
+      <div class="panel-block" id="a-info">
+        <h4>4つの気団</h4>
+        <div class="info-text">
+          <b>シベリア気団</b>：北西・冷たく乾燥／<b>オホーツク海気団</b>：北東・冷たく湿潤／<b>小笠原気団</b>：南東・暖かく湿潤／<b>揚子江気団</b>：南西・暖かく乾燥。季節によってどの気団が勢力を強めるかが変わり、日本付近の気圧配置を決めている。
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4>季節を選ぶ</h4>
+        <div class="btn-row">
+          <button class="btn" data-aseason="winter">冬</button>
+          <button class="btn" data-aseason="shoulder">春・秋</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn" data-aseason="baiu">梅雨</button>
+          <button class="btn active" data-aseason="summer">夏</button>
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4 id="a-stat-label">夏の気圧配置</h4>
+        <div class="info-text" id="a-desc" style="font-size:12.5px;"></div>
+      </div>
+      <div class="panel-block">
+        <h4>凡例</h4>
+        <div class="legend">
+          <div class="row"><span class="sw" style="background:#5a8bd6"></span>シベリア気団（寒・乾）</div>
+          <div class="row"><span class="sw" style="background:#3fc7d6"></span>オホーツク海気団（寒・湿）</div>
+          <div class="row"><span class="sw" style="background:var(--high)"></span>小笠原気団（暖・湿）</div>
+          <div class="row"><span class="sw" style="background:#d6c23f"></span>揚子江気団（暖・乾）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 台風の構造 ============ -->
+<section id="sim-structure" class="screen sim-screen hidden">
+  <div class="sim-header">
+    <button class="back-btn" data-nav="home">← ホーム</button>
+    <h2><span class="theme-dot" style="background:var(--low)"></span>台風の立体構造</h2>
+    <button class="info-toggle" data-toggle="#s-info">説明を見る</button>
+  </div>
+  <div class="sim-body">
+    <div class="canvas-mount" id="mount-structure">
+      <div class="hint">ドラッグで回転／ホイールで拡大縮小</div>
+    </div>
+    <div class="side-panel">
+      <div class="panel-block" id="s-info">
+        <h4>仕組み</h4>
+        <div class="info-text">
+          台風の下層では、反時計回り（北半球）に風が中心へ吹き込み（<b>眼の壁雲</b>で強い上昇気流）、目の中は逆に穏やかで晴れることが多い。上空まで上った空気は、上空では向きを変え<b>時計回り</b>に周囲へ広がって吹き出す（アウトフロー）。発達した台風ほど目が小さくなる傾向がある。
+          <span class="note">断面表示をオンにすると、内部の様子を切り取って観察できます。</span>
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4>操作</h4>
+        <div class="ctl">
+          <label>台風の勢力（目の大きさ）<span class="v" id="s-intensity-v">中</span></label>
+          <input type="range" id="s-intensity" min="0" max="2" step="1" value="1">
+        </div>
+        <div class="ctl">
+          <label class="checkline"><input type="checkbox" id="s-cut">断面（カットアウェイ）表示</label>
+        </div>
+        <div class="ctl">
+          <button class="btn small" id="s-play">一時停止</button>
+        </div>
+      </div>
+      <div class="panel-block">
+        <h4>凡例</h4>
+        <div class="legend">
+          <div class="row"><span class="sw" style="background:#aecbe8"></span>壁雲（アイウォール・急な上昇）</div>
+          <div class="row"><span class="sw" style="background:#4fc3f7"></span>スパイラルバンド（外側の雨雲）</div>
+          <div class="row"><span class="sw" style="background:var(--typhoon)"></span>暖かい中心（暖核）</div>
+          <div class="row"><span class="sw" style="background:var(--jet)"></span>上空の吹き出し（時計回り）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+/* =========================================================
+   共通ユーティリティ
+   ========================================================= */
+const SharedGL = (() => {
+  const texCache = {};
+  function glowTexture(rgb){
+    if(texCache[rgb]) return texCache[rgb];
+    const size=128;
+    const c=document.createElement('canvas'); c.width=c.height=size;
+    const ctx=c.getContext('2d');
+    const g=ctx.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
+    g.addColorStop(0, `rgba(${rgb},0.95)`);
+    g.addColorStop(0.45, `rgba(${rgb},0.45)`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.fillStyle=g; ctx.fillRect(0,0,size,size);
+    const tex=new THREE.CanvasTexture(c);
+    texCache[rgb]=tex;
+    return tex;
+  }
+  function textSprite(text, opts={}){
+    const fontsize = opts.fontsize||44;
+    const color = opts.color||'#1c2536';
+    const bg = opts.bg||null;
+    const scale = opts.scale||2.2;
+    const c=document.createElement('canvas');
+    const ctx=c.getContext('2d');
+    ctx.font = `900 ${fontsize}px "Zen Kaku Gothic New", sans-serif`;
+    const m=ctx.measureText(text);
+    const pad=18;
+    c.width=Math.ceil(m.width)+pad*2;
+    c.height=Math.ceil(fontsize*1.5);
+    ctx.font = `900 ${fontsize}px "Zen Kaku Gothic New", sans-serif`;
+    if(bg){ ctx.fillStyle=bg; ctx.fillRect(0,0,c.width,c.height); }
+    ctx.fillStyle=color;
+    ctx.textAlign='left';
+    ctx.textBaseline='middle';
+    ctx.fillText(text, pad, c.height/2);
+    const tex=new THREE.CanvasTexture(c);
+    tex.minFilter=THREE.LinearFilter;
+    const mat=new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false});
+    const sp=new THREE.Sprite(mat);
+    const aspect=c.width/c.height;
+    sp.scale.set(aspect*scale, scale, 1);
+    return sp;
+  }
+  function makeRenderer(mount){
+    const renderer=new THREE.WebGLRenderer({antialias:true, alpha:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setClearColor(0x000000, 0);
+    mount.appendChild(renderer.domElement);
+    return renderer;
+  }
+  function resize(renderer, camera, mount){
+    const w=mount.clientWidth||300, h=mount.clientHeight||300;
+    renderer.setSize(w,h,false);
+    camera.aspect=w/h;
+    camera.updateProjectionMatrix();
+  }
+  // 日本列島の実形状を外部の実地図データ（jpn-atlas／国土地理院「地球地図日本」由来）から取得。
+  // どの経路でも、最終的な平面座標は必ず [worldX(東+), worldZ(南+)] に揃えてから
+  // toShapePoint() でThree.Shape座標系（(u,v) = (worldX, -worldZ)）に変換する。
+  // 取得できない場合は、実在の経緯度（岬・主要都市）から作図した実データ由来の簡易形状にフォールバックする。
+  const DEG=Math.PI/180;
+  // 北海道・本州・四国・九州・沖縄本島の概形を、実在する岬や都市の経緯度[lon,lat]で表した簡易多角形
+  const JAPAN_FALLBACK_ISLANDS = [
+    // 北海道
+    [[141.94,45.52],[145.82,43.33],[144.38,42.98],[143.23,41.95],[140.97,42.32],[140.86,43.20],[141.67,45.42]],
+    // 本州
+    [[141.48,41.43],[140.74,40.82],[140.87,38.27],[140.87,35.71],[139.78,35.44],[138.85,34.60],
+     [136.91,35.18],[135.50,34.69],[130.94,33.95],[131.40,34.41],[134.24,35.50],[136.06,35.65],
+     [139.04,37.92],[140.10,39.72],[140.74,40.82]],
+    // 四国
+    [[132.77,33.84],[133.53,33.56],[134.56,34.07],[133.90,34.15],[132.77,33.84]],
+    // 九州
+    [[130.88,33.88],[130.40,33.59],[129.87,32.75],[130.74,32.79],[130.56,31.60],[130.66,31.00],
+     [131.42,31.83],[131.65,33.24],[130.88,33.88]],
+    // 沖縄本島
+    [[127.68,26.21],[127.98,26.59],[128.05,26.50],[127.78,26.10],[127.68,26.21]]
+  ];
+
+  const JAPAN_MAP_URLS = [
+    'https://unpkg.com/jpn-atlas@1/japan/japan.json',
+    'https://cdn.jsdelivr.net/npm/jpn-atlas@1/japan/japan.json'
+  ];
+  let _japanShapesPromise = null;
+
+  // Shape座標系へ変換：rotateX(-90°)により最終的に (X, -v) がワールド座標(X,Z)になるため v=-worldZ とする
+  function toShapePoint([wx,wz]){ return [wx, -wz]; }
+  function ringToVec2(ring){ return ring.map(p=>{ const [u,v]=toShapePoint(p); return new THREE.Vector2(u,v); }); }
+
+  function polygonsToShapes(polygons){
+    // polygons: [{outer:[[worldX,worldZ]...], holes:[[[worldX,worldZ]...], ...]}, ...]
+    return polygons.map(p=>{
+      const shape=new THREE.Shape(ringToVec2(p.outer));
+      p.holes.forEach(h=> shape.holes.push(new THREE.Path(ringToVec2(h))));
+      return shape;
+    });
+  }
+
+  function extractPolygons(geometry){
+    // GeoJSON Polygon/MultiPolygon -> [{outer, holes}]（座標はまだ変換前の生の値）
+    const polys=[];
+    const fromCoords = (rings)=>{
+      const outer=rings[0], holes=rings.slice(1);
+      polys.push({outer, holes});
+    };
+    if(geometry.type==='Polygon'){ fromCoords(geometry.coordinates); }
+    else if(geometry.type==='MultiPolygon'){ geometry.coordinates.forEach(fromCoords); }
+    return polys;
+  }
+
+  function ringArea(ring){
+    let a=0;
+    for(let i=0;i<ring.length;i++){ const [x1,y1]=ring[i]; const [x2,y2]=ring[(i+1)%ring.length]; a+=x1*y2-x2*y1; }
+    return Math.abs(a/2);
+  }
+
+  // polys の座標(任意の単位)を中心合わせし、南北か東西の大きい方が targetSpan になるよう拡大縮小する
+  function normalizeWorldPolys(polys, targetSpan){
+    let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+    polys.forEach(p=>{
+      p.outer.forEach(([x,z])=>{ minX=Math.min(minX,x);maxX=Math.max(maxX,x);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z); });
+    });
+    const midX=(minX+maxX)/2, midZ=(minZ+maxZ)/2;
+    const span=Math.max(maxX-minX, maxZ-minZ) || 1;
+    const s = targetSpan/span;
+    const norm = (ring)=> ring.map(([x,z])=>[ (x-midX)*s, (z-midZ)*s ]);
+    return polys.map(p=>({ outer:norm(p.outer), holes:p.holes.map(norm) }));
+  }
+
+  // 経度緯度 -> ワールド座標 [worldX(東+), worldZ(南+)]。lat0基準の単純な正距円筒図法（東西方向をcosで補正）
+  function lonLatToWorld([lon,lat], lon0, lat0){
+    return [ (lon-lon0)*Math.cos(lat0*DEG), -(lat-lat0) ];
+  }
+
+  function buildFallbackPolys(){
+    const lon0=137.5, lat0=36.5;
+    const polys = JAPAN_FALLBACK_ISLANDS.map(ring=>({
+      outer: ring.map(p=>lonLatToWorld(p, lon0, lat0)),
+      holes: []
+    }));
+    return normalizeWorldPolys(polys, 34);
+  }
+
+  async function fetchJapanTopology(){
+    let lastErr=null;
+    for(const url of JAPAN_MAP_URLS){
+      try{
+        const withTimeout = Promise.race([
+          fetch(url),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout: '+url)), 4500))
+        ]);
+        const res = await withTimeout;
+        if(!res.ok) throw new Error('map fetch failed: '+res.status);
+        return await res.json();
+      }catch(err){ lastErr=err; }
+    }
+    throw lastErr || new Error('map fetch failed');
+  }
+
+  function getJapanShapes(){
+    if(_japanShapesPromise) return _japanShapesPromise;
+    _japanShapesPromise = (async ()=>{
+      if(typeof topojson === 'undefined') throw new Error('topojson library not loaded');
+      const topo = await fetchJapanTopology();
+      const obj = (topo.objects && (topo.objects.country||topo.objects.japan)) || Object.values(topo.objects||{})[0];
+      if(!obj) throw new Error('country geometry not found in topology');
+      const feat = topojson.feature(topo, obj);
+      const geometries = feat.type==='FeatureCollection' ? feat.features.map(f=>f.geometry) : [feat.geometry];
+      let raw=[];
+      geometries.forEach(g=>{ raw=raw.concat(extractPolygons(g)); });
+      if(raw.length===0) throw new Error('no polygons extracted');
+      // このデータは x=東+, y=南+（SVG/Canvas向けに反転済み）なので、そのまま[worldX,worldZ]として使える
+      const allPolys = raw.map(p=>({ outer:p.outer.map(([x,y])=>[x,y]), holes:p.holes.map(h=>h.map(([x,y])=>[x,y])) }));
+      // スケール（正規化）は、後で一部の島を間引いても変わらないよう、必ず全データのbboxから決める
+      const normAll = normalizeWorldPolys(allPolys, 34);
+      const areas = normAll.map(p=>ringArea(p.outer));
+      const maxArea = Math.max(...areas, 1);
+      // 極端に小さい島（点に近いもの）だけを間引く。残りは「まとめて」1つの地図として扱う
+      const candidates = normAll.filter((p,i)=> areas[i] > maxArea*0.0025);
+      if(candidates.length===0) throw new Error('no significant polygons after filtering');
+      const shapes = polygonsToShapes(candidates);
+      // 本州・九州のような複雑な海岸線を持つ島は、県境結合時の座標誤差で三角形分割に失敗することがある。
+      // 個別に間引いて一部だけ表示すると、代わりに別の小島が残って「入れ替わった」ように見えてしまうため、
+      // ここでは地図全体をひとまとまりとして検証し、1つでも生成に失敗したら丸ごとフォールバックへ委ねる。
+      shapes.forEach(shape=>{
+        const test=new THREE.ExtrudeGeometry(shape,{depth:0.05, bevelEnabled:false, curveSegments:2});
+        if(!test.attributes.position || test.attributes.position.count===0) throw new Error('empty geometry in combined map');
+      });
+      return shapes;
+    })().catch(err=>{
+      console.warn('日本の実地図データの外部取得に失敗したため、実座標（岬・主要都市の経緯度）から作図した簡易地図をまとめて使用します。', err);
+      return polygonsToShapes(buildFallbackPolys());
+    });
+    return _japanShapesPromise;
+  }
+
+  function buildJapanGroupFromShapes(shapes, color, opacity){
+    // 個々の島を別々に取捨選択せず、常にひとまとまりのオーバーレイとして地図全体を描画する
+    const group=new THREE.Group();
+    const mat=new THREE.MeshStandardMaterial({color, transparent:true, opacity:Math.min(opacity,0.4), roughness:0.9, metalness:0, side:THREE.DoubleSide, depthWrite:false});
+    const edgeMat=new THREE.LineBasicMaterial({color:0x2f8f5f, transparent:true, opacity:0.8});
+    shapes.forEach(shape=>{
+      const geo=new THREE.ExtrudeGeometry(shape,{depth:0.05, bevelEnabled:false, curveSegments:4});
+      geo.rotateX(-Math.PI/2);
+      const mesh=new THREE.Mesh(geo, mat);
+      group.add(mesh);
+      const edges=new THREE.EdgesGeometry(geo,20);
+      group.add(new THREE.LineSegments(edges, edgeMat));
+    });
+    return group;
+  }
+
+  function makeJapanMesh(color=0x2f6f4f, opacity=0.55){
+    // 即座に空のグループを返し、実地図データの取得が完了し次第、非同期に中身を差し替える。
+    const group=new THREE.Group();
+    getJapanShapes().then(shapes=>{
+      const filled=buildJapanGroupFromShapes(shapes, color, opacity);
+      filled.children.forEach(c=>group.add(c));
+    });
+    return group;
+  }
+  function compassLabels(scene, r=34){
+    const N=textSprite('N',{color:'#3d4a63',scale:1.6}); N.position.set(0,0.6,-r); scene.add(N);
+    const S=textSprite('S',{color:'#3d4a63',scale:1.6}); S.position.set(0,0.6, r); scene.add(S);
+    const E=textSprite('E',{color:'#3d4a63',scale:1.6}); E.position.set(r,0.6,0); scene.add(E);
+    const W=textSprite('W',{color:'#3d4a63',scale:1.6}); W.position.set(-r,0.6,0); scene.add(W);
+  }
+  function groundGrid(size=64, div=24){
+    const g=new THREE.GridHelper(size,div,0x9aabc7,0xc7d0e0);
+    g.material.transparent=true; g.material.opacity=0.75;
+    return g;
+  }
+  function baseLights(scene){
+    scene.add(new THREE.AmbientLight(0xffffff,0.75));
+    const dl=new THREE.DirectionalLight(0xffffff,0.55);
+    dl.position.set(15,40,20);
+    scene.add(dl);
+    const dl2=new THREE.DirectionalLight(0x88aaff,0.25);
+    dl2.position.set(-20,20,-10);
+    scene.add(dl2);
+  }
+  // 「流動的なラベル型矢印」：シャフト＋矢じりを持つ旗（ラベル）状の薄い矢印ジオメトリ。
+  // 既存のCone(+Y方向がデフォルトの向き)と同じ規約で、+Y方向を向く。setFromUnitVectors(Y,dir)でそのまま流用可能。
+  let _arrowGeoCache=null;
+  function makeArrowGeometry(){
+    if(_arrowGeoCache) return _arrowGeoCache;
+    const shape=new THREE.Shape();
+    shape.moveTo(0,1.05);
+    shape.lineTo(0.46,0.30);
+    shape.lineTo(0.17,0.30);
+    shape.lineTo(0.17,-0.75);
+    shape.lineTo(-0.17,-0.75);
+    shape.lineTo(-0.17,0.30);
+    shape.lineTo(-0.46,0.30);
+    shape.closePath();
+    const geo=new THREE.ExtrudeGeometry(shape,{depth:0.09, bevelEnabled:false, curveSegments:2});
+    geo.translate(0,0,-0.045);
+    _arrowGeoCache=geo;
+    return geo;
+  }
+  // 高度の目盛り（縦軸）：ある地点に鉛直の物差しを立て、地上からの高さの目安（km）を示す
+  function altitudeAxis(scene, x, z, opts={}){
+    const maxY = opts.maxY||18;
+    const color = opts.color||0x5b6b85;
+    const kmPerUnit = opts.kmPerUnit||0.78;
+    const marks = opts.marks||[0,4,8,12,16];
+    const group=new THREE.Group();
+    const pts=[new THREE.Vector3(x,0,z), new THREE.Vector3(x,maxY,z)];
+    const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({color, dashSize:0.5, gapSize:0.35, transparent:true, opacity:0.7}));
+    line.computeLineDistances();
+    group.add(line);
+    marks.forEach(y=>{
+      if(y>maxY+0.5) return;
+      const tick=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x-0.6,y,z), new THREE.Vector3(x+0.6,y,z)]), new THREE.LineBasicMaterial({color, transparent:true, opacity:0.8}));
+      group.add(tick);
+      const km=Math.round(y*kmPerUnit);
+      const lbl=textSprite(km+'km', {color:'#3d4a63', scale:1.1});
+      lbl.position.set(x-1.6, y, z);
+      group.add(lbl);
+    });
+    const capLbl=textSprite('高度（目安）', {color:'#3d4a63', scale:1.2});
+    capLbl.position.set(x, maxY+1.4, z);
+    group.add(capLbl);
+    scene.add(group);
+    return group;
+  }
+  return {glowTexture, textSprite, makeRenderer, resize, makeJapanMesh, getJapanShapes, compassLabels, groundGrid, baseLights, makeArrowGeometry, altitudeAxis};
+})();
+
+/* 軽量オービットカメラ（ドラッグ回転／ホイールズーム） */
+class OrbitLite{
+  constructor(camera, dom, opts={}){
+    this.camera=camera; this.dom=dom;
+    this.target=new THREE.Vector3(...(opts.target||[0,0,0]));
+    this.radius=opts.radius||40;
+    this.theta=opts.theta!==undefined?opts.theta:0.8;
+    this.phi=opts.phi!==undefined?opts.phi:1.05;
+    this.minRadius=opts.minRadius||8;
+    this.maxRadius=opts.maxRadius||120;
+    this.autoRotate=opts.autoRotate||false;
+    this.autoRotateSpeed=opts.autoRotateSpeed||0.06;
+    this._drag=false; this._lx=0; this._ly=0;
+    this._pointers=new Map(); // アクティブなポインタ（タッチ2本でピンチズーム）
+    this._pinchDist=0;
+    this._onDown=this._onDown.bind(this);
+    this._onMove=this._onMove.bind(this);
+    this._onUp=this._onUp.bind(this);
+    this._onWheel=this._onWheel.bind(this);
+    dom.style.touchAction='none';
+    dom.addEventListener('pointerdown', this._onDown);
+    dom.addEventListener('pointermove', this._onMove);
+    window.addEventListener('pointerup', this._onUp);
+    window.addEventListener('pointercancel', this._onUp);
+    dom.addEventListener('wheel', this._onWheel, {passive:false});
+    this.update();
+  }
+  _pointerDistance(){
+    const it=this._pointers.values();
+    const a=it.next().value, b=it.next().value;
+    return Math.hypot(a.x-b.x, a.y-b.y);
+  }
+  _onDown(e){
+    this._pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    try{this.dom.setPointerCapture(e.pointerId);}catch(err){}
+    if(this._pointers.size===2){
+      // 2本指：ピンチズーム開始（回転は一時停止）
+      this._drag=false;
+      this._pinchDist=this._pointerDistance();
+    } else if(this._pointers.size===1){
+      this._drag=true; this._lx=e.clientX; this._ly=e.clientY;
+    }
+  }
+  _onMove(e){
+    if(this._pointers.has(e.pointerId)) this._pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(this._pointers.size>=2){
+      // ピンチ：2本指の距離の変化をホイールズームと同じ経路に流す
+      const d=this._pointerDistance();
+      if(this._pinchDist>0) this._applyZoom((this._pinchDist-d)*2.2);
+      this._pinchDist=d;
+      return;
+    }
+    if(!this._drag) return;
+    const dx=e.clientX-this._lx, dy=e.clientY-this._ly;
+    this._lx=e.clientX; this._ly=e.clientY;
+    this.theta -= dx*0.006;
+    this.phi -= dy*0.006;
+    this.phi=Math.max(0.2, Math.min(Math.PI-0.2, this.phi));
+  }
+  _onUp(e){
+    if(e && e.pointerId!==undefined) this._pointers.delete(e.pointerId);
+    else this._pointers.clear();
+    if(this._pointers.size<2) this._pinchDist=0;
+    if(this._pointers.size===1){
+      // 残った1本の指でそのまま回転を続けられるよう基準位置を取り直す
+      const p=this._pointers.values().next().value;
+      this._drag=true; this._lx=p.x; this._ly=p.y;
+    } else if(this._pointers.size===0){
+      this._drag=false;
+    }
+  }
+  _applyZoom(delta){
+    this.radius += delta*0.02*(this.radius*0.04+0.6);
+    this.radius=Math.max(this.minRadius, Math.min(this.maxRadius, this.radius));
+  }
+  _onWheel(e){
+    e.preventDefault();
+    this._applyZoom(e.deltaY);
+  }
+  update(dt=0){
+    if(this.autoRotate && !this._drag) this.theta += this.autoRotateSpeed*dt;
+    const {radius,theta,phi,target}=this;
+    this.camera.position.set(
+      target.x + radius*Math.sin(phi)*Math.sin(theta),
+      target.y + radius*Math.cos(phi),
+      target.z + radius*Math.sin(phi)*Math.cos(theta)
+    );
+    this.camera.lookAt(target);
+  }
+  dispose(){
+    this.dom.removeEventListener('pointerdown', this._onDown);
+    this.dom.removeEventListener('pointermove', this._onMove);
+    window.removeEventListener('pointerup', this._onUp);
+    window.removeEventListener('pointercancel', this._onUp);
+    this.dom.removeEventListener('wheel', this._onWheel);
+  }
+}
+
+function orientAlong(obj, dir){
+  const d=dir.clone().normalize();
+  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), d);
+  obj.quaternion.copy(q);
+}
+
+/* =========================================================
+   01: 高気圧・低気圧シミュレーター
+   ========================================================= */
+const SimPressure = (()=>{
+  let mount,renderer,scene,camera,orbit,raf=null,running=false,lastT=0;
+  let hMesh,lMesh,hCloudGroup,lCloudGroup;
+  let warmMesh,coolMesh,dummy;
+  const N=132; // 半分が暖色（高気圧側）、半分が寒色（低気圧側）の矢印
+  const state=[]; // {x,y,z,age,warm,ceiling,maxAge}
+  const params={dist:18, speed:1.0, vertical:true};
+  const domain=30;
+
+  function fieldVel3(x,y,z,cx,cz,mode,vertical){
+    // mode: 'H' outward+clockwise(NH)+沈降, 'L' inward+counterclockwise(NH)+上昇
+    const dx=x-cx, dz=z-cz;
+    const r=Math.sqrt(dx*dx+dz*dz)+0.001;
+    const ur=[dx/r, dz/r];
+    const utcw=[-dz/r, dx/r];   // clockwise tangential (N up=-z, E=+x)
+    const utccw=[dz/r,-dx/r];   // counterclockwise
+    const falloff = 1/(1+r*r*0.01);
+    let vx,vz,vy=0;
+    if(mode==='H'){
+      vx=(0.55*ur[0]+0.85*utcw[0])*falloff; vz=(0.55*ur[1]+0.85*utcw[1])*falloff;
+      if(vertical) vy = -Math.max(0,1-r/8)*0.9;
+    } else {
+      vx=(-0.55*ur[0]+0.85*utccw[0])*falloff; vz=(-0.55*ur[1]+0.85*utccw[1])*falloff;
+      if(vertical) vy = Math.max(0,1-r/8)*1.1;
+    }
+    return [vx,vy,vz,r];
+  }
+
+  function buildClouds(group, color, count){
+    group.clear();
+    for(let i=0;i<count;i++){
+      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:SharedGL.glowTexture(color), transparent:true, depthWrite:false, opacity:0.85}));
+      const a=Math.random()*Math.PI*2, r=Math.random()*3.2;
+      sp.position.set(Math.cos(a)*r, 0, Math.sin(a)*r);
+      sp.scale.setScalar(3+Math.random()*2.2);
+      sp.userData.baseY=0; sp.userData.ph=Math.random()*10;
+      group.add(sp);
+    }
+  }
+
+  function positions(){
+    const d=params.dist;
+    return { H:new THREE.Vector3(-d/2,0,3), L:new THREE.Vector3(d/2,0,-3) };
+  }
+
+  function relayout(){
+    const {H,L}=positions();
+    hMesh.position.copy(H); hMesh.position.y=0.05;
+    lMesh.position.copy(L); lMesh.position.y=0.05;
+    hCloudGroup.position.set(H.x,9.5,H.z);
+    lCloudGroup.position.set(L.x,9.5,L.z);
+  }
+
+  function init(){
+    mount=document.getElementById('mount-pressure');
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(45, mount.clientWidth/mount.clientHeight, 0.1, 600);
+    renderer=SharedGL.makeRenderer(mount);
+    orbit=new OrbitLite(camera, renderer.domElement, {radius:52, theta:0.7, phi:1.05, minRadius:18, maxRadius:110});
+    SharedGL.baseLights(scene);
+    scene.add(SharedGL.groundGrid(70,26));
+    scene.add(SharedGL.makeJapanMesh());
+    SharedGL.compassLabels(scene, 34);
+
+    hMesh=SharedGL.textSprite('H',{color:'#e8a33d',scale:3}); scene.add(hMesh);
+    lMesh=SharedGL.textSprite('L',{color:'#3fa9f5',scale:3}); scene.add(lMesh);
+    hCloudGroup=new THREE.Group(); scene.add(hCloudGroup);
+    lCloudGroup=new THREE.Group(); scene.add(lCloudGroup);
+    buildClouds(hCloudGroup,'255,214,140',5);
+    buildClouds(lCloudGroup,'150,185,230',9);
+
+    // sun above H
+    const sun=new THREE.Sprite(new THREE.SpriteMaterial({map:SharedGL.glowTexture('255,224,150'), transparent:true, depthWrite:false}));
+    sun.scale.setScalar(9); sun.position.set(0,0,0);
+    hCloudGroup.userData.sun=sun;
+
+    // 風向きに合わせて向きを変える「流動的なラベル型矢印」で3D風の流れを表現
+    dummy=new THREE.Object3D();
+    const arrowGeo=SharedGL.makeArrowGeometry();
+    const warmMat=new THREE.MeshStandardMaterial({color:0xe8a33d, emissive:0xe8a33d, emissiveIntensity:0.35, roughness:0.5, side:THREE.DoubleSide});
+    const coolMat=new THREE.MeshStandardMaterial({color:0x3fa9f5, emissive:0x3fa9f5, emissiveIntensity:0.35, roughness:0.5, side:THREE.DoubleSide});
+    const halfN=Math.floor(N/2);
+    warmMesh=new THREE.InstancedMesh(arrowGeo, warmMat, halfN);
+    coolMesh=new THREE.InstancedMesh(arrowGeo, coolMat, N-halfN);
+    scene.add(warmMesh); scene.add(coolMesh);
+    for(let i=0;i<N;i++){ state.push({x:0,y:0,z:0,age:0,warm:i<halfN,ceiling:9,maxAge:20}); respawn(i); }
+
+    relayout();
+    bindControls();
+    onResize();
+    start();
+  }
+
+  function respawn(i){
+    const s=state[i];
+    if(s.warm){
+      // 高気圧側は「吹き出している」様子がひと目で分かるよう、中心付近から再出現させ続ける
+      const {H}=positions();
+      const a=Math.random()*Math.PI*2;
+      const r=1.2+Math.random()*3.6;
+      s.x=H.x+Math.cos(a)*r;
+      s.z=H.z+Math.sin(a)*r;
+    } else {
+      s.x=(Math.random()-0.5)*domain*2;
+      s.z=(Math.random()-0.5)*domain*2;
+    }
+    s.y=Math.random()*1.5;
+    // 個体差を持たせ、上昇気流にのった矢印が一斉に消えて再出現する「ポップ」を防ぐ
+    s.age=-Math.random()*4;
+    s.ceiling=8+Math.random()*4.5;
+    s.maxAge=18+Math.random()*14;
+  }
+
+  function step(dt){
+    const {H,L}=positions();
+    const halfN=Math.floor(N/2);
+    let wi=0, ci=0;
+    for(let i=0;i<N;i++){
+      const s=state[i];
+      const [vhx,vhy,vhz,rh]=fieldVel3(s.x,s.y,s.z,H.x,H.z,'H',params.vertical);
+      const [vlx,vly,vlz,rl]=fieldVel3(s.x,s.y,s.z,L.x,L.z,'L',params.vertical);
+      const vx=(vhx+vlx)*4.0*params.speed;
+      const vz=(vhz+vlz)*4.0*params.speed;
+      const vy=(vhy+vly)*3.2*params.speed;
+      const nx=s.x+vx*dt, ny=s.y+vy*dt, nz=s.z+vz*dt;
+      s.age+=dt;
+      if(Math.abs(nx)>domain||Math.abs(nz)>domain||ny>s.ceiling||ny<-0.3||s.age>s.maxAge){
+        respawn(i);
+      } else {
+        s.x=nx; s.y=Math.max(0,ny); s.z=nz;
+      }
+      // 矢印の向き＝その場所での瞬間的な風向き（水平＋鉛直）
+      let dir=new THREE.Vector3(vx,vy,vz);
+      const speedMag=dir.length();
+      dir = speedMag>0.0001 ? dir.normalize() : new THREE.Vector3(0,1,0);
+      dummy.position.set(s.x, s.y+0.3, s.z);
+      const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
+      dummy.quaternion.copy(q);
+      // 天井・寿命に近づくほど小さくして、消える瞬間の唐突さ（ポップ）を和らげる
+      const fadeCeil=Math.min(1, Math.max(0, (s.ceiling-s.y)/1.8));
+      const fadeAge=Math.min(1, Math.max(0, (s.maxAge-s.age)/2.5));
+      const fade=Math.min(fadeCeil, fadeAge, Math.min(1,(s.age+4)/1.5));
+      const sc=(0.5+Math.min(1.2, speedMag*0.32))*fade;
+      dummy.scale.set(sc*0.85, sc, sc*0.85);
+      dummy.updateMatrix();
+      if(s.warm){ warmMesh.setMatrixAt(wi++, dummy.matrix); }
+      else { coolMesh.setMatrixAt(ci++, dummy.matrix); }
+    }
+    warmMesh.instanceMatrix.needsUpdate=true;
+    coolMesh.instanceMatrix.needsUpdate=true;
+
+    // clouds bob + visibility toggle
+    hCloudGroup.visible = params.vertical;
+    lCloudGroup.visible = params.vertical;
+    const t=performance.now()*0.001;
+    lCloudGroup.children.forEach(c=>{ c.position.y = 0.6*Math.sin(t*0.8+c.userData.ph); });
+  }
+
+  function animate(){
+    if(!running) return;
+    raf=requestAnimationFrame(animate);
+    const now=performance.now();
+    const dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    step(dt);
+    orbit.update(dt);
+    renderer.render(scene,camera);
+  }
+  function start(){ if(running)return; running=true; lastT=performance.now(); raf=requestAnimationFrame(animate); }
+  function stop(){ running=false; if(raf) cancelAnimationFrame(raf); raf=null; }
+  function onResize(){ if(!mount||!renderer||!camera) return; SharedGL.resize(renderer,camera,mount); if(!running) renderer.render(scene,camera); }
+
+  function bindControls(){
+    const dist=document.getElementById('p-dist'), distV=document.getElementById('p-dist-v');
+    dist.addEventListener('input', ()=>{ params.dist=+dist.value; distV.textContent=dist.value; relayout(); });
+    const speed=document.getElementById('p-speed'), speedV=document.getElementById('p-speed-v');
+    speed.addEventListener('input', ()=>{ params.speed=+speed.value; speedV.textContent=(+speed.value).toFixed(1); });
+    document.getElementById('p-vert').addEventListener('change', e=>{ params.vertical=e.target.checked; });
+    const playBtn=document.getElementById('p-play');
+    playBtn.addEventListener('click', ()=>{
+      if(running){ stop(); playBtn.textContent='再生'; } else { start(); playBtn.textContent='一時停止'; }
+    });
+  }
+  return {init,start,stop,onResize};
+})();
+
+/* =========================================================
+   02: 偏西風・ジェット気流シミュレーター
+   ========================================================= */
+const SimJet = (()=>{
+  let mount,renderer,scene,camera,orbit,raf=null,running=false,lastT=0;
+  let arrowMesh, dummy, seeds, tAccum=0;
+  let surfaceMarkers=[];
+  const COUNT=130;
+  const domainX=32, jetY=13;
+  const seasonParams={
+    winter:{baseZ:3, amp:5.5, k:0.16, speed:9, color:0xd9a6ef, label:'冬：南寄り・強い', readout:'緯度位置：日本付近まで南下／風速：強い（100m/s近くに達することも）'},
+    shoulder:{baseZ:-6, amp:3.5, k:0.15, speed:6, color:0xc792ea, label:'春・秋：中間', readout:'緯度位置：中間／風速：中程度'},
+    summer:{baseZ:-16, amp:2.4, k:0.13, speed:4.2, color:0xb08de0, label:'夏：北寄り・弱い', readout:'緯度位置：北へ後退／風速：弱い（冬のおよそ半分程度）'}
+  };
+  let season='shoulder';
+  let amp=3.5;
+
+  function waveZ(x, ph, s){
+    return s.baseZ + amp*Math.sin(x*s.k + ph);
+  }
+  function waveSlope(x, ph, s){
+    return amp*s.k*Math.cos(x*s.k+ph);
+  }
+
+  function init(){
+    mount=document.getElementById('mount-jet');
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(45, mount.clientWidth/mount.clientHeight,0.1,700);
+    renderer=SharedGL.makeRenderer(mount);
+    orbit=new OrbitLite(camera, renderer.domElement, {radius:62, theta:0.55, phi:1.15, minRadius:20, maxRadius:130});
+    SharedGL.baseLights(scene);
+    scene.add(SharedGL.groundGrid(76,26));
+    scene.add(SharedGL.makeJapanMesh());
+    SharedGL.compassLabels(scene, 38);
+
+    const arrowGeo=SharedGL.makeArrowGeometry();
+    const mat=new THREE.MeshStandardMaterial({color:seasonParams[season].color, emissive:seasonParams[season].color, emissiveIntensity:0.35, side:THREE.DoubleSide});
+    arrowMesh=new THREE.InstancedMesh(arrowGeo, mat, COUNT);
+    scene.add(arrowMesh);
+    dummy=new THREE.Object3D();
+    seeds=[];
+    for(let i=0;i<COUNT;i++){
+      seeds.push({x:(Math.random()*2-1)*domainX, zs:(Math.random()-0.5)*1.6, ys:(Math.random()-0.5)*1.2, ph0:Math.random()*Math.PI*2});
+    }
+
+    // 偏西風の「高さ」がひと目で分かるよう、地上からの高度目盛り（縦軸）を表示
+    SharedGL.altitudeAxis(scene, -domainX-4, 0, {maxY:18, marks:[0,4,8,13,16], kmPerUnit:0.77});
+
+    // surface L markers steered by jet
+    for(let i=0;i<3;i++){
+      const g=new THREE.Group();
+      const lbl=SharedGL.textSprite('L',{color:'#3fa9f5',scale:2.4});
+      g.add(lbl);
+      g.userData.x=-domainX + i*(domainX*2/3);
+      scene.add(g);
+      surfaceMarkers.push(g);
+    }
+
+    applySeason('shoulder', true);
+    bindControls();
+    onResize();
+    start();
+  }
+
+  function applySeason(name, silent){
+    season=name;
+    amp = +document.getElementById('j-amp').value || seasonParams[name].amp;
+    document.getElementById('j-amp').value = seasonParams[name].amp;
+    document.getElementById('j-amp-v').textContent = seasonParams[name].amp.toFixed(1);
+    amp = seasonParams[name].amp;
+    const s=seasonParams[name];
+    arrowMesh.material.color.setHex(s.color);
+    arrowMesh.material.emissive.setHex(s.color);
+    document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active', b.dataset.season===name));
+    document.getElementById('j-stat-label').textContent='現在の設定：'+s.label;
+    document.getElementById('j-readout').textContent=s.readout;
+  }
+
+  function step(dt){
+    const s=seasonParams[season];
+    tAccum += dt*s.speed*0.12;
+    for(let i=0;i<COUNT;i++){
+      const sd=seeds[i];
+      sd.x += dt*s.speed*1.0;
+      if(sd.x>domainX) sd.x -= domainX*2;
+      const ph = tAccum + sd.ph0*0.0;
+      const z = waveZ(sd.x, tAccum, s) + sd.zs;
+      const y = jetY + sd.ys;
+      const slope = waveSlope(sd.x, tAccum, s);
+      dummy.position.set(sd.x, y, z);
+      const dir=new THREE.Vector3(1,0,slope).normalize();
+      const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
+      dummy.quaternion.copy(q);
+      const sc=0.7+ (s.speed/9)*0.6;
+      dummy.scale.setScalar(sc);
+      dummy.updateMatrix();
+      arrowMesh.setMatrixAt(i, dummy.matrix);
+    }
+    arrowMesh.instanceMatrix.needsUpdate=true;
+
+    surfaceMarkers.forEach((g,i)=>{
+      g.userData.x += dt*s.speed*0.5;
+      if(g.userData.x>domainX) g.userData.x -= domainX*2;
+      const z = waveZ(g.userData.x, tAccum, s)*0.6;
+      g.position.set(g.userData.x, 0.6, z);
+    });
+  }
+
+  function animate(){
+    if(!running) return;
+    raf=requestAnimationFrame(animate);
+    const now=performance.now();
+    const dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    step(dt);
+    orbit.update(dt);
+    renderer.render(scene,camera);
+  }
+  function start(){ if(running)return; running=true; lastT=performance.now(); raf=requestAnimationFrame(animate); }
+  function stop(){ running=false; if(raf) cancelAnimationFrame(raf); raf=null; }
+  function onResize(){ if(!mount||!renderer||!camera) return; SharedGL.resize(renderer,camera,mount); if(!running) renderer.render(scene,camera); }
+
+  function bindControls(){
+    document.querySelectorAll('[data-season]').forEach(b=>{
+      b.addEventListener('click', ()=>applySeason(b.dataset.season));
+    });
+    const ampEl=document.getElementById('j-amp'), ampV=document.getElementById('j-amp-v');
+    ampEl.addEventListener('input', ()=>{ amp=+ampEl.value; ampV.textContent=(+ampEl.value).toFixed(1); });
+  }
+  return {init,start,stop,onResize};
+})();
+
+/* =========================================================
+   03: 台風の季節ごとの軌道シミュレーター
+   ========================================================= */
+const SimTyphoon = (()=>{
+  let mount,renderer,scene,camera,orbit,raf=null,running=false,lastT=0;
+  let pacificHigh, jetRibbon=[], guideLine, marker, swirl, uParam=0, playing=false;
+  const tracks={
+    early:{
+      pts:[[-1,29],[-5,21],[-8,14],[-9,9],[-7,6],[-2,5],[5,4],[13,3],[21,4]],
+      recurveU:0.4, highPos:[14,18], highR:7, jetZ:9,
+      label:'5〜6月の傾向',
+      desc:'太平洋高気圧はまだ弱く南寄りにあるため、台風は低い緯度で東寄りに進みやすく、日本の南海上を通過することが多い。'
+    },
+    peak:{
+      pts:[[0,29],[-6,20],[-10,11],[-11,4],[-9,-1],[-5,-6],[1,-11],[8,-14],[14,-16]],
+      recurveU:0.55, highPos:[7,7], highR:12, jetZ:-6,
+      label:'7〜8月の傾向',
+      desc:'太平洋高気圧が最も強く西へ張り出すため、台風は西寄りに進んでから日本列島の近くで北上・接近しやすい時期。'
+    },
+    autumn:{
+      pts:[[3,27],[-3,18],[-7,9],[-8,3],[-6,-2],[0,-6],[8,-8],[17,-5],[27,0]],
+      recurveU:0.5, highPos:[9,11], highR:9.5, jetZ:0,
+      label:'9月の傾向',
+      desc:'太平洋高気圧が後退し、偏西風が南下してくるため、台風は日本付近で北寄りに進路を変え、速いスピードで東へ抜けやすい。'
+    },
+    late:{
+      pts:[[6,30],[3,22],[3,15],[6,9],[11,4],[17,2],[23,3],[29,6],[35,9]],
+      recurveU:0.32, highPos:[16,20], highR:6.5, jetZ:13,
+      label:'10月以降の傾向',
+      desc:'偏西風がさらに南下し台風の勢力も弱まりやすいため、日本のはるか南海上で東へそれることが多くなる。'
+    }
+  };
+  let curKey='peak';
+  let curve;
+
+  function buildCurve(key){
+    const t=tracks[key];
+    const vecs=t.pts.map(p=>new THREE.Vector3(p[0],0,p[1]));
+    return new THREE.CatmullRomCurve3(vecs);
+  }
+
+  function rebuildStatics(){
+    const t=tracks[curKey];
+    if(guideLine){ scene.remove(guideLine); guideLine.geometry.dispose(); }
+    curve=buildCurve(curKey);
+    const pts=curve.getPoints(90);
+    const geo=new THREE.BufferGeometry().setFromPoints(pts);
+    const mat=new THREE.LineDashedMaterial({color:0xff8a8e, dashSize:1.2, gapSize:0.8, transparent:true, opacity:0.85});
+    guideLine=new THREE.Line(geo, mat);
+    guideLine.computeLineDistances();
+    scene.add(guideLine);
+
+    if(pacificHigh){
+      scene.remove(pacificHigh);
+      if(pacificHigh.userData.label) scene.remove(pacificHigh.userData.label);
+    }
+    const g=new THREE.SphereGeometry(1,24,16);
+    pacificHigh=new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:0xe8a33d, transparent:true, opacity:0.28, roughness:1}));
+    pacificHigh.scale.set(t.highR, t.highR*0.35, t.highR);
+    pacificHigh.position.set(t.highPos[0], 3, t.highPos[1]);
+    scene.add(pacificHigh);
+    const hLabel=SharedGL.textSprite('太平洋高気圧',{color:'#e8a33d',scale:2.2});
+    hLabel.position.set(t.highPos[0], t.highR*0.35+4, t.highPos[1]);
+    pacificHigh.userData.label=hLabel;
+    scene.add(hLabel);
+
+    jetRibbon.forEach(o=>scene.remove(o));
+    jetRibbon=[];
+    const jz=t.jetZ;
+    const jpts=[];
+    for(let x=-32;x<=38;x+=3){ jpts.push(new THREE.Vector3(x, 13, jz+2.2*Math.sin(x*0.16))); }
+    const jgeo=new THREE.BufferGeometry().setFromPoints(jpts);
+    const jmat=new THREE.LineBasicMaterial({color:0xc792ea, transparent:true, opacity:0.75});
+    const jline=new THREE.Line(jgeo,jmat);
+    scene.add(jline); jetRibbon.push(jline);
+    const jLabel=SharedGL.textSprite('偏西風（ジェット気流）',{color:'#c792ea',scale:2.0});
+    jLabel.position.set(-28,15,jz);
+    scene.add(jLabel); jetRibbon.push(jLabel);
+
+    document.getElementById('t-stat-label').textContent=t.label;
+    document.getElementById('t-desc').textContent=t.desc;
+    uParam=0;
+  }
+
+  function buildSwirl(){
+    swirl=new THREE.Group();
+    const levels=5, levelGap=2.0, baseY=0.6;
+    for(let L=0; L<levels; L++){
+      const y=baseY+L*levelGap;
+      const rr=Math.max(0.9, 3.6 - L*0.55); // 上にいくほど少し窄まる塔状の雲
+      const count=10;
+      for(let i=0;i<count;i++){
+        const ang0=(i/count)*Math.PI*2 + L*0.4;
+        const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:SharedGL.glowTexture('120,138,168'), transparent:true, depthWrite:false, opacity:0.82-L*0.09}));
+        sp.scale.setScalar(1.15 + (levels-L)*0.05);
+        sp.userData.baseAng=ang0; sp.userData.rr=rr; sp.userData.y=y;
+        swirl.add(sp);
+      }
+    }
+    // 最上部：時計回りに広がる上空の吹き出し（アウトフロー＝雲頂の広がり）
+    const topY=baseY+levels*levelGap;
+    for(let i=0;i<16;i++){
+      const ang0=(i/16)*Math.PI*2;
+      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:SharedGL.glowTexture('150,165,190'), transparent:true, depthWrite:false, opacity:0.6}));
+      sp.scale.setScalar(1.7);
+      sp.userData.baseAng=ang0; sp.userData.rr=4.8; sp.userData.y=topY; sp.userData.outflow=true;
+      swirl.add(sp);
+    }
+    // 目（中心の柱）と暖かい中心の光
+    const eyeCol=new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55,0.85,topY,12,1,true),
+      new THREE.MeshBasicMaterial({color:0x9fd8ff, transparent:true, opacity:0.10, side:THREE.DoubleSide})
+    );
+    eyeCol.position.y=topY/2;
+    swirl.add(eyeCol);
+    const eye=new THREE.Sprite(new THREE.SpriteMaterial({map:SharedGL.glowTexture('255,107,111'), transparent:true, depthWrite:false}));
+    eye.position.y=0.7;
+    eye.scale.setScalar(2.1);
+    swirl.add(eye);
+    marker=new THREE.Group();
+    marker.add(swirl);
+    scene.add(marker);
+  }
+
+  function init(){
+    mount=document.getElementById('mount-typhoon');
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(45, mount.clientWidth/mount.clientHeight,0.1,700);
+    renderer=SharedGL.makeRenderer(mount);
+    orbit=new OrbitLite(camera, renderer.domElement, {radius:66, theta:0.5, phi:1.1, minRadius:22, maxRadius:140});
+    SharedGL.baseLights(scene);
+    scene.add(SharedGL.groundGrid(90,28));
+    scene.add(SharedGL.makeJapanMesh());
+    SharedGL.compassLabels(scene, 40);
+
+    buildSwirl();
+    rebuildStatics();
+    marker.position.copy(curve.getPointAt(0));
+
+    bindControls();
+    onResize();
+    start();
+  }
+
+  function step(dt){
+    if(playing){
+      const t=tracks[curKey];
+      const accel = uParam>t.recurveU ? 2.4 : 1.0;
+      uParam += dt*0.045*accel;
+      if(uParam>=1){ uParam=0; }
+    }
+    const p=curve.getPointAt(Math.min(0.999,uParam));
+    marker.position.set(p.x,0,p.z);
+    const tt=performance.now()*0.001;
+    swirl.children.forEach(c=>{
+      if(c.userData.rr===undefined) return;
+      // 下層〜中層は反時計回り（サイクロン性）、最上部の吹き出しだけ時計回り（アンチサイクロン性）
+      const dir = c.userData.outflow ? 1 : -1;
+      const speed = c.userData.outflow ? 0.55 : 1.4;
+      const ang=c.userData.baseAng + dir*tt*speed;
+      c.position.set(Math.cos(ang)*c.userData.rr, c.userData.y, Math.sin(ang)*c.userData.rr);
+    });
+    if(pacificHigh) pacificHigh.userData.label.position.set(pacificHigh.position.x, pacificHigh.scale.y+4, pacificHigh.position.z);
+  }
+
+  function animate(){
+    if(!running) return;
+    raf=requestAnimationFrame(animate);
+    const now=performance.now();
+    const dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    step(dt);
+    orbit.update(dt);
+    renderer.render(scene,camera);
+  }
+  function start(){ if(running)return; running=true; lastT=performance.now(); raf=requestAnimationFrame(animate); }
+  function stop(){ running=false; if(raf) cancelAnimationFrame(raf); raf=null; }
+  function onResize(){ if(!mount||!renderer||!camera) return; SharedGL.resize(renderer,camera,mount); if(!running) renderer.render(scene,camera); }
+
+  function bindControls(){
+    document.querySelectorAll('[data-month]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        document.querySelectorAll('[data-month]').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        curKey=b.dataset.month;
+        rebuildStatics();
+        marker.position.copy(curve.getPointAt(0));
+      });
+    });
+    const playBtn=document.getElementById('t-play');
+    playBtn.addEventListener('click', ()=>{
+      playing=!playing;
+      playBtn.textContent = playing? '一時停止 ❚❚' : '台風を進める ▶';
+    });
+  }
+  return {init,start,stop,onResize};
+})();
+
+/* =========================================================
+   04: 気団と季節ごとの気圧配置シミュレーター
+   ========================================================= */
+const SimAirmass = (()=>{
+  let mount,renderer,scene,camera,orbit,raf=null,running=false,lastT=0;
+  let blobs={}, patternGroup, migGroup, migT=0;
+  const defs={
+    siberia:{pos:[-17,-9], color:0x5a8bd6, label:'シベリア気団\n（寒・乾）'},
+    okhotsk:{pos:[3,-19], color:0x3fc7d6, label:'オホーツク海気団\n（寒・湿）'},
+    ogasawara:{pos:[15,17], color:0xe8a33d, label:'小笠原気団\n（暖・湿）'},
+    yangtze:{pos:[-15,10], color:0xd6c23f, label:'揚子江気団\n（暖・乾）'}
+  };
+  const influence={
+    winter:{siberia:1.0, okhotsk:0.3, ogasawara:0.08, yangtze:0.2},
+    shoulder:{siberia:0.25, okhotsk:0.2, ogasawara:0.3, yangtze:0.85},
+    baiu:{siberia:0.1, okhotsk:0.85, ogasawara:0.85, yangtze:0.2},
+    summer:{siberia:0.05, okhotsk:0.18, ogasawara:1.0, yangtze:0.25}
+  };
+  const desc={
+    winter:'シベリア高気圧が発達し、日本の東海上には低気圧が発達。西に高気圧・東に低気圧が並ぶ「西高東低」の冬型の気圧配置になり、南北に等圧線が混み合う。日本海側は大雪、太平洋側は乾いた晴天になりやすい。',
+    shoulder:'揚子江気団の影響で、移動性高気圧と低気圧が交互に西から東へ通過する。天気は数日周期でくるくる変わりやすい時期。',
+    baiu:'北のオホーツク海気団（冷たく湿った空気）と南の小笠原気団（暖かく湿った空気）の勢力がほぼ拮抗し、その境目に梅雨前線ができる。前線は南北に行ったり来たりしながら1か月以上停滞する。',
+    summer:'小笠原気団（太平洋高気圧）が日本列島をおおい、南に高気圧・北に低気圧の「南高北低」型になる。蒸し暑い晴天が続き、強い日射で積乱雲が発生しやすい。'
+  };
+  let season='summer';
+
+  function ring(center, color, count, baseR){
+    const g=new THREE.Group();
+    for(let i=0;i<count;i++){
+      const rr=baseR + i*2.4;
+      const curve=new THREE.EllipseCurve(0,0, rr, rr*0.78, 0, Math.PI*2,false,0);
+      const pts=curve.getPoints(64).map(p=>new THREE.Vector3(p.x,0,p.y));
+      const geo=new THREE.BufferGeometry().setFromPoints(pts);
+      const mat=new THREE.LineBasicMaterial({color, transparent:true, opacity:0.55-i*0.07});
+      const line=new THREE.LineLoop(geo,mat);
+      line.position.set(center[0],0.25+i*0.01,center[1]);
+      g.add(line);
+    }
+    return g;
+  }
+
+  function frontSymbol(zFrom,zTo,x0,x1){
+    const g=new THREE.Group();
+    const n=10;
+    const pts=[];
+    for(let i=0;i<=n;i++){
+      const t=i/n;
+      const x=x0+(x1-x0)*t;
+      const z=zFrom+(zTo-zFrom)*t + Math.sin(t*Math.PI*2)*1.0;
+      pts.push(new THREE.Vector3(x,0.4,z));
+    }
+    const geo=new THREE.BufferGeometry().setFromPoints(pts);
+    const mat=new THREE.LineDashedMaterial({color:0x33415a, dashSize:1,gapSize:0.6});
+    const line=new THREE.Line(geo,mat); line.computeLineDistances();
+    g.add(line);
+    for(let i=1;i<pts.length-1;i+=2){
+      const p=pts[i];
+      if(i%4===1){
+        const tri=new THREE.Mesh(new THREE.ConeGeometry(0.6,1.1,4), new THREE.MeshStandardMaterial({color:0x3fc7d6}));
+        tri.position.set(p.x,0.4,p.z-0.8);
+        tri.rotation.x=Math.PI/2;
+        g.add(tri);
+      } else {
+        const semi=new THREE.Mesh(new THREE.SphereGeometry(0.55,10,8,0,Math.PI), new THREE.MeshStandardMaterial({color:0xe8a33d}));
+        semi.position.set(p.x,0.4,p.z+0.8);
+        semi.rotation.y=Math.PI/2;
+        g.add(semi);
+      }
+    }
+    return g;
+  }
+
+  function buildPattern(){
+    if(patternGroup) scene.remove(patternGroup);
+    if(migGroup) scene.remove(migGroup);
+    patternGroup=new THREE.Group();
+    migGroup=new THREE.Group();
+    if(season==='winter'){
+      patternGroup.add(ring(defs.siberia.pos, 0x5a8bd6, 4, 6));
+      patternGroup.add(ring([26,-14], 0x3fa9f5, 3, 5));
+      const hl=SharedGL.textSprite('高',{color:'#5a8bd6',scale:2.4}); hl.position.set(defs.siberia.pos[0],3,defs.siberia.pos[1]); patternGroup.add(hl);
+      const ll=SharedGL.textSprite('低',{color:'#3fa9f5',scale:2.4}); ll.position.set(26,3,-14); patternGroup.add(ll);
+      // 縦じま等圧線
+      for(let i=-3;i<=3;i++){
+        const pts=[];
+        for(let z=-22;z<=22;z+=4){ pts.push(new THREE.Vector3(i*4.4 + Math.sin(z*0.2)*1.2, 0.2, z)); }
+        const geo=new THREE.BufferGeometry().setFromPoints(pts);
+        const line=new THREE.Line(geo, new THREE.LineBasicMaterial({color:0x7d93c2, transparent:true,opacity:0.35}));
+        patternGroup.add(line);
+      }
+    } else if(season==='summer'){
+      patternGroup.add(ring(defs.ogasawara.pos, 0xe8a33d, 5, 7));
+      patternGroup.add(ring([-2,-24], 0x3fa9f5, 2, 4));
+      const hl=SharedGL.textSprite('高',{color:'#e8a33d',scale:2.4}); hl.position.set(defs.ogasawara.pos[0],3,defs.ogasawara.pos[1]); patternGroup.add(hl);
+      const ll=SharedGL.textSprite('低',{color:'#3fa9f5',scale:2.0}); ll.position.set(-2,3,-24); patternGroup.add(ll);
+    } else if(season==='baiu'){
+      patternGroup.add(frontSymbol(-4,-2, -20, 22));
+      const fl=SharedGL.textSprite('梅雨前線',{color:'#33415a',scale:2.0}); fl.position.set(0,4,-3); patternGroup.add(fl);
+    } else if(season==='shoulder'){
+      const positions=[[-24,6,'H'],[-8,-10,'L'],[10,8,'H'],[24,-8,'L']];
+      positions.forEach(p=>{
+        const grp=ring([p[0],p[1]], p[2]==='H'?0xe8a33d:0x3fa9f5, 2, 3.4);
+        const lbl=SharedGL.textSprite(p[2]==='H'?'高':'低',{color:p[2]==='H'?'#e8a33d':'#3fa9f5',scale:1.8});
+        lbl.position.set(p[0],2.6,p[1]);
+        grp.add(lbl);
+        grp.userData.drift=true;
+        migGroup.add(grp);
+      });
+    }
+    scene.add(patternGroup);
+    scene.add(migGroup);
+  }
+
+  function applySeason(name){
+    season=name;
+    document.querySelectorAll('[data-aseason]').forEach(b=>b.classList.toggle('active', b.dataset.aseason===name));
+    const label={winter:'冬の気圧配置（西高東低）',summer:'夏の気圧配置（南高北低）',baiu:'梅雨の気圧配置',shoulder:'春・秋の気圧配置'};
+    document.getElementById('a-stat-label').textContent=label[name];
+    document.getElementById('a-desc').textContent=desc[name];
+    const inf=influence[name];
+    Object.keys(blobs).forEach(k=>{
+      blobs[k].userData.target = inf[k];
+    });
+    buildPattern();
+  }
+
+  function init(){
+    mount=document.getElementById('mount-airmass');
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(45, mount.clientWidth/mount.clientHeight,0.1,700);
+    renderer=SharedGL.makeRenderer(mount);
+    orbit=new OrbitLite(camera, renderer.domElement, {radius:64, theta:0.65, phi:1.05, minRadius:20, maxRadius:140});
+    SharedGL.baseLights(scene);
+    scene.add(SharedGL.groundGrid(80,26));
+    scene.add(SharedGL.makeJapanMesh());
+    SharedGL.compassLabels(scene, 36);
+
+    Object.entries(defs).forEach(([k,d])=>{
+      const geo=new THREE.SphereGeometry(1,20,16);
+      const mat=new THREE.MeshStandardMaterial({color:d.color, transparent:true, opacity:0.3, roughness:1});
+      const mesh=new THREE.Mesh(geo,mat);
+      mesh.position.set(d.pos[0], 4, d.pos[1]);
+      mesh.userData.target=0.3; mesh.userData.cur=0.3;
+      const baseScale=8;
+      mesh.userData.baseScale=baseScale;
+      mesh.scale.setScalar(baseScale*0.3);
+      scene.add(mesh);
+      const lines=d.label.split('\n');
+      const lbl=SharedGL.textSprite(lines[0],{color:'#'+d.color.toString(16).padStart(6,'0'),scale:1.9});
+      lbl.position.set(d.pos[0], 9.5, d.pos[1]);
+      scene.add(lbl);
+      const lbl2=SharedGL.textSprite(lines[1]||'',{color:'#5b6b85',scale:1.3});
+      lbl2.position.set(d.pos[0], 7.8, d.pos[1]);
+      scene.add(lbl2);
+      blobs[k]=mesh;
+    });
+
+    applySeason('summer');
+    bindControls();
+    onResize();
+    start();
+  }
+
+  function step(dt){
+    Object.values(blobs).forEach(b=>{
+      b.userData.cur += (b.userData.target - b.userData.cur)*Math.min(1,dt*1.6);
+      const s=b.userData.baseScale*(0.35+b.userData.cur*0.9);
+      b.scale.setScalar(s);
+      b.material.opacity=0.16+b.userData.cur*0.32;
+    });
+    migT += dt;
+    migGroup.children.forEach((g,i)=>{
+      if(!g.userData.drift) return;
+      g.position.x += dt*1.1;
+      if(g.position.x>34){ g.position.x=-34; }
+    });
+  }
+
+  function animate(){
+    if(!running) return;
+    raf=requestAnimationFrame(animate);
+    const now=performance.now();
+    const dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    step(dt);
+    orbit.update(dt);
+    renderer.render(scene,camera);
+  }
+  function start(){ if(running)return; running=true; lastT=performance.now(); raf=requestAnimationFrame(animate); }
+  function stop(){ running=false; if(raf) cancelAnimationFrame(raf); raf=null; }
+  function onResize(){ if(!mount||!renderer||!camera) return; SharedGL.resize(renderer,camera,mount); if(!running) renderer.render(scene,camera); }
+
+  function bindControls(){
+    document.querySelectorAll('[data-aseason]').forEach(b=>{
+      b.addEventListener('click', ()=>applySeason(b.dataset.aseason));
+    });
+  }
+  return {init,start,stop,onResize};
+})();
+
+/* =========================================================
+   05: 台風の立体構造シミュレーター
+   ========================================================= */
+const SimStructure = (()=>{
+  let mount,renderer,scene,camera,orbit,raf=null,running=false,lastT=0;
+  let wallMesh,rainMesh,outMesh,coreMesh,eyeCyl,dummy,structureLabels;
+  const WALL_N=90, RAIN_N=110, OUT_N=90;
+  let intensity=1; // 0 weak,1 mid,2 strong
+  let cutaway=false;
+  const clipPlane=new THREE.Plane(new THREE.Vector3(1,0,0), 0.2);
+
+  function eyeR(){ return [4.2,3.0,1.9][intensity]; }
+
+  function init(){
+    mount=document.getElementById('mount-structure');
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(45, mount.clientWidth/mount.clientHeight,0.1,400);
+    renderer=SharedGL.makeRenderer(mount);
+    renderer.localClippingEnabled=true;
+    orbit=new OrbitLite(camera, renderer.domElement, {radius:38, theta:0.7, phi:1.15, minRadius:12, maxRadius:80});
+    SharedGL.baseLights(scene);
+    scene.add(SharedGL.groundGrid(46,18));
+
+    eyeCyl=new THREE.Mesh(
+      new THREE.CylinderGeometry(eyeR(),eyeR()*1.3,16,24,1,true),
+      new THREE.MeshBasicMaterial({color:0x9fd8ff, transparent:true, opacity:0.09, side:THREE.DoubleSide})
+    );
+    eyeCyl.position.y=8;
+    scene.add(eyeCyl);
+    const eyeLbl=SharedGL.textSprite('目（おだやかで晴れ）',{color:'#1c76c9',scale:1.4}); eyeLbl.position.set(0,2.2,0); scene.add(eyeLbl);
+    eyeCyl.userData.label=eyeLbl;
+
+    coreMesh=new THREE.Mesh(new THREE.CylinderGeometry(1.1,0.6,14,16), new THREE.MeshStandardMaterial({color:0xff6b6f, emissive:0xff2a30, emissiveIntensity:0.5, transparent:true, opacity:0.55}));
+    coreMesh.position.y=7;
+    scene.add(coreMesh);
+    const coreLbl=SharedGL.textSprite('暖核',{color:'#d84850',scale:1.6}); coreLbl.position.set(0,15.5,0); scene.add(coreLbl);
+
+    // 風向きに沿って向きを変える「流動的なラベル型矢印」で壁雲・スパイラルバンド・上空の吹き出しを表現
+    dummy=new THREE.Object3D();
+    const arrowGeo=SharedGL.makeArrowGeometry();
+    const wallMat=new THREE.MeshStandardMaterial({color:0xd8e6f5, emissive:0x4a78b0, emissiveIntensity:0.3, roughness:0.45, transparent:true, opacity:0.95, side:THREE.DoubleSide});
+    const rainMat=new THREE.MeshStandardMaterial({color:0x4fc3f7, emissive:0x2f9fe0, emissiveIntensity:0.3, roughness:0.55, transparent:true, opacity:0.9, side:THREE.DoubleSide});
+    const outMat=new THREE.MeshStandardMaterial({color:0xc792ea, emissive:0xc792ea, emissiveIntensity:0.35, roughness:0.5, transparent:true, opacity:0.92, side:THREE.DoubleSide});
+    wallMesh=new THREE.InstancedMesh(arrowGeo, wallMat, WALL_N); scene.add(wallMesh);
+    rainMesh=new THREE.InstancedMesh(arrowGeo, rainMat, RAIN_N); scene.add(rainMesh);
+    outMesh=new THREE.InstancedMesh(arrowGeo, outMat, OUT_N); scene.add(outMesh);
+
+    for(let i=0;i<WALL_N;i++) initWall(i);
+    for(let i=0;i<RAIN_N;i++) initRain(i);
+    for(let i=0;i<OUT_N;i++) initOut(i);
+
+    // 構造がひと目でわかるよう、地面に壁雲・スパイラルバンドの範囲を示すリングと日本語ラベルを追加
+    const wallRing=new THREE.Mesh(new THREE.RingGeometry(eyeR()+0.3,eyeR()+0.9,48), new THREE.MeshBasicMaterial({color:0x2f7fc9, transparent:true, opacity:0.35, side:THREE.DoubleSide}));
+    wallRing.rotation.x=-Math.PI/2; wallRing.position.y=0.03; scene.add(wallRing);
+    const wallLbl=SharedGL.textSprite('壁雲（アイウォール）',{color:'#1c76c9',scale:1.4}); wallLbl.position.set(eyeR()+2.2,1.2,0); scene.add(wallLbl);
+    const rainLbl=SharedGL.textSprite('スパイラルバンド',{color:'#2f9fe0',scale:1.4}); rainLbl.position.set(eyeR()+10,1.2,0); scene.add(rainLbl);
+    structureLabels={wallRing, wallLbl, rainLbl};
+
+    const outLbl=SharedGL.textSprite('上空の吹き出し（時計回り）',{color:'#8a4fd1',scale:1.5}); outLbl.position.set(0,17.5,0); scene.add(outLbl);
+
+    bindControls();
+    onResize();
+    start();
+  }
+
+  const state={wall:[],rain:[],out:[]};
+  function initWall(i){
+    const a=Math.random()*Math.PI*2;
+    state.wall[i]={a, y:Math.random()*14, speedY:1.2+Math.random()*0.6};
+  }
+  function initRain(i){
+    const arm=i%3;
+    const r=eyeR()+3+Math.random()*9;
+    const a=(r*0.5)+arm*(Math.PI*2/3);
+    state.rain[i]={a, r, y:Math.random()*10, speedY:0.5+Math.random()*0.4};
+  }
+  function initOut(i){
+    const a=Math.random()*Math.PI*2;
+    state.out[i]={a, r:1+Math.random()*2};
+  }
+
+  function placeArrow(mesh, idx, x,y,z, vx,vy,vz, scale){
+    let dir=new THREE.Vector3(vx,vy,vz);
+    dir = dir.lengthSq()>0.0001 ? dir.normalize() : new THREE.Vector3(0,1,0);
+    dummy.position.set(x,y,z);
+    dummy.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir));
+    dummy.scale.setScalar(scale);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(idx, dummy.matrix);
+  }
+
+  function step(dt){
+    const er=eyeR();
+    eyeCyl.geometry.dispose();
+    eyeCyl.geometry=new THREE.CylinderGeometry(er,er*1.3,16,24,1,true);
+    if(structureLabels){
+      structureLabels.wallRing.geometry.dispose();
+      structureLabels.wallRing.geometry=new THREE.RingGeometry(er+0.3,er+0.9,48);
+      structureLabels.wallLbl.position.x = er+2.2;
+    }
+
+    // 北半球：下層〜壁雲・スパイラルバンドは反時計回り（サイクロン性収束）
+    const wallOmega=-2.4;
+    for(let i=0;i<WALL_N;i++){
+      const s=state.wall[i];
+      s.a += dt*wallOmega;
+      s.y += dt*s.speedY;
+      if(s.y>15){ s.y=0; }
+      const r=er+0.6;
+      const x=Math.cos(s.a)*r, z=Math.sin(s.a)*r;
+      const vx=-r*wallOmega*Math.sin(s.a), vz=r*wallOmega*Math.cos(s.a), vy=s.speedY;
+      placeArrow(wallMesh, i, x,s.y,z, vx,vy,vz, 1.0);
+    }
+    wallMesh.instanceMatrix.needsUpdate=true;
+
+    for(let i=0;i<RAIN_N;i++){
+      const s=state.rain[i];
+      const omega=-1.6*(er>0?4/er:1);
+      s.a += dt*omega;
+      s.y += dt*s.speedY;
+      if(s.y>11) s.y=0;
+      const x=Math.cos(s.a)*s.r, z=Math.sin(s.a)*s.r;
+      const vx=-s.r*omega*Math.sin(s.a), vz=s.r*omega*Math.cos(s.a), vy=s.speedY;
+      placeArrow(rainMesh, i, x,s.y,z, vx,vy,vz, 0.85);
+    }
+    rainMesh.instanceMatrix.needsUpdate=true;
+
+    // 上空の吹き出し（アウトフロー）は逆に時計回り（アンチサイクロン性発散）— ラベル表記と向きを一致させる
+    const outOmega=2.0;
+    const outDrDt=1.6;
+    for(let i=0;i<OUT_N;i++){
+      const s=state.out[i];
+      s.a += dt*outOmega;
+      s.r += dt*outDrDt;
+      if(s.r>16){ s.r=1+Math.random()*2; s.a=Math.random()*Math.PI*2; }
+      const y=16+Math.sin(s.r*0.3)*0.4;
+      const x=Math.cos(s.a)*s.r, z=Math.sin(s.a)*s.r;
+      const vx=outDrDt*Math.cos(s.a)-s.r*outOmega*Math.sin(s.a);
+      const vz=outDrDt*Math.sin(s.a)+s.r*outOmega*Math.cos(s.a);
+      const vy=0.4*0.3*Math.cos(s.r*0.3)*outDrDt;
+      placeArrow(outMesh, i, x,y,z, vx,vy,vz, 0.95);
+    }
+    outMesh.instanceMatrix.needsUpdate=true;
+
+    const planes = cutaway? [clipPlane] : [];
+    [wallMesh.material, rainMesh.material, outMesh.material, eyeCyl.material].forEach(m=>{ m.clippingPlanes=planes; });
+    coreMesh.material.clippingPlanes=planes;
+    if(structureLabels) structureLabels.wallRing.material.clippingPlanes=planes;
+  }
+
+  function animate(){
+    if(!running) return;
+    raf=requestAnimationFrame(animate);
+    const now=performance.now();
+    const dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    step(dt);
+    orbit.update(dt);
+    renderer.render(scene,camera);
+  }
+  function start(){ if(running)return; running=true; lastT=performance.now(); raf=requestAnimationFrame(animate); }
+  function stop(){ running=false; if(raf) cancelAnimationFrame(raf); raf=null; }
+  function onResize(){ if(!mount||!renderer||!camera) return; SharedGL.resize(renderer,camera,mount); if(!running) renderer.render(scene,camera); }
+
+  function bindControls(){
+    const sl=document.getElementById('s-intensity'), slv=document.getElementById('s-intensity-v');
+    const names=['弱','中','強'];
+    sl.addEventListener('input', ()=>{ intensity=+sl.value; slv.textContent=names[intensity]; });
+    document.getElementById('s-cut').addEventListener('change', e=>{ cutaway=e.target.checked; });
+    const playBtn=document.getElementById('s-play');
+    playBtn.addEventListener('click', ()=>{
+      if(running){ stop(); playBtn.textContent='再生'; } else { start(); playBtn.textContent='一時停止'; }
+    });
+  }
+  return {init,start,stop,onResize};
+})();
+
+/* =========================================================
+   ナビゲーション
+   ========================================================= */
+const Nav = (()=>{
+  const sims = { pressure:SimPressure, jet:SimJet, typhoon:SimTyphoon, airmass:SimAirmass, structure:SimStructure };
+  const inited = new Set();
+  function show(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+    const target=document.getElementById(id);
+    if(target) target.classList.remove('hidden');
+    window.scrollTo({top:0});
+    if(id==='home'){
+      Object.values(sims).forEach(s=>s.stop && s.stop());
+      return;
+    }
+    const key=id.replace('sim-','');
+    const sim=sims[key];
+    if(sim){
+      Object.entries(sims).forEach(([k,s])=>{ if(k!==key) s.stop && s.stop(); });
+      if(!inited.has(key)){ sim.init(); inited.add(key); }
+      else { sim.start(); sim.onResize(); }
+    }
+  }
+  document.addEventListener('click', e=>{
+    const nav=e.target.closest('[data-nav]');
+    if(nav){ show(nav.dataset.nav); return; }
+    const info=e.target.closest('[data-toggle]');
+    if(info){
+      const panel=document.querySelector(info.dataset.toggle);
+      if(panel) panel.classList.toggle('hidden');
+    }
+  });
+  window.addEventListener('resize', ()=>{ inited.forEach(k=>{ const s=sims[k]; if(s&&s.onResize) s.onResize(); }); });
+  return {show};
+})();
+</script>
+</body>
+</html>

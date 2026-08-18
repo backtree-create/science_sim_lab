@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>斜方投射はなぜ放物線を描くのか</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:var(--velocity);}
+  #stage{width:100%;height:380px;}
+  #chart{width:100%;height:140px;display:block;margin-top:14px;}
+  .chartbox{background:var(--bg-panel-2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:14px;}
+  .chartbox h3{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);letter-spacing:.06em;margin-bottom:6px;text-transform:uppercase;}
+  .toggles{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  /* モバイル対応（表示専用キャンバス：ダブルタップ拡大のみ抑制） */
+  body{-webkit-tap-highlight-color:transparent;}
+  canvas{touch-action:manipulation;}
+  button.btn{touch-action:manipulation;}
+  @media (max-width:600px){
+    #stage{height:260px;}
+  }
+  @media (pointer: coarse){
+    button.btn{min-height:44px;}
+    input[type=range]::-webkit-slider-thumb{width:26px;height:26px;}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">03 ／ 運動と力</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Projectile Motion (Air Resistance Ignored)</span>
+  <h1>斜方投射はなぜ放物線を描くのか</h1>
+  <p>ななめに投げ出した物体には、飛んでいる間ずっと重力だけが働き続ける（空気抵抗は無視）。水平方向と鉛直方向、それぞれの動きに力がどう関わっているかを分解して見てみよう。</p>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h2><span class="dot"></span>シミュレーション</h2>
+    <div class="toggles">
+      <button class="btn active" id="toggleVec">速度ベクトルを表示</button>
+      <button class="btn active" id="toggleTrail">軌跡を表示</button>
+    </div>
+    <div class="stage"><canvas id="stage"></canvas></div>
+    <div class="legend" style="margin-top:12px;">
+      <div class="item"><span class="sw" style="background:var(--force);"></span>重力 mg（一定・下向き）</div>
+      <div class="item"><span class="sw" style="background:var(--velocity);"></span>水平速度 vx（一定）</div>
+      <div class="item"><span class="sw" style="background:var(--highlight);"></span>鉛直速度 vy（変化）</div>
+    </div>
+    <div class="chartbox">
+      <h3>速度成分の時間変化</h3>
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>パラメータ</h2>
+    <div class="controls">
+      <div class="control">
+        <label>初速 v₀ <span class="val"><span id="v0Val">20</span> m/s</span></label>
+        <input type="range" id="v0" min="5" max="40" value="20" step="1">
+      </div>
+      <div class="control">
+        <label>投射角 θ <span class="val"><span id="thVal">45</span>°</span></label>
+        <input type="range" id="th" min="5" max="85" value="45" step="1">
+      </div>
+    </div>
+    <div class="btnrow" style="margin-top:16px;">
+      <button class="btn primary" id="launchBtn">発射する</button>
+      <button class="btn" id="resetBtn">リセット</button>
+    </div>
+
+    <h2 style="margin-top:22px;"><span class="dot"></span>読み取り値</h2>
+    <div class="readout">
+      <div class="item"><div class="k">経過時間</div><div class="v" id="rT">0.00 s</div></div>
+      <div class="item"><div class="k">最高到達点</div><div class="v" id="rHmax">— m</div></div>
+      <div class="item"><div class="k">水平到達距離</div><div class="v" id="rRange">— m</div></div>
+      <div class="item"><div class="k">滞空時間</div><div class="v" id="rTflight">— s</div></div>
+      <div class="item"><div class="k">vx（水平）</div><div class="v velocity" id="rVx">0.0 m/s</div></div>
+      <div class="item"><div class="k">vy（鉛直）</div><div class="v force" id="rVy">0.0 m/s</div></div>
+    </div>
+
+    <div class="explain">
+      水平方向には力が働かないため、<strong>vx は一定</strong>のまま変わりません。鉛直方向には重力だけが働くため、<strong>vy は毎秒 9.8 m/s ずつ</strong>下向きに変化し続けます（自由落下と同じ）。この2つの独立した運動が組み合わさることで、軌道は放物線を描きます。
+      <div class="note">最高点では vy = 0 になりますが、vx はゼロになりません。だから物体は最高点でも止まらず、水平方向には進み続けます。</div>
+    </div>
+  </div>
+</div>
+
+<footer class="source">
+  <h3>Reference</h3>
+  空気抵抗を無視した場合の斜方投射の軌道は、水平方向の等速直線運動（x=v0cosθ・t）と鉛直方向の等加速度運動（y=v0sinθ・t − ½gt²）の重ね合わせとして厳密に解け、放物線を描くことは古典力学（ニュートン力学）の基本結果として広く確立されている。g=9.8 m/s² を使用。
+</footer>
+
+<script>
+const canvas=document.getElementById('stage'), ctx=canvas.getContext('2d');
+function resize(){
+  const r=canvas.parentElement.getBoundingClientRect();
+  canvas.width=r.width*devicePixelRatio; canvas.height=r.height*devicePixelRatio;
+  canvas.style.width=r.width+'px'; canvas.style.height=r.height+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener('resize',resize);
+
+const v0El=document.getElementById('v0'), thEl=document.getElementById('th');
+v0El.addEventListener('input',()=>document.getElementById('v0Val').textContent=v0El.value);
+thEl.addEventListener('input',()=>document.getElementById('thVal').textContent=thEl.value);
+
+const g=9.8;
+let flying=false, t=0, trail=[], vxHist=[], vyHist=[], tHist=[];
+let showVec=true, showTrail=true;
+document.getElementById('toggleVec').onclick=(e)=>{showVec=!showVec;e.target.classList.toggle('active',showVec);};
+document.getElementById('toggleTrail').onclick=(e)=>{showTrail=!showTrail;e.target.classList.toggle('active',showTrail);};
+
+document.getElementById('launchBtn').onclick=()=>{
+  flying=true; t=0; trail=[]; vxHist=[]; vyHist=[]; tHist=[];
+};
+document.getElementById('resetBtn').onclick=()=>{
+  flying=false; t=0; trail=[]; vxHist=[]; vyHist=[]; tHist=[];
+  document.getElementById('rT').textContent='0.00 s';
+  document.getElementById('rVx').textContent='0.0 m/s';
+  document.getElementById('rVy').textContent='0.0 m/s';
+};
+
+function getParams(){
+  const v0=parseFloat(v0El.value), th=parseFloat(thEl.value)*Math.PI/180;
+  const vx0=v0*Math.cos(th), vy0=v0*Math.sin(th);
+  const tFlight=2*vy0/g;
+  const range=vx0*tFlight;
+  const hmax=(vy0*vy0)/(2*g);
+  return {v0,th,vx0,vy0,tFlight,range,hmax};
+}
+
+let scale=8; // px per meter, recalculated
+function draw(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const P=getParams();
+  scale=Math.min((w-80)/Math.max(P.range,10), (h-80)/Math.max(P.hmax,5));
+  scale=Math.max(Math.min(scale,22),3);
+  const originX=50, originY=h-40;
+
+  // ground
+  ctx.strokeStyle='#c9c9d3'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,originY); ctx.lineTo(w,originY); ctx.stroke();
+
+  // trail
+  if(showTrail && trail.length>1){
+    ctx.strokeStyle='rgba(74,217,255,.35)'; ctx.lineWidth=2;
+    ctx.beginPath();
+    trail.forEach((p,i)=>{
+      const px=originX+p.x*scale, py=originY-p.y*scale;
+      if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    });
+    ctx.stroke();
+  }
+
+  // full projected parabola (faint guide)
+  ctx.strokeStyle='rgba(20,20,30,.12)'; ctx.lineWidth=1.5; ctx.beginPath();
+  for(let i=0;i<=60;i++){
+    const tt=P.tFlight*i/60;
+    const x=P.vx0*tt, y=Math.max(P.vy0*tt-0.5*g*tt*tt,0);
+    const px=originX+x*scale, py=originY-y*scale;
+    if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+
+  // current position
+  let x,y,vx,vy;
+  if(flying){
+    x=P.vx0*t; y=P.vy0*t-0.5*g*t*t; vx=P.vx0; vy=P.vy0-g*t;
+    if(y<0){y=0;flying=false;}
+  } else {
+    x=0;y=0;vx=P.vx0;vy=P.vy0;
+  }
+  const px=originX+x*scale, py=originY-y*scale;
+
+  if(showVec){
+    const vscale=2.2;
+    arrow(px,py,px,py-P.v0*0,null); // no-op placeholder
+    arrow(px,py,px,py-40*0.6,'#ff6b4a','mg',[8,10],true); // gravity fixed length indicator
+    arrow(px,py,px+vx*vscale,py,'#4ad9ff','vx',[6,-4]);
+    arrow(px,py,px,py-vy*vscale,'#ffc857','vy',[8,-6]);
+  }
+
+  ctx.fillStyle='#1c1c24';
+  ctx.beginPath(); ctx.arc(px,py,6,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#4ad9ff'; ctx.lineWidth=2; ctx.stroke();
+
+  document.getElementById('rHmax').textContent=P.hmax.toFixed(1)+' m';
+  document.getElementById('rRange').textContent=P.range.toFixed(1)+' m';
+  document.getElementById('rTflight').textContent=P.tFlight.toFixed(2)+' s';
+  document.getElementById('rT').textContent=t.toFixed(2)+' s';
+  document.getElementById('rVx').textContent=vx.toFixed(1)+' m/s';
+  document.getElementById('rVy').textContent=vy.toFixed(1)+' m/s';
+
+  return {vx,vy};
+}
+
+function arrow(x0,y0,x1,y1,color,label,labelOffset,fixedGravity){
+  if(fixedGravity){
+    x1=x0; y1=y0+40;
+  }
+  if(Math.hypot(x1-x0,y1-y0)<2)return;
+  const headlen=8;
+  const dx=x1-x0, dy=y1-y0, ang=Math.atan2(dy,dx);
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2.6;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x1-headlen*Math.cos(ang-Math.PI/6), y1-headlen*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x1-headlen*Math.cos(ang+Math.PI/6), y1-headlen*Math.sin(ang+Math.PI/6));
+  ctx.closePath(); ctx.fill();
+  if(label){ ctx.font='600 11px "JetBrains Mono",monospace'; ctx.fillStyle=color;
+    const lo=labelOffset||[6,-6]; ctx.fillText(label,x1+lo[0],y1+lo[1]); }
+}
+
+function drawChart(){
+  const c=document.getElementById('chart');
+  const dpr=devicePixelRatio||1; const rect=c.getBoundingClientRect();
+  c.width=rect.width*dpr; c.height=rect.height*dpr;
+  const cctx=c.getContext('2d'); cctx.setTransform(dpr,0,0,dpr,0,0);
+  const w=rect.width,h=rect.height; cctx.clearRect(0,0,w,h);
+  const P=getParams();
+  const padL=34,padB=20,padT=8,padR=8;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  cctx.strokeStyle='#c9c9d3'; cctx.lineWidth=1;
+  cctx.beginPath();cctx.moveTo(padL,padT);cctx.lineTo(padL,padT+plotH);cctx.lineTo(padL+plotW,padT+plotH);cctx.stroke();
+  const midY=padT+plotH/2;
+  cctx.strokeStyle='#dcdce4'; cctx.beginPath(); cctx.moveTo(padL,midY); cctx.lineTo(padL+plotW,midY); cctx.stroke();
+  const vmax=Math.max(P.vx0,Math.abs(P.vy0))*1.15;
+  function toXY(tt,v){return [padL+(tt/P.tFlight)*plotW, midY-(v/vmax)*(plotH/2)];}
+  // vx line (constant)
+  cctx.strokeStyle='#4ad9ff'; cctx.lineWidth=2; cctx.beginPath();
+  let p=toXY(0,P.vx0); cctx.moveTo(p[0],p[1]); p=toXY(P.tFlight,P.vx0); cctx.lineTo(p[0],p[1]); cctx.stroke();
+  // vy line
+  cctx.strokeStyle='#ffc857'; cctx.lineWidth=2; cctx.beginPath();
+  for(let i=0;i<=40;i++){const tt=P.tFlight*i/40; const vy=P.vy0-g*tt; const pp=toXY(tt,vy); if(i===0)cctx.moveTo(pp[0],pp[1]);else cctx.lineTo(pp[0],pp[1]);}
+  cctx.stroke();
+  // marker
+  if(flying||t>0){
+    const pp=toXY(Math.min(t,P.tFlight),0);
+    cctx.strokeStyle='rgba(20,20,30,.25)'; cctx.beginPath(); cctx.moveTo(pp[0],padT); cctx.lineTo(pp[0],padT+plotH); cctx.stroke();
+  }
+  cctx.fillStyle='#5a6376'; cctx.font='10px "JetBrains Mono",monospace';
+  cctx.fillText('t (s)',padL+plotW-24,padT+plotH+14);
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,0.033); last=now;
+  if(flying){ t+=dt; trail.push({x:getParams().vx0*t, y:Math.max(getParams().vy0*t-0.5*g*t*t,0)}); }
+  draw(); drawChart();
+  requestAnimationFrame(loop);
+}
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

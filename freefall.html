@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>雨はなぜ弾丸にならないのか ― 自由落下と空気抵抗</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:var(--highlight);}
+  #stage{width:100%;height:340px;}
+  #chart{width:100%;height:180px;display:block;}
+  .chartbox{background:var(--bg-panel-2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:14px;}
+  .chartbox h3{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);letter-spacing:.06em;margin-bottom:6px;text-transform:uppercase;}
+  .exception{
+    font-family:var(--font-mono);font-size:11px;color:var(--highlight);
+    border:1px solid var(--highlight);border-radius:100px;padding:6px 14px;display:inline-block;margin-bottom:14px;
+  }
+
+  /* --- モバイル対応 --- */
+  body{-webkit-tap-highlight-color:transparent;min-height:100dvh;}
+  button{touch-action:manipulation;}
+  #stage{display:block;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+  @media (pointer:coarse){
+    button.btn{min-height:44px;}
+    input[type=range]::-webkit-slider-thumb{width:26px;height:26px;}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">04 ／ 自由落下と空気抵抗</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Free Fall vs Terminal Velocity</span>
+  <h1>雨はなぜ弾丸にならないのか</h1>
+  <p>雲の高さ（1000〜2000m）から雨粒が空気抵抗なしで自由落下したら、地上に着くころには時速300kmを超え、拳銃の弾なみの速さになる。しかし実際の雨はそうならない。この矛盾を、速度が増すほど強くなる空気抵抗の働きから解き明かす。</p>
+  <div class="exception">※ このシミュレーターに限り、現象を説明するため空気抵抗を考慮します</div>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h2><span class="dot"></span>2つの雨粒を落としてみる</h2>
+    <div class="stage"><canvas id="stage"></canvas></div>
+    <div class="legend" style="margin-top:10px;">
+      <div class="item"><span class="sw" style="background:var(--force);"></span>空気抵抗なし（理論上）</div>
+      <div class="item"><span class="sw" style="background:var(--velocity);"></span>空気抵抗あり（現実の雨）</div>
+    </div>
+    <div class="btnrow" style="margin-top:14px;">
+      <button class="btn primary" id="dropBtn">雨粒を落とす</button>
+      <button class="btn" id="resetBtn2">リセット</button>
+    </div>
+    <div class="chartbox">
+      <h3>速度の時間変化（v-tグラフ）</h3>
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>パラメータ</h2>
+    <div class="controls">
+      <div class="control">
+        <label>雨粒の直径 <span class="val"><span id="dVal">2.0</span> mm</span></label>
+        <input type="range" id="d" min="0.5" max="5" value="2.0" step="0.1">
+      </div>
+      <div class="control">
+        <label>雲の高さ h <span class="val"><span id="hVal">1500</span> m</span></label>
+        <input type="range" id="h" min="500" max="3000" value="1500" step="100">
+      </div>
+    </div>
+
+    <h2 style="margin-top:22px;"><span class="dot"></span>読み取り値</h2>
+    <div class="readout">
+      <div class="item"><div class="k">終端速度</div><div class="v velocity" id="rVt">— m/s</div></div>
+      <div class="item"><div class="k">終端速度（時速）</div><div class="v velocity" id="rVtKmh">— km/h</div></div>
+      <div class="item"><div class="k">空気抵抗なしの着地速度</div><div class="v force" id="rVimpact">— m/s</div></div>
+      <div class="item"><div class="k">同上（時速）</div><div class="v force" id="rVimpactKmh">— km/h</div></div>
+      <div class="item"><div class="k">空気抵抗なしの落下時間</div><div class="v force" id="rTimpactNo">— s</div></div>
+      <div class="item"><div class="k">空気抵抗ありの落下時間</div><div class="v velocity" id="rTimpactRes">— s</div></div>
+    </div>
+
+    <div class="explain" id="explainText">
+      速度が小さいうちは空気抵抗も小さく、重力がまさって加速します。しかし空気抵抗は<strong>速度が大きいほど強く</strong>なるため、やがて重力とつり合う速さに達し、それ以上は加速しなくなります。これが<strong>終端速度</strong>です。
+      <div class="note" id="noteText">直径2mmの雨粒の終端速度はおよそ6.5m/s（時速約23km）。空気抵抗がなければ雲の高さから着地までに時速300km以上に達している計算になります。</div>
+      <div class="note" style="border-left-color:var(--velocity);">アニメーションのレーンは実際の高度ではなく、一定区間（25m）を模式的にループ表示しています。<strong>ループの間隔が短くなるほど速く落ちている</strong>ことを表します。空気抵抗ありは加速後すぐに一定間隔になり、空気抵抗なしは間隔がどんどん短くなり続けます。右の「読み取り値」が実際の高度 h に対する正確な着地速度・時間です。</div>
+    </div>
+  </div>
+</div>
+
+<footer class="source">
+  <h3>Reference</h3>
+  雨粒の終端速度は、大気科学で広く使われる経験式 v(D) = 9.65 − 10.3・exp(−0.6D)（D: 直径[mm], v: 終端速度[m/s], Atlas, Srivastava &amp; Sekhon, 1973 による関係式）を採用。これは速度の2乗に比例する空気抵抗（慣性抵抗、高レイノルズ数域で支配的）が重力とつり合う条件から導かれる代表的なモデルで、実測データともよく一致することが大気科学の文献で確認されている。空気抵抗なしの自由落下速度は v=√(2gh)（g=9.8 m/s²）で計算。
+</footer>
+
+<script>
+/*
+  物理モデル（解析解を使用。数値積分の誤差や、時間圧縮によるアニメーションの
+  破綻を避けるため、すべて閉じた式で厳密に計算する）
+
+  空気抵抗なし（自由落下）:
+    v(t) = g t
+    y(t) = 1/2 g t^2
+
+  空気抵抗あり（速度の2乗に比例する抵抗 → 終端速度 vt に収束する運動方程式
+  m dv/dt = mg - k v^2 の厳密解。k は vt = sqrt(mg/k) から決まる）:
+    v(t) = vt * tanh(g t / vt)
+    y(t) = (vt^2/g) * ln(cosh(g t / vt))
+
+  アニメーションは実時間（等倍）で進める。空気抵抗ありの場合、終端速度に
+  達したあとも実際の雲の高さに落ちきるまで現実には長い時間がかかるため、
+  画面表示は一定区間（LANE_M）をループさせる模式表示とし、実際の高度に
+  対する着地速度・落下時間は右側の読み取り値に厳密解から算出して表示する。
+*/
+const canvas=document.getElementById('stage'), ctx=canvas.getContext('2d');
+function resize(){
+  canvas.style.height=''; // メディアクエリによる高さ変更をインラインスタイルが上書きしないよう一旦解除
+  const r=canvas.parentElement.getBoundingClientRect();
+  canvas.width=r.width*devicePixelRatio; canvas.height=r.height*devicePixelRatio;
+  canvas.style.width=r.width+'px'; canvas.style.height=r.height+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener('resize',resize);
+
+const dEl=document.getElementById('d'), hEl=document.getElementById('h');
+dEl.addEventListener('input',()=>{document.getElementById('dVal').textContent=parseFloat(dEl.value).toFixed(1);updateReadouts();});
+hEl.addEventListener('input',()=>{document.getElementById('hVal').textContent=hEl.value;updateReadouts();});
+
+const g=9.8;
+const LANE_M=25;      // 表示レーンが表す模式的な区間の長さ [m]
+const T_AUTOPAUSE=16; // このシミュレーション時間[s]で自動停止する
+
+function terminalVelocity(D_mm){ return 9.65 - 10.3*Math.exp(-0.6*D_mm); }
+
+// 空気抵抗なし：厳密解
+function vNoRes(t){ return g*t; }
+function yNoRes(t){ return 0.5*g*t*t; }
+
+// 空気抵抗あり：厳密解（v(t)=vt tanh(gt/vt), y(t)=(vt^2/g) ln(cosh(gt/vt))）
+function vRes(t,vt){ return vt*Math.tanh(g*t/vt); }
+function yRes(t,vt){ return (vt*vt/g)*Math.log(Math.cosh(g*t/vt)); }
+
+function formatTime(s){
+  if(!isFinite(s)) return '—';
+  if(s<60) return s.toFixed(1)+' s';
+  const m=Math.floor(s/60), rem=s-m*60;
+  return m+'分'+rem.toFixed(0)+'秒';
+}
+
+function updateReadouts(){
+  const D=parseFloat(dEl.value), h=parseFloat(hEl.value);
+  const vt=terminalVelocity(D);
+  const vImpact=Math.sqrt(2*g*h);
+  const tImpactNo=Math.sqrt(2*h/g);
+
+  // 空気抵抗ありの落下時間: y(t)=h を t について解く
+  // cosh(gt/vt) = exp(g h / vt^2)  →  gt/vt = arccosh(exp(X)), X = g h / vt^2
+  const X=g*h/(vt*vt);
+  let z; // = g t / vt = arccosh(exp(X))
+  if(X>20){ z = X + Math.log(2); } // exp(X)が非常に大きい場合の漸近近似（オーバーフロー回避）
+  else { const c=Math.exp(X); z = Math.log(c + Math.sqrt(c*c-1)); }
+  const tImpactRes = z*vt/g;
+  const vImpactRes = vRes(tImpactRes, vt); // 実質的にほぼ vt に収束している
+
+  document.getElementById('rVt').textContent=vt.toFixed(2)+' m/s';
+  document.getElementById('rVtKmh').textContent=(vt*3.6).toFixed(1)+' km/h';
+  document.getElementById('rVimpact').textContent=vImpact.toFixed(1)+' m/s';
+  document.getElementById('rVimpactKmh').textContent=(vImpact*3.6).toFixed(0)+' km/h';
+  document.getElementById('rTimpactNo').textContent=formatTime(tImpactNo);
+  document.getElementById('rTimpactRes').textContent=formatTime(tImpactRes);
+  document.getElementById('noteText').innerHTML='直径'+D.toFixed(1)+'mmの雨粒の終端速度はおよそ'+vt.toFixed(1)+'m/s（時速約'+(vt*3.6).toFixed(0)+'km）。高さ'+h+'mから空気抵抗なしで落ちると、着地時にはおよそ時速'+(vImpact*3.6).toFixed(0)+'kmに達する計算になります（実際の雨は終端速度に収束するため、着地速度はほぼ'+vt.toFixed(1)+'m/sのまま）。';
+}
+updateReadouts();
+
+let dropping=false, paused=false, t=0;
+
+document.getElementById('dropBtn').onclick=()=>{
+  dropping=true; paused=false; t=0;
+};
+document.getElementById('resetBtn2').onclick=()=>{
+  dropping=false; paused=false; t=0;
+};
+
+function drawDrop(x,y,color){
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(x,y-10);
+  ctx.bezierCurveTo(x-6,y-2,x-6,y+6,x,y+6);
+  ctx.bezierCurveTo(x+6,y+6,x+6,y-2,x,y-10);
+  ctx.fill();
+}
+
+function draw(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const D=parseFloat(dEl.value); const vt=terminalVelocity(D);
+  const topY=26, botY=h-26;
+  const laneX1=w*0.32, laneX2=w*0.68;
+
+  ctx.strokeStyle='#dcdce4'; ctx.setLineDash([4,5]); ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(laneX1,topY);ctx.lineTo(laneX1,botY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(laneX2,topY);ctx.lineTo(laneX2,botY);ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle='#5a6376'; ctx.font='11px "JetBrains Mono",monospace'; ctx.textAlign='center';
+  ctx.fillText('空気抵抗なし',laneX1,18);
+  ctx.fillText('空気抵抗あり',laneX2,18);
+  ctx.textAlign='left';
+
+  const curYNo=yNoRes(t), curVNo=vNoRes(t);
+  const curYRes=yRes(t,vt), curVRes=vRes(t,vt);
+
+  // レーン内の位置は LANE_M ごとにループ（模式表示）。ループ回数が多い＝速く動いている。
+  const fracNo=(curYNo%LANE_M)/LANE_M;
+  const fracRes=(curYRes%LANE_M)/LANE_M;
+  const py1=topY+fracNo*(botY-topY);
+  const py2=topY+fracRes*(botY-topY);
+
+  drawDrop(laneX1,py1,getComputedStyle(document.documentElement).getPropertyValue('--force').trim());
+  drawDrop(laneX2,py2,getComputedStyle(document.documentElement).getPropertyValue('--velocity').trim());
+
+  ctx.font='600 13px "JetBrains Mono",monospace';
+  ctx.textAlign='center';
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--force').trim();
+  ctx.fillText(curVNo.toFixed(1)+' m/s',laneX1,botY+22);
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--velocity').trim();
+  ctx.fillText(curVRes.toFixed(1)+' m/s',laneX2,botY+22);
+  ctx.textAlign='left';
+
+  if(paused){
+    ctx.fillStyle='rgba(10,14,21,.78)';
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='#eef1f6'; ctx.font='600 13px "JetBrains Mono",monospace'; ctx.textAlign='center';
+    ctx.fillText('デモ終了（この先も差は開き続ける） ― リセットして再実行できます',w/2,h/2);
+    ctx.textAlign='left';
+  }
+}
+
+function drawChart(){
+  const c=document.getElementById('chart');
+  const dpr=devicePixelRatio||1; const rect=c.getBoundingClientRect();
+  c.width=rect.width*dpr; c.height=rect.height*dpr;
+  const cctx=c.getContext('2d'); cctx.setTransform(dpr,0,0,dpr,0,0);
+  const w=rect.width,h=rect.height; cctx.clearRect(0,0,w,h);
+  const padL=38,padB=22,padT=10,padR=10;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  cctx.strokeStyle='#c9c9d3'; cctx.lineWidth=1;
+  cctx.beginPath();cctx.moveTo(padL,padT);cctx.lineTo(padL,padT+plotH);cctx.lineTo(padL+plotW,padT+plotH);cctx.stroke();
+
+  const D=parseFloat(dEl.value); const vt=terminalVelocity(D);
+  const maxT=Math.max(t,3);
+  const maxV=Math.max(vNoRes(maxT), vt*1.3, 5);
+
+  function toXY(tt,v){return [padL+(tt/maxT)*plotW, padT+plotH-(v/maxV)*plotH];}
+
+  cctx.strokeStyle='rgba(74,217,255,.35)'; cctx.setLineDash([3,4]); cctx.lineWidth=1.3;
+  let p0=toXY(0,vt), p1=toXY(maxT,vt);
+  cctx.beginPath();cctx.moveTo(p0[0],p0[1]);cctx.lineTo(p1[0],p1[1]);cctx.stroke();
+  cctx.setLineDash([]);
+  cctx.fillStyle='#4ad9ff'; cctx.font='10px "JetBrains Mono",monospace';
+  cctx.fillText('終端速度 '+vt.toFixed(1)+'m/s',padL+6,p0[1]-4);
+
+  cctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--force').trim();
+  cctx.lineWidth=2; cctx.beginPath();
+  for(let i=0;i<=60;i++){const tt=maxT*i/60; const pp=toXY(tt,vNoRes(tt)); if(i===0)cctx.moveTo(pp[0],pp[1]);else cctx.lineTo(pp[0],pp[1]);}
+  cctx.stroke();
+
+  cctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--velocity').trim();
+  cctx.lineWidth=2; cctx.beginPath();
+  for(let i=0;i<=60;i++){const tt=maxT*i/60; const pp=toXY(tt,vRes(tt,vt)); if(i===0)cctx.moveTo(pp[0],pp[1]);else cctx.lineTo(pp[0],pp[1]);}
+  cctx.stroke();
+
+  if(t>0){
+    const pp=toXY(Math.min(t,maxT),0);
+    cctx.strokeStyle='rgba(20,20,30,.22)'; cctx.beginPath(); cctx.moveTo(pp[0],padT); cctx.lineTo(pp[0],padT+plotH); cctx.stroke();
+  }
+
+  cctx.fillStyle='#5a6376'; cctx.font='10px "JetBrains Mono",monospace';
+  cctx.fillText('t (s)',padL+plotW-20,padT+plotH+14);
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,0.033); last=now; // 実時間（等倍）で進める
+  if(dropping && !paused){
+    t+=dt;
+    if(t>=T_AUTOPAUSE){ t=T_AUTOPAUSE; paused=true; }
+  }
+  draw(); drawChart();
+  requestAnimationFrame(loop);
+}
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

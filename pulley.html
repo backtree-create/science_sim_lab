@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>定滑車と動滑車を組み合わせる</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:#7bdc8f;}
+  #stage{width:100%;height:420px;}
+  .builder{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .pulleylist{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .pulleyrow{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--bg-panel-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;
+    font-family:var(--font-mono);font-size:12px;
+  }
+  .pulleyrow .tag{
+    padding:3px 10px;border-radius:100px;font-size:11px;
+  }
+  .pulleyrow .tag.fixed{background:rgba(74,217,255,.12);color:var(--velocity);border:1px solid var(--velocity);}
+  .pulleyrow .tag.movable{background:rgba(123,220,143,.12);color:var(--normal);border:1px solid var(--normal);}
+  .pulleyrow button{
+    background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:14px;
+  }
+  .pulleyrow button:hover{color:var(--force);}
+  .empty-hint{font-family:var(--font-mono);font-size:12px;color:var(--text-faint);padding:14px;text-align:center;border:1px dashed var(--border);border-radius:8px;}
+
+  .stagehint{
+    font-family:var(--font-mono);font-size:12px;color:var(--highlight);
+    text-align:center;margin-top:10px;padding:8px;border:1px dashed var(--highlight);border-radius:8px;
+  }
+  button.btn:disabled{opacity:.35;cursor:not-allowed;}
+  button.btn:disabled:hover{border-color:var(--border);}
+
+  .errorbox{
+    display:none;
+    background:rgba(255,107,74,.08);border:1px solid var(--force);border-radius:10px;
+    padding:16px 18px;margin-bottom:16px;
+  }
+  .errorbox.show{display:block;}
+  .errorbox .etitle{
+    font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;color:var(--force);
+    display:flex;align-items:center;gap:8px;margin-bottom:8px;text-transform:uppercase;
+  }
+  .errorbox .etitle .mark{
+    width:18px;height:18px;border-radius:50%;background:var(--force);color:#0a0e15;
+    display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;
+  }
+  .errorbox p{font-size:13.5px;line-height:1.8;color:var(--text);}
+  .errorbox p strong{color:var(--force);}
+
+  .tabbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .tabbtn{
+    font-family:var(--font-mono);font-size:12px;padding:9px 14px;border-radius:100px;
+    background:var(--bg-panel-2);border:1px solid var(--border);color:var(--text-dim);cursor:pointer;
+    transition:.15s;
+  }
+  .tabbtn:hover{border-color:var(--text-dim);color:var(--text);}
+  .tabbtn.active{background:#7bdc8f;color:#0a0e15;border-color:#7bdc8f;font-weight:700;}
+  .examplecaption{
+    background:var(--bg-panel-2);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;margin-bottom:18px;font-size:13px;line-height:1.8;color:var(--text-dim);
+  }
+  .examplecaption strong{color:var(--text);}
+  .examplecaption .ma{
+    display:inline-block;margin-top:8px;font-family:var(--font-mono);font-size:11px;color:var(--normal);
+    border:1px solid var(--normal);border-radius:100px;padding:4px 12px;
+  }
+
+  /* --- モバイル対応 --- */
+  body{-webkit-tap-highlight-color:transparent;min-height:100dvh;}
+  button{touch-action:manipulation;}
+  #stage{display:block;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+  @media (max-width:600px){
+    #stage{height:360px;}
+  }
+  @media (pointer:coarse){
+    button.btn{min-height:44px;}
+    .tabbtn{min-height:44px;}
+    .pulleyrow button{min-height:44px;padding:4px 10px;}
+    input[type=range]::-webkit-slider-thumb{width:26px;height:26px;}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">06 ／ 滑車</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Fixed &amp; Movable Pulleys</span>
+  <h1>定滑車と動滑車を自由に組み合わせる</h1>
+  <p>天井に固定されて向きだけを変える「定滑車」と、荷物と一緒に動いて力を分散させる「動滑車」。組み合わせる数を自分で変えながら、必要な力・引く紐の長さ・仕事（エネルギー）の関係を確かめる。</p>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h2><span class="dot"></span>身の回りの例から見る</h2>
+    <div class="tabbar" id="tabbar"></div>
+    <div class="examplecaption" id="exampleCaption"></div>
+
+    <h2><span class="dot"></span>滑車を組み立てる</h2>
+    <div class="builder">
+      <button class="btn" id="addFixed">＋ 定滑車を追加</button>
+      <button class="btn" id="addMovable">＋ 動滑車を追加</button>
+      <button class="btn" id="clearAll">全て外す</button>
+    </div>
+    <div class="pulleylist" id="pulleyList"></div>
+
+    <div class="errorbox" id="errorBox">
+      <div class="etitle"><span class="mark">!</span>この組み合わせは現実には成立しません</div>
+      <p id="errorText"></p>
+    </div>
+
+    <h2><span class="dot"></span>シミュレーション</h2>
+    <div class="stage"><canvas id="stage"></canvas></div>
+    <div class="stagehint" id="stageHint">滑車を並べ終えたら「ロープを掛ける」を押してください</div>
+    <p style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-top:8px;line-height:1.7;">
+      ロープは追加した順番ではなく、実際に荷物を持ち上げられる配線（天井側と荷物側を交互に通る、定滑車→動滑車→定滑車…の順）で自動的に掛かります。同じ種類の滑車が連続する部分だけは、その区間で単に向きを変えるだけになります。
+    </p>
+    <div class="btnrow" style="margin-top:14px;">
+      <button class="btn primary" id="hangBtn">ロープを掛ける</button>
+      <button class="btn" id="liftBtn" disabled>持ち上げる</button>
+      <button class="btn" id="resetBtn3">リセット</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>パラメータ</h2>
+    <div class="controls">
+      <div class="control">
+        <label>荷物の質量 <span class="val"><span id="massVal2">20</span> kg</span></label>
+        <input type="range" id="mass2" min="2" max="60" value="20" step="1">
+      </div>
+      <div class="control">
+        <label>持ち上げる高さ h <span class="val"><span id="hVal2">1.0</span> m</span></label>
+        <input type="range" id="h2" min="0.2" max="2.0" value="1.0" step="0.1">
+      </div>
+    </div>
+
+    <h2 style="margin-top:22px;"><span class="dot"></span>読み取り値</h2>
+    <div class="readout">
+      <div class="item"><div class="k">荷物の重さ W</div><div class="v force" id="rW2">— N</div></div>
+      <div class="item"><div class="k">支える紐の本数</div><div class="v" id="rStrands">1 本</div></div>
+      <div class="item"><div class="k">必要な力 F</div><div class="v normal" id="rF2">— N</div></div>
+      <div class="item"><div class="k">引く紐の長さ</div><div class="v velocity" id="rRope">— m</div></div>
+      <div class="item"><div class="k">入力した仕事 F×距離</div><div class="v" id="rWorkIn">— J</div></div>
+      <div class="item"><div class="k">荷物がされた仕事 W×h</div><div class="v" id="rWorkOut">— J</div></div>
+    </div>
+
+    <div class="explain" id="explainText2">
+      滑車を組み合わせても、道具を使わずに直接持ち上げる場合と<strong>必要な仕事の総量は変わりません</strong>（仕事の原理）。動滑車を1個使うごとに、荷物を支える紐の本数が1本増え、必要な力はその分だけ小さくなりますが、代わりに紐を引く距離がその分だけ長くなります。
+      <div class="note">定滑車は力の向きを変えるだけで、必要な力の大きさは変えません。力を小さくできるのは動滑車だけです。</div>
+    </div>
+  </div>
+</div>
+
+<footer class="source">
+  <h3>Reference</h3>
+  仕事の原理（道具を使っても仕事の総量は変わらない：F×引く距離＝W×持ち上げる高さ、摩擦・滑車やひもの質量は無視）は中学校理科・力学分野の基本原理。動滑車1個につき荷物を支える紐の本数が2本ずつ増え、必要な力がその本数分の1になることは、動滑車にはたらく力のつり合い（複数の紐の張力の合計＝荷物の重さ）から導かれる。
+</footer>
+
+<script>
+const canvas=document.getElementById('stage'), ctx=canvas.getContext('2d');
+function resize(){
+  canvas.style.height=''; // メディアクエリによる高さ変更をインラインスタイルが上書きしないよう一旦解除
+  const r=canvas.parentElement.getBoundingClientRect();
+  canvas.width=r.width*devicePixelRatio; canvas.height=r.height*devicePixelRatio;
+  canvas.style.width=r.width+'px'; canvas.style.height=r.height+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener('resize',resize);
+const g=9.8;
+
+/* ---------------- 身の回りの例（プリセット） ---------------- */
+const EXAMPLES=[
+  {
+    id:'well', label:'井戸のつるべ',
+    build:['fixed'],
+    caption:'井戸の上に定滑車を1個つけて、縄を下ろしてバケツをくむ道具。定滑車は<strong>力の向きを変えるだけ</strong>で、必要な力の大きさはバケツの重さと同じ。それでも「下向きに引く」という体重をかけやすい動きに変えられるので、はるかにくみやすくなる。'
+  },
+  {
+    id:'hoist', label:'工事現場の荷揚げ滑車',
+    build:['fixed','movable'],
+    caption:'定滑車で引く向きを変え、動滑車で荷物を支えることで、必要な力を<strong>半分</strong>にできる組み合わせ。現場でよく使われる最も基本的な「組み合わせ滑車」の形。'
+  },
+  {
+    id:'sailboat', label:'ヨットのブロック（帆の索具）',
+    build:['fixed','movable','fixed','movable'],
+    caption:'ヨットで帆を操作する綱には、定滑車と動滑車を組み合わせた「ブロック」が使われる。動滑車を2個使うことで、必要な力を<strong>1/4</strong>にでき、強い風を受けた帆でも人の力で調整できる。'
+  },
+  {
+    id:'crane', label:'大型クレーンの巻き上げ機',
+    build:['fixed','movable','fixed','movable','fixed','movable'],
+    caption:'重い建材や資材をつり上げる大型クレーンでは、動滑車を複数個使う「多滑車」構成で、必要な力を数分の一まで小さくしている。その代わり、巻き取るワイヤーの長さは何倍にも長くなる。'
+  }
+];
+
+function buildTabs(){
+  const bar=document.getElementById('tabbar');
+  bar.innerHTML='';
+  EXAMPLES.forEach(ex=>{
+    const b=document.createElement('button');
+    b.className='tabbtn'; b.textContent=ex.label; b.dataset.id=ex.id;
+    b.onclick=()=>applyExample(ex.id);
+    bar.appendChild(b);
+  });
+  const customBtn=document.createElement('button');
+  customBtn.className='tabbtn'; customBtn.textContent='自由に組み立てる'; customBtn.dataset.id='custom';
+  customBtn.onclick=()=>applyExample('custom');
+  bar.appendChild(customBtn);
+}
+function setActiveTab(id){
+  document.querySelectorAll('.tabbtn').forEach(b=>b.classList.toggle('active',b.dataset.id===id));
+}
+function applyExample(id){
+  if(id==='custom'){
+    setActiveTab('custom');
+    document.getElementById('exampleCaption').innerHTML='滑車をボタンで自由に追加・削除して、好きな組み合わせを試してみよう。';
+    return;
+  }
+  const ex=EXAMPLES.find(e=>e.id===id);
+  if(!ex)return;
+  pulleys=ex.build.map(t=>({type:t}));
+  renderList(); resetLift(); markUnroped();
+  setActiveTab(id);
+  document.getElementById('exampleCaption').innerHTML='<strong>'+ex.label+'</strong>：'+ex.caption;
+}
+
+let pulleys=[]; // {type:'fixed'|'movable'}  ― 追加した順序を保持する
+let roped=false; // ロープが掛けられている(構成が確定している)かどうか
+let configValid=true; // 現実に組み立てられる構成かどうか
+const pulleyList=document.getElementById('pulleyList');
+const MAX_PULLEYS=8;
+const liftBtn=document.getElementById('liftBtn');
+const hangBtn=document.getElementById('hangBtn');
+const stageHint=document.getElementById('stageHint');
+const errorBox=document.getElementById('errorBox');
+const errorText=document.getElementById('errorText');
+
+// 動滑車1個につき、それを支える紐は必ず2本とも上(天井側)につながる必要があり、
+// そのためには少なくとも動滑車と同じ数の定滑車が要る。定滑車の方が多い分には
+// (単なる方向転換用として)現実に成立するが、動滑車が定滑車より多いと、
+// 動滑車どうしを直接つなぐしかなくなり、そのロープは荷物を持ち上げる力を
+// 一切伝えない(＝現実には組み立てられない)ため、これをエラーとして扱う。
+function validateConfig(){
+  const nMov=pulleys.filter(p=>p.type==='movable').length;
+  const nFix=pulleys.length-nMov;
+  if(nMov>nFix){
+    const need=nMov-nFix;
+    return {valid:false, reason:
+      '動滑車が'+nMov+'個あるのに対して、定滑車は'+nFix+'個しかありません。動滑車を支える紐は必ず2本とも上（天井や定滑車）につながっている必要があり、そのぶんの定滑車がなければ、動滑車どうしを直接つなぐしかなくなります。動滑車どうしを直接つないでも、そのロープは荷物を持ち上げる力を伝えられないため、この構成は現実には組み立てられません。定滑車をあと'+need+'個追加するか、動滑車を'+need+'個減らしてください。'
+    };
+  }
+  return {valid:true};
+}
+
+function updateValidation(){
+  const v=validateConfig();
+  configValid=v.valid;
+  if(!v.valid){
+    errorBox.classList.add('show');
+    errorText.textContent=v.reason;
+    hangBtn.disabled=true;
+    liftBtn.disabled=true;
+    roped=false; liftProgress=0; lifting=false;
+    stageHint.style.display='none';
+  } else {
+    errorBox.classList.remove('show');
+    hangBtn.disabled = pulleys.length===0;
+    stageHint.style.display = roped? 'none' : '';
+  }
+}
+
+function markUnroped(){
+  roped=false; liftProgress=0; lifting=false;
+  liftBtn.disabled=true;
+  updateValidation();
+  if(configValid){
+    stageHint.style.display='';
+    stageHint.textContent = pulleys.length===0
+      ? '滑車を追加してから「ロープを掛ける」を押してください'
+      : '滑車を並べ終えたら「ロープを掛ける」を押してください';
+  }
+}
+hangBtn.onclick=()=>{
+  if(pulleys.length===0 || !configValid)return;
+  roped=true;
+  liftBtn.disabled=false;
+  stageHint.style.display='none';
+};
+
+function renderList(){
+  pulleyList.innerHTML='';
+  if(pulleys.length===0){
+    pulleyList.innerHTML='<div class="empty-hint">まだ滑車がありません。上のボタンで追加してください。</div>';
+  }
+  pulleys.forEach((p,i)=>{
+    const row=document.createElement('div');
+    row.className='pulleyrow';
+    row.innerHTML='<span>滑車 '+(i+1)+'　<span class="tag '+p.type+'">'+(p.type==='fixed'?'定滑車':'動滑車')+'</span></span>';
+    const btn=document.createElement('button');
+    btn.textContent='✕ 外す';
+    btn.onclick=()=>{pulleys.splice(i,1);renderList();updateCalc();markUnroped();setActiveTab('custom');document.getElementById('exampleCaption').innerHTML='滑車をボタンで自由に追加・削除して、好きな組み合わせを試してみよう。';};
+    row.appendChild(btn);
+    pulleyList.appendChild(row);
+  });
+  updateCalc();
+}
+
+document.getElementById('addFixed').onclick=()=>{
+  if(pulleys.length>=MAX_PULLEYS)return;
+  pulleys.push({type:'fixed'}); renderList(); markUnroped();
+  setActiveTab('custom'); document.getElementById('exampleCaption').innerHTML='滑車をボタンで自由に追加・削除して、好きな組み合わせを試してみよう。';
+};
+document.getElementById('addMovable').onclick=()=>{
+  if(pulleys.length>=MAX_PULLEYS)return;
+  pulleys.push({type:'movable'}); renderList(); markUnroped();
+  setActiveTab('custom'); document.getElementById('exampleCaption').innerHTML='滑車をボタンで自由に追加・削除して、好きな組み合わせを試してみよう。';
+};
+document.getElementById('clearAll').onclick=()=>{
+  pulleys=[]; renderList(); markUnroped();
+  setActiveTab('custom'); document.getElementById('exampleCaption').innerHTML='滑車をボタンで自由に追加・削除して、好きな組み合わせを試してみよう。';
+};
+
+const mass2El=document.getElementById('mass2'), h2El=document.getElementById('h2');
+mass2El.addEventListener('input',()=>{document.getElementById('massVal2').textContent=mass2El.value;updateCalc();resetLift();});
+h2El.addEventListener('input',()=>{document.getElementById('hVal2').textContent=parseFloat(h2El.value).toFixed(1);updateCalc();resetLift();});
+
+function movableCount(){return pulleys.filter(p=>p.type==='movable').length;}
+
+function updateCalc(){
+  const m=parseFloat(mass2El.value), h=parseFloat(h2El.value);
+  const W=m*g;
+  const nMov=movableCount();
+  const nFix=pulleys.length-nMov;
+  if(nMov>nFix){
+    document.getElementById('rW2').textContent=W.toFixed(1)+' N';
+    ['rStrands','rF2','rRope','rWorkIn','rWorkOut'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('explainText2').innerHTML='この組み合わせは現実に組み立てられないため、力の計算はできません。左側のエラー表示を確認してください。';
+    return;
+  }
+  const strands=Math.max(1, 2*nMov); // 動滑車1個につき支える紐が2本、動滑車0なら1本(直接引く/定滑車のみ)
+  const F=W/strands;
+  const rope=h*strands;
+  document.getElementById('rW2').textContent=W.toFixed(1)+' N';
+  document.getElementById('rStrands').textContent=strands+' 本';
+  document.getElementById('rF2').textContent=F.toFixed(1)+' N';
+  document.getElementById('rRope').textContent=rope.toFixed(2)+' m';
+  document.getElementById('rWorkIn').textContent=(F*rope).toFixed(1)+' J';
+  document.getElementById('rWorkOut').textContent=(W*h).toFixed(1)+' J';
+  if(nMov===0){
+    document.getElementById('explainText2').innerHTML='動滑車がまだありません。定滑車だけでは<strong>力の向きが変わるだけ</strong>で、必要な力の大きさは荷物の重さと同じです。動滑車を追加してみましょう。<div class="note">定滑車は力の向きを変えるだけで、必要な力の大きさは変えません。力を小さくできるのは動滑車だけです。</div>';
+  } else {
+    document.getElementById('explainText2').innerHTML='動滑車が'+nMov+'個あるので、荷物を支える紐は'+strands+'本になり、必要な力は荷物の重さの1/'+strands+'（'+F.toFixed(1)+' N）まで小さくなります。ただしその分、紐を引く距離は'+strands+'倍（'+rope.toFixed(2)+' m）必要です。<div class="note">入力した仕事（F×距離）と、荷物がされた仕事（W×高さ）を見比べてみましょう。摩擦を無視すれば、この2つは常に等しくなります＝仕事の原理。</div>';
+  }
+}
+
+let liftProgress=0, lifting=false, dashPhase=0;
+liftBtn.onclick=()=>{ if(roped) lifting=true; };
+document.getElementById('resetBtn3').onclick=()=>resetLift();
+function resetLift(){liftProgress=0;lifting=false;}
+
+function getCss(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+
+// 滑車の外周を接線で通過させる。
+// ロープはこの図では常に「左(手元側)→右(アンカー側)」へ流れるように滑車を配置しているため、
+// 入り側は巻き付き目標角度から見て常に空間的な左側、出り側は常に空間的な右側の接点に
+// 固定する。ただし「角度を引く/足す」がどちらの空間方向(左/右)に対応するかは、
+// 巻き付き目標が上(-90°)か下(+90°)かで逆転する(下側では、角度を引くと右へ、
+// 足すと左へ進む)。これを取り違えていたため、動滑車では入り側と出り側の接続先が
+// 左右反対になり、直前・直後への直線区間が滑車の手前で交差して見えていた。
+const WRAP_SPREAD=58*Math.PI/180; // 巻き付き目標角度から接点までの開き角(左右とも同じ)
+function traceRopePath(ctx, ropePoints){
+  ctx.beginPath();
+  for(let i=0;i<ropePoints.length;i++){
+    const cur=ropePoints[i];
+    if(cur.r<=0){
+      if(i===0) ctx.moveTo(cur.x,cur.y); else ctx.lineTo(cur.x,cur.y);
+      continue;
+    }
+    // wrapAngleが上(-90°)なら「引く」で左・「足す」で右。下(+90°)なら逆になるため、
+    // sign で符号を反転させ、entryAが必ず空間的な左、exitAが必ず空間的な右になるようにする。
+    const sign = Math.sin(cur.wrapAngle) <= 0 ? 1 : -1; // 上向き(-90°→sin=-1)なら+1、下向き(+90°→sin=+1)なら-1
+    const entryA=cur.wrapAngle-WRAP_SPREAD*sign; // 空間的な左肩
+    const exitA=cur.wrapAngle+WRAP_SPREAD*sign;  // 空間的な右肩
+    const entry={x:cur.x+cur.r*Math.cos(entryA),y:cur.y+cur.r*Math.sin(entryA)};
+    ctx.lineTo(entry.x,entry.y);
+    ctx.arc(cur.x,cur.y,cur.r,entryA,exitA,sign<0); // signが負(下巻き)のときは反時計回りで目標角度を通過する
+  }
+}
+
+function draw(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const ceilingY=30;
+  ctx.strokeStyle='#3a4258'; ctx.lineWidth=5;
+  ctx.beginPath();ctx.moveTo(20,ceilingY);ctx.lineTo(w-20,ceilingY);ctx.stroke();
+  for(let x=20;x<w-20;x+=14){ctx.beginPath();ctx.moveTo(x,ceilingY);ctx.lineTo(x-7,ceilingY+10);ctx.strokeStyle='#dcdce4';ctx.lineWidth=2;ctx.stroke();}
+  const groundY=h-30;
+  ctx.strokeStyle='#dcdce4'; ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,groundY+10);ctx.lineTo(w,groundY+10);ctx.stroke();
+
+  if(!configValid){
+    // 現実に組み立てられない構成は無理に描画しない
+    ctx.strokeStyle=getCss('--force'); ctx.lineWidth=3; ctx.lineCap='round';
+    const cx=w/2, cy=(ceilingY+groundY)/2, s=16;
+    ctx.beginPath();ctx.moveTo(cx-s,cy-s);ctx.lineTo(cx+s,cy+s);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+s,cy-s);ctx.lineTo(cx-s,cy+s);ctx.stroke();
+    ctx.lineCap='butt';
+    ctx.fillStyle=getCss('--force'); ctx.font='600 12px "JetBrains Mono",monospace'; ctx.textAlign='center';
+    ctx.fillText('この組み合わせは組み立てられません',cx,cy+s+22);
+    ctx.textAlign='left';
+    return;
+  }
+
+  const nMov=movableCount();
+  const nFix=pulleys.length-nMov;
+
+  const fixedY=ceilingY+34;
+  const centerX=w/2;
+
+  // 荷物の高さ（持ち上げ量に応じて上昇）
+  const loadRestY=groundY-46;
+  const loadTopY=fixedY+150;
+  const loadY=loadRestY-(loadRestY-loadTopY)*Math.min(liftProgress,1);
+  const movBlockY=loadY-26;
+
+  // 定滑車：天井に横一列に等間隔配置(可動列と少しずらし、真上に重ならないようにする)
+  // 定滑車・動滑車の横位置は、同じ座標軸(共通のspacingと基準X)で決める。
+  // こうすると「定滑車i番目」と「動滑車i番目」は必ず同じX座標になり、
+  // ペアで交互に配線した時にジグザグが左右に逆戻りすることがなくなる
+  // （逆戻りが起きると、ロープの直線区間どうしが交差して見えてしまうため）。
+  const spacing=46;
+  const maxCount=Math.max(nFix,nMov,1);
+  const rowStartX=centerX-((maxCount-1)*spacing)/2;
+  const fixedXs=[]; for(let i=0;i<nFix;i++) fixedXs.push(rowStartX+i*spacing);
+  const movXs=[]; for(let i=0;i<nMov;i++) movXs.push(rowStartX+i*spacing);
+
+  // ロープの経路は「追加した順番」ではなく、実際に持ち上げられる配線
+  // （定滑車→動滑車→定滑車→…と、天井側と荷物側を交互に結ぶ）で組み立てる。
+  // 同じ側の滑車が連続して並ぶ配線は、その区間が荷物にも天井にも力を伝えないため、
+  // 現実には持ち上がらない配線になってしまう。
+  const pairCount=Math.min(nFix,nMov);
+  const seq=[];
+  for(let i=0;i<pairCount;i++){
+    seq.push({x:fixedXs[i],y:fixedY,type:'fixed'});
+    seq.push({x:movXs[i],y:movBlockY,type:'movable'});
+  }
+  for(let i=pairCount;i<nFix;i++) seq.push({x:fixedXs[i],y:fixedY,type:'fixed'});
+  for(let i=pairCount;i<nMov;i++) seq.push({x:movXs[i],y:movBlockY,type:'movable'});
+
+  // 定滑車を描画
+  fixedXs.forEach(x=>{
+    ctx.beginPath();ctx.arc(x,fixedY,13,0,Math.PI*2);
+    ctx.fillStyle='#232a3a';ctx.fill();ctx.strokeStyle=getCss('--velocity');ctx.lineWidth=2.4;ctx.stroke();
+  });
+
+  // 動滑車ブロック（土台の板）と動滑車を描画
+  if(nMov>0){
+    ctx.strokeStyle='#4a5268'; ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(movXs[0]-16,movBlockY+16);ctx.lineTo(movXs[movXs.length-1]+16,movBlockY+16);ctx.stroke();
+    movXs.forEach(x=>{
+      ctx.beginPath();ctx.arc(x,movBlockY,11,0,Math.PI*2);
+      ctx.fillStyle='#232a3a';ctx.fill();ctx.strokeStyle=getCss('--normal');ctx.lineWidth=2.4;ctx.stroke();
+    });
+  }
+
+  // ロープ：手元(左端) → 追加順に全ての滑車を経由 → アンカー(右端、固定端)
+  const handX=48, handY=groundY-14;
+
+  if(!roped){
+    // まだロープが掛けられていない：各滑車に外れたロープの端だけを模式的に示す
+    ctx.strokeStyle='rgba(90,90,104,.55)'; ctx.lineWidth=2; ctx.setLineDash([5,5]); ctx.lineDashOffset=0;
+    fixedXs.forEach(x=>{ ctx.beginPath();ctx.moveTo(x,fixedY+13);ctx.lineTo(x,fixedY+34);ctx.stroke(); });
+    movXs.forEach(x=>{ ctx.beginPath();ctx.moveTo(x,movBlockY-11);ctx.lineTo(x,movBlockY-30);ctx.stroke(); });
+    ctx.setLineDash([]);
+  } else {
+    dashPhase -= (lifting?2.4:0.3);
+    ctx.strokeStyle=getCss('--highlight'); ctx.lineWidth=2.4;
+    ctx.setLineDash([9,6]); ctx.lineDashOffset=dashPhase;
+    if(seq.length===0){
+      // 滑車なし：荷物を直接ひもでつるす模式図
+      ctx.beginPath();
+      ctx.moveTo(centerX,ceilingY);
+      ctx.lineTo(centerX,loadY-6);
+    } else {
+      const FIXED_R=13, MOV_R=11;
+      const ropePoints=[{x:handX,y:handY,r:0}];
+      seq.forEach(pt=>{
+        ropePoints.push({
+          x:pt.x, y:pt.y,
+          r: pt.type==='fixed'?FIXED_R:MOV_R,
+          wrapAngle: pt.type==='fixed'? -Math.PI/2 : Math.PI/2 // 定滑車=上を巻く／動滑車=下を巻く
+        });
+      });
+      // 固定端（アンカー）：
+      // ・動滑車がどこにも無ければ、この定滑車の先は荷物に直接つながる
+      // ・末尾が「ペア区間からあふれた定滑車(方向転換だけの予備滑車)」なら、
+      //   荷物側へ戻らず、その滑車のすぐ隣(天井側)に結び止める
+      //   (荷物側へ戻ろうとすると、途中の区間と交差してしまうため)
+      // ・末尾が動滑車(＝定滑車と動滑車が同数で、あふれが無い場合)なら、天井側に結ぶ
+      const lastPt=seq[seq.length-1];
+      if(lastPt.type==='fixed'){
+        if(nMov===0){
+          ropePoints.push({x:centerX,y:loadY+4,r:0}); // 動滑車が無いので、荷物に直接結び止める
+        } else {
+          ropePoints.push({x:Math.min(lastPt.x+40,w-30),y:fixedY,r:0}); // 予備の定滑車のすぐ隣に結び止める
+        }
+      } else {
+        ropePoints.push({x:Math.min(lastPt.x+45,w-30),y:ceilingY,r:0}); // 天井側(滑車のすぐそば)に結び止める
+      }
+      traceRopePath(ctx, ropePoints);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // 手のアイコン（ロープを引く位置）
+  if(roped && seq.length>0){
+    ctx.fillStyle=getCss('--highlight');
+    ctx.beginPath();ctx.arc(handX,handY,6,0,Math.PI*2);ctx.fill();
+    ctx.font='10px "JetBrains Mono",monospace'; ctx.fillStyle=getCss('--text-dim')||'#8993a8';
+    ctx.textAlign='center'; ctx.fillText('手',handX,handY+20); ctx.textAlign='left';
+  }
+
+  // 荷物
+  ctx.fillStyle='#c9c9d3'; ctx.strokeStyle='#4a5268'; ctx.lineWidth=1.5;
+  ctx.fillRect(centerX-24,loadY,48,32); ctx.strokeRect(centerX-24,loadY,48,32);
+  ctx.fillStyle='#eef1f6'; ctx.font='600 11px "JetBrains Mono",monospace'; ctx.textAlign='center';
+  ctx.fillText(mass2El.value+'kg',centerX,loadY+20);
+  ctx.textAlign='left';
+
+  if(lifting){
+    liftProgress+=0.012;
+    if(liftProgress>=1){liftProgress=1;lifting=false;}
+  }
+}
+
+buildTabs();
+applyExample('well');
+renderList();
+updateCalc();
+
+function loop(){
+  draw();
+  requestAnimationFrame(loop);
+}
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

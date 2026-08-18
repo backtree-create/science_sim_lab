@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>中学理科 電気分野 3Dインタラクティブシミュレーター & CAD</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #ffffff;
+            --panel-bg: rgba(255, 255, 255, 0.94);
+            --panel-border: rgba(21, 96, 122, 0.28);
+            --cyan: #0f7d9e;
+            --cyan-dim: #4a97ad;
+            --amber: #d97a06;
+            --lcd-green: #0d8f63;
+            --text: #16232e;
+            --text-dim: #5d7080;
+            --danger: #cf3b3b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Noto Sans JP', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button, select { touch-action: manipulation; }
+        .card { touch-action: manipulation; }
+        #canvas-container { width: 100vw; height: 100vh; height: 100dvh; }
+        #canvas-container canvas {
+            display: block;
+            touch-action: none;
+            user-select: none; -webkit-user-select: none;
+        }
+
+        #atmosphere {
+            position: absolute; inset: 0; pointer-events: none; z-index: 5;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(23,60,80,0.07) 100%);
+        }
+
+        #nav-panel { position: absolute; top: 18px; left: 18px; z-index: 10; }
+        .back-btn {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--panel-bg); color: var(--text);
+            border: 1px solid var(--panel-border);
+            padding: 10px 18px; border-radius: 4px; cursor: pointer;
+            font-family: 'Noto Sans JP', sans-serif; font-weight: 500; font-size: 0.82rem;
+            transition: all 0.2s ease; backdrop-filter: blur(8px);
+            box-shadow: 0 2px 10px rgba(20,50,70,0.08);
+        }
+        .back-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+        #home-screen {
+            position: absolute; inset: 0; z-index: 20;
+            background: rgba(248, 251, 253, 0.96);
+            backdrop-filter: blur(14px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 40px; text-align: center;
+        }
+        .home-title {
+            font-family: 'Orbitron', 'Noto Sans JP', sans-serif;
+            font-size: 2.2rem; font-weight: 900; color: #0d2634;
+            margin-bottom: 8px; letter-spacing: 0.05em;
+        }
+        .home-sub {
+            font-size: 0.95rem; color: var(--cyan); margin-bottom: 30px;
+            letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;
+        }
+        .grid-cards {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+            max-width: 960px; width: 100%;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px; padding: 18px; cursor: pointer;
+            text-align: left; transition: all 0.25s ease;
+            position: relative; overflow: hidden;
+            box-shadow: 0 2px 10px rgba(20,50,70,0.06);
+        }
+        .card::before {
+            content: ''; position: absolute; top:0; left:0; width:4px; height:100%;
+            background: var(--cyan-dim); transition: all 0.25s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--cyan);
+            box-shadow: 0 10px 24px rgba(15,125,158,0.18);
+        }
+        .card:hover::before { background: var(--cyan); }
+        .card-idx {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+            color: var(--cyan); font-weight: 700; margin-bottom: 6px;
+        }
+        .card-title { font-size: 1.05rem; font-weight: 700; color: #0d2634; margin-bottom: 6px; }
+        .card-desc { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; }
+
+        #ui-panel {
+            position: absolute; top: 18px; right: 18px; width: 360px;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 20px;
+            backdrop-filter: blur(12px);
+            max-height: 92vh; max-height: 92dvh; overflow-y: auto;
+            z-index: 10;
+            box-shadow: 0 4px 22px rgba(20,50,70,0.12);
+        }
+        #ui-panel::-webkit-scrollbar { width: 5px; }
+        #ui-panel::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 3px; }
+
+        h2 {
+            font-size: 1.0rem; font-weight: 700;
+            margin: 0 0 4px 0; color: #0d2634;
+            display: flex; align-items: center; gap: 8px;
+        }
+        h2::before {
+            content: ''; width: 8px; height: 8px; border-radius: 50%;
+            background: var(--cyan); display: inline-block;
+        }
+        .subhead {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem; color: var(--cyan-dim);
+            letter-spacing: 0.08em; margin-bottom: 16px;
+            padding-bottom: 8px; border-bottom: 1px solid rgba(21,96,122,0.18);
+        }
+
+        label { display: block; font-size: 0.8rem; margin-bottom: 6px; color: var(--text-dim); }
+        .control-group { margin-bottom: 16px; }
+        .value-display {
+            float: right; font-family: 'JetBrains Mono', monospace;
+            color: var(--cyan); font-weight: 700; font-size: 0.85rem;
+        }
+        input[type=range] {
+            width: 100%; cursor: pointer; accent-color: var(--cyan);
+            height: 5px; background: #dfe8ee; border-radius: 3px;
+        }
+        select {
+            width: 100%; padding: 8px 10px; background: #ffffff; color: var(--text);
+            border: 1px solid rgba(21,96,122,0.3); border-radius: 4px;
+            font-size: 0.82rem; font-family: 'Noto Sans JP', sans-serif; outline: none;
+        }
+        input[type=number] {
+            background: #ffffff; color: var(--text);
+            border: 1px solid rgba(21,96,122,0.3); border-radius: 3px; padding: 3px 5px;
+        }
+
+        .lcd {
+            background: #f2f8f6;
+            border: 1px solid rgba(13,143,99,0.4);
+            border-radius: 4px; padding: 10px 14px; margin-top: 10px;
+            transition: all 0.25s ease;
+        }
+        .lcd .lcd-label {
+            font-size: 0.65rem; color: rgba(13,143,99,0.85);
+            font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
+            margin-bottom: 2px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .lcd .lcd-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem; font-weight: 700; color: var(--lcd-green);
+        }
+        .lcd .lcd-sub {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+            color: rgba(13,143,99,0.9); margin-top: 4px; line-height: 1.6;
+        }
+        .lcd.lcd-warn { background: #fdf3f3; border-color: rgba(207,59,59,0.45); }
+        .lcd.lcd-warn .lcd-label { color: rgba(207,59,59,0.85); }
+        .lcd.lcd-warn .lcd-value { color: var(--danger); }
+        .lcd.lcd-warn .lcd-sub { color: rgba(207,59,59,0.95); }
+        .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+        .lcd-ok .status-dot { background: var(--lcd-green); }
+        .lcd-warn .status-dot { background: var(--danger); }
+
+        .legend-row {
+            display: flex; align-items: center; gap: 14px; margin-top: 10px;
+            font-size: 0.7rem; color: var(--text-dim); flex-wrap: wrap;
+        }
+        .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+        .legend-dot.cyan { background: #1145c4; }
+        .legend-dot.amber { background: var(--amber); }
+        .legend-dot.green { background: #18b06a; }
+
+        .btn-action {
+            width: 100%;
+            background: linear-gradient(180deg, #17a377, #0e7a58);
+            color: #ffffff; border: 1px solid rgba(13,143,99,0.5);
+            padding: 8px 10px; border-radius: 4px; cursor: pointer;
+            font-weight: 700; font-size: 0.78rem; margin-top: 4px;
+            transition: all 0.15s ease;
+        }
+        .btn-action:hover { filter: brightness(1.08); }
+        .btn-action.toggle-off {
+            background: linear-gradient(180deg, #f0f4f7, #dfe7ec);
+            border-color: rgba(21,96,122,0.25); color: #6b7d8b;
+        }
+        .btn-secondary { background: linear-gradient(180deg, #2a8bb5, #16688c); border-color: rgba(15,125,158,0.5); }
+
+        .builder-tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+        .tool-btn {
+            background: #f4f8fa; border: 1px solid var(--panel-border);
+            color: var(--text); border-radius: 4px; padding: 8px 4px; font-size: 0.72rem;
+            cursor: pointer; text-align: center; transition: all 0.15s ease;
+        }
+        .tool-btn:hover { border-color: var(--cyan); background: rgba(15,125,158,0.1); }
+        .tool-btn.active { border-color: var(--cyan); background: var(--cyan); color: #fff; font-weight: 700; }
+        .tool-btn.danger.active { border-color: var(--danger); background: var(--danger); color: #fff; }
+
+        #builder-canvas-container {
+            width: 100%; height: 230px; background: #ffffff;
+            border: 1px solid var(--panel-border); border-radius: 4px;
+            position: relative; margin-bottom: 12px; overflow: hidden;
+        }
+        /* 構築中は HUD 全体を画面の半分程度までズームアップする。
+           作図領域はHUDの中に統合したままなので、記号が必ず反映される。 */
+        #builder-canvas-container.bc-zoomed {
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 1px rgba(15,125,158,0.35);
+        }
+        #ui-panel.hud-zoom {
+            width: min(50vw, 900px);
+            top: 2vh; right: 2vw;
+            max-height: 96vh; max-height: 96dvh;
+            border: 2px solid var(--cyan);
+            box-shadow: 0 18px 50px rgba(20,50,70,0.28);
+        }
+        #ui-panel.hud-zoom .tool-btn { font-size: 0.8rem; padding: 11px 6px; }
+        #ui-panel.hud-zoom h2 { font-size: 1.15rem; }
+        #ui-panel.hud-zoom .builder-tools { gap: 8px; margin-bottom: 14px; }
+        #ui-panel.hud-zoom label { font-size: 0.85rem; }
+        #builder-2d-canvas {
+            width: 100%; height: 100%; display: block; cursor: default;
+            touch-action: none;
+            user-select: none; -webkit-user-select: none;
+        }
+
+        #err-banner {
+            display: none; position: fixed; left: 50%; top: 12px; transform: translateX(-50%);
+            z-index: 200; max-width: 80vw;
+            background: #fdf3f3; color: var(--danger);
+            border: 1px solid rgba(207,59,59,0.5); border-radius: 5px;
+            padding: 9px 16px; font-size: 0.76rem; font-family: 'JetBrains Mono', monospace;
+        }
+
+        #hint {
+            position: absolute; bottom: 16px; left: 18px;
+            font-size: 0.7rem; color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace; z-index: 10;
+            background: var(--panel-bg); padding: 6px 12px; border-radius: 3px;
+            border: 1px solid var(--panel-border); max-width: 60vw;
+        }
+        #brand {
+            position: absolute; bottom: 16px; right: 18px;
+            font-family: 'Orbitron', sans-serif; font-size: 0.65rem;
+            color: rgba(15,125,158,0.55); letter-spacing: 0.1em; z-index: 10;
+        }
+
+        #help-btn {
+            position: absolute; bottom: 16px; right: 128px; z-index: 15;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--panel-bg); border: 1px solid var(--panel-border);
+            color: var(--cyan); font-weight: 700; cursor: pointer; font-size: 0.9rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #help-modal {
+            display: none; position: absolute; inset: 0; z-index: 70;
+            background: rgba(240,246,250,0.85); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center;
+        }
+        #help-modal-inner {
+            background: #ffffff; border: 1px solid var(--panel-border); border-radius: 8px;
+            padding: 24px 28px; max-width: 460px; width: 90%;
+            box-shadow: 0 10px 34px rgba(20,50,70,0.2);
+        }
+        #help-modal-inner h3 { margin-top: 0; color: #0d2634; font-size: 1.05rem; }
+        #help-modal-inner ul { padding-left: 18px; font-size: 0.82rem; line-height: 1.9; color: var(--text); }
+
+        /* ===== タブレット（〜900px） ===== */
+        @media (max-width: 900px) {
+            .grid-cards { grid-template-columns: repeat(2, 1fr); }
+            #ui-panel { width: 320px; }
+            #ui-panel.hud-zoom { width: min(92vw, 900px); right: 4vw; }
+        }
+
+        /* ===== スマートフォン（〜600px） ===== */
+        @media (max-width: 600px) {
+            #home-screen {
+                padding: 24px 16px; overflow-y: auto;
+                justify-content: flex-start;
+                -webkit-overflow-scrolling: touch;
+            }
+            .home-title { font-size: 1.45rem; }
+            .home-sub { font-size: 0.8rem; margin-bottom: 20px; }
+            .grid-cards { grid-template-columns: 1fr; gap: 12px; }
+            #nav-panel { top: 10px; left: 10px; }
+            #ui-panel {
+                top: auto; bottom: 0; left: 0; right: 0;
+                width: 100%; max-width: 100%;
+                max-height: 55vh; max-height: 55dvh;
+                border-radius: 10px 10px 0 0;
+                padding: 14px 16px;
+                -webkit-overflow-scrolling: touch;
+            }
+            #ui-panel.hud-zoom {
+                width: 100%; top: auto; bottom: 0; right: 0;
+                max-height: 82vh; max-height: 82dvh;
+            }
+            #hint { display: none; }
+            #brand { display: none; }
+            #help-btn { bottom: auto; top: 12px; right: 12px; }
+            #err-banner { max-width: 94vw; }
+        }
+
+        /* ===== タッチ端末：操作ターゲットを拡大 ===== */
+        @media (pointer: coarse) {
+            .btn-action, .tool-btn, .back-btn, select { min-height: 44px; }
+            #help-btn { width: 44px; height: 44px; }
+            input[type=number] { min-height: 36px; }
+            input[type=range] {
+                -webkit-appearance: none; appearance: none;
+                height: 30px; background: transparent;
+            }
+            input[type=range]::-webkit-slider-runnable-track {
+                height: 6px; background: #dfe8ee; border-radius: 3px;
+            }
+            input[type=range]::-webkit-slider-thumb {
+                -webkit-appearance: none; appearance: none;
+                width: 26px; height: 26px; border-radius: 50%;
+                background: var(--cyan); border: none;
+                margin-top: -10px;
+            }
+            input[type=range]::-moz-range-track {
+                height: 6px; background: #dfe8ee; border-radius: 3px;
+            }
+            input[type=range]::-moz-range-thumb {
+                width: 26px; height: 26px; border-radius: 50%;
+                background: var(--cyan); border: none;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="atmosphere"></div>
+
+    <div id="home-screen">
+        <div class="home-title">中学理科 電気分野 3D LAB</div>
+        <div class="home-sub">INTERACTIVE CIRCUIT SIMULATOR &amp; SCHEMATIC CAD</div>
+        <div class="grid-cards">
+            <div class="card" onclick="switchMode('crookes')">
+                <div class="card-idx">01</div>
+                <div class="card-title">クルックス管と陰極線</div>
+                <div class="card-desc">高電圧による電子線の放出と上下電極による曲がりを立体的に観察。</div>
+            </div>
+            <div class="card" onclick="switchMode('shadow')">
+                <div class="card-idx">02</div>
+                <div class="card-title">陰極線と影のでき方</div>
+                <div class="card-desc">十字板の位置を動かし、蛍光板に映る影の大きさの変化を観察。</div>
+            </div>
+            <div class="card" onclick="switchMode('flow')">
+                <div class="card-idx">03</div>
+                <div class="card-title">電流と電子の運動</div>
+                <div class="card-desc">マス目に沿った綺麗な回路内で、電流（＋→－）と電子（－→＋）の逆向き運動を観察。</div>
+            </div>
+            <div class="card" onclick="switchMode('ohm')">
+                <div class="card-idx">04</div>
+                <div class="card-title">オームの法則と抵抗</div>
+                <div class="card-desc">電圧・抵抗の変化に伴う導線・抵抗内部での電子衝突挙動を計算。</div>
+            </div>
+            <div class="card" onclick="switchMode('circuit')">
+                <div class="card-idx">05</div>
+                <div class="card-title">直列回路と並列回路</div>
+                <div class="card-desc">整列された回路構造で、各抵抗を流れる分流のようすを可視化。</div>
+            </div>
+            <div class="card" style="border-color: var(--cyan); background: rgba(15,125,158,0.06);" onclick="switchMode('builder')">
+                <div class="card-idx" style="color:var(--lcd-green);">06 [NEW]</div>
+                <div class="card-title" style="color:var(--cyan);">自由構築CAD &amp; 3D連動</div>
+                <div class="card-desc">回路図記号を回転・配置し、導線を自由に折り曲げて接続。連動する3Dモデルを自動構築。</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="nav-panel">
+        <button class="back-btn" id="btn-home-return" style="display:none;" onclick="switchMode('home')">＜ ホームに戻る</button>
+    </div>
+
+    <div id="ui-panel" style="display:none;"><div id="controls-content"></div></div>
+
+    <div id="err-banner"></div>
+
+    <div id="hint">[ドラッグ] 視点回転 | [ホイール] 拡大・縮小</div>
+    <button id="help-btn" onclick="toggleHelp()" title="使い方ガイド">?</button>
+    <div id="brand">SCIENCE LAB / 中学理科</div>
+
+    <div id="help-modal">
+        <div id="help-modal-inner">
+            <h3>使い方ガイド</h3>
+            <ul>
+                <li>3D画面：ドラッグで視点回転 / ホイールで拡大縮小</li>
+                <li>各モードには、ホーム画面のカードからのみ入れます</li>
+                <li>電子線・陰極線は、真横からの視点でも観察できます</li>
+                <li>「導線接続」：ピンをクリック → 何もない所をクリックで折れ点を追加 → 相手のピンをクリックで確定</li>
+                <li>配線を途中でやめる時は Esc キー</li>
+                <li>「選択/移動」：部品をドラッグで移動、R キーで90度ずつ回転</li>
+                <li>電流計・電圧計は円の上下左右いずれの向きでも接続できます</li>
+                <li>記号の設置・移動・配線を始めると、HUD全体が画面の半分程度まで自動で拡大します</li>
+                <li>拡大中も工具・記号パレット・作図領域はHUD内に揃っています</li>
+                <li>拡大表示は「パレット縮小」、Esc キー、またはHUDの外側をタップすると元に戻ります</li>
+            </ul>
+            <button class="btn-action" onclick="toggleHelp()">閉じる</button>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let currentMode = 'home';
+        let clock = new THREE.Clock();
+        let activeObjects = {};
+        let particleTexture = null;
+
+        const ELECTRON_COLOR = 0x1145c4;
+
+        let state = {
+            k_accel: 6,
+            k_switchOn: true,
+            k_polarity: 'normal',
+            k_vertPolarity: 'none',
+
+            s_accel: 6,
+            s_crossOn: true,
+            s_switchOn: true,
+            s_crossX: 0,
+
+            f_voltage: 6,
+            f_switchOn: true,
+            f_source: 'dc',      // 'dc' = 直流 / 'ac' = 交流
+            f_freq: 1.0,         // 交流の周波数（表示用）
+
+            // 導線内の電子は毎秒0.1mm程度しか進まない（ドリフト速度）。
+            // 既定ではこの「ほとんど進まない」実際の速さで表示する。
+            realisticDrift: true,
+
+            o_voltage: 6,
+            o_resistance: 10,
+
+            c_type: 'series',
+            c_voltage: 6,
+            c_r1: 5,
+            c_r2: 5
+        };
+
+        let builderData = {
+            activeTool: 'select',
+            nodes: [],
+            wires: [],
+            selectedId: null,
+            wireStart: null,
+            wirePoints: [],
+            dragNodeId: null,
+            dragOffset: { x: 0, y: 0 },
+            mousePos2D: { x: 0, y: 0 },
+            calculatedCurrent: 0,
+            isClosedCircuit: false,
+            statusReason: '',
+            zoomed: false
+        };
+
+        function getParticleTexture() {
+            if (!particleTexture) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 64; canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+                grad.addColorStop(0, 'rgba(10, 30, 120, 1)');
+                grad.addColorStop(0.35, 'rgba(20, 80, 210, 0.95)');
+                grad.addColorStop(0.7, 'rgba(60, 130, 235, 0.45)');
+                grad.addColorStop(1, 'rgba(90, 160, 240, 0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 64, 64);
+                particleTexture = new THREE.CanvasTexture(canvas);
+            }
+            return particleTexture;
+        }
+
+        // 電子の移動速度の倍率。実際のドリフト速度はきわめて遅い。
+        function driftFactor() { return state.realisticDrift ? 0.05 : 1.0; }
+
+        function toggleDriftMode() {
+            state.realisticDrift = !state.realisticDrift;
+            buildUI();
+        }
+
+        // 電子の速さに関する共通の説明とトグル（導線を扱うタブで使用）
+        function driftPanelHtml() {
+            return `
+                    <button class="btn-action ${state.realisticDrift ? '' : 'toggle-off'}" style="margin-top:10px;" onclick="toggleDriftMode()">
+                        電子の速さ: ${state.realisticDrift ? '実際のドリフト速度（ほぼ進まない）' : '観察用（速く動かす）'}
+                    </button>
+                    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:6px; line-height:1.6;">
+                        導線の中の電子は、熱運動で細かく震えながら、全体としては
+                        1秒に0.1mm程度しか進みません（ドリフト速度）。
+                        それでもスイッチを入れた瞬間に電球が光るのは、電流をはたらかせる
+                        電気の作用が導線全体をほぼ光の速さで伝わるためです。
+                    </div>`;
+        }
+
+        function electronMaterial() {
+            // 抵抗や電流計などの筐体の中に入っても見えなくならないよう、深度テストを外す
+            return new THREE.MeshBasicMaterial({ color: ELECTRON_COLOR, depthTest: false });
+        }
+
+        function beamPointsMaterial(size) {
+            return new THREE.PointsMaterial({
+                size: size, map: getParticleTexture(),
+                transparent: true, opacity: 0.95,
+                blending: THREE.NormalBlending,
+                depthWrite: false, depthTest: false, sizeAttenuation: true
+            });
+        }
+
+        function glassTubeMaterial() {
+            return new THREE.MeshPhysicalMaterial({
+                color: 0x9fd8e8, transparent: true, opacity: 0.20,
+                roughness: 0.05, metalness: 0, transmission: 0.85,
+                depthWrite: false, side: THREE.DoubleSide
+            });
+        }
+
+        // 外部CDNの OrbitControls が読み込めなかった場合の代替カメラ操作。
+        // これが無いと init() が例外で止まり、3Dが一切表示されなくなる。
+        function createFallbackControls(cam, dom) {
+            const s = {
+                target: new THREE.Vector3(),
+                minDistance: 1, maxDistance: 1000,
+                maxPolarAngle: Math.PI, enableDamping: true, dampingFactor: 0.08
+            };
+            let radius = 30, theta = 0, phi = 1, dT = 0, dP = 0;
+            let dragging = false, lx = 0, ly = 0;
+
+            s.syncFromCamera = function () {
+                const off = new THREE.Vector3().subVectors(cam.position, s.target);
+                radius = Math.max(0.001, off.length());
+                theta = Math.atan2(off.x, off.z);
+                phi = Math.acos(Math.max(-1, Math.min(1, off.y / radius)));
+            };
+            s.syncFromCamera();
+
+            s.update = function () {
+                theta += dT; phi += dP;
+                dT *= 0.82; dP *= 0.82;
+                phi = Math.max(0.05, Math.min(s.maxPolarAngle, phi));
+                radius = Math.max(s.minDistance, Math.min(s.maxDistance, radius));
+                cam.position.set(
+                    s.target.x + radius * Math.sin(phi) * Math.sin(theta),
+                    s.target.y + radius * Math.cos(phi),
+                    s.target.z + radius * Math.sin(phi) * Math.cos(theta)
+                );
+                cam.lookAt(s.target);
+            };
+
+            // タッチ・マウス両対応：Pointer Events でドラッグ回転、2本指ピンチでズーム
+            const activePtrs = new Map();
+            let pinchDist = 0;
+
+            dom.addEventListener('pointerdown', e => {
+                activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (dom.setPointerCapture) { try { dom.setPointerCapture(e.pointerId); } catch (err) { /* noop */ } }
+                if (activePtrs.size === 2) {
+                    const p = Array.from(activePtrs.values());
+                    pinchDist = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+                    dragging = false; // ピンチ中は回転しない
+                } else if (activePtrs.size === 1) {
+                    dragging = true; lx = e.clientX; ly = e.clientY;
+                }
+            });
+            const endPointer = e => {
+                activePtrs.delete(e.pointerId);
+                if (activePtrs.size < 2) pinchDist = 0;
+                if (activePtrs.size === 0) dragging = false;
+                else if (activePtrs.size === 1) {
+                    const p = Array.from(activePtrs.values())[0];
+                    dragging = true; lx = p.x; ly = p.y;
+                }
+            };
+            window.addEventListener('pointerup', endPointer);
+            window.addEventListener('pointercancel', endPointer);
+            window.addEventListener('pointermove', e => {
+                if (activePtrs.has(e.pointerId)) {
+                    activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                }
+                if (activePtrs.size === 2) {
+                    // ピンチズーム：ホイールと同じ radius 操作に乗せる
+                    const p = Array.from(activePtrs.values());
+                    const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+                    if (pinchDist > 0 && d > 0) radius *= pinchDist / d;
+                    pinchDist = d;
+                    return;
+                }
+                if (!dragging) return;
+                dT -= (e.clientX - lx) * 0.004;
+                dP -= (e.clientY - ly) * 0.004;
+                lx = e.clientX; ly = e.clientY;
+            });
+            dom.addEventListener('wheel', e => {
+                e.preventDefault();
+                radius *= (e.deltaY > 0 ? 1.12 : 0.89);
+            }, { passive: false });
+
+            return s;
+        }
+
+        function showErrorBanner(msg) {
+            const el = document.getElementById('err-banner');
+            if (!el) return;
+            el.style.display = 'block';
+            el.textContent = '描画に問題が発生しました: ' + msg;
+        }
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            if (typeof THREE === 'undefined') {
+                showErrorBanner('three.js を読み込めませんでした（通信環境をご確認ください）');
+                return;
+            }
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffffff);
+            scene.fog = new THREE.FogExp2(0xffffff, 0.005);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 25, 25);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setClearColor(0xffffff, 1);
+            container.appendChild(renderer.domElement);
+
+            controls = (typeof THREE.OrbitControls === 'function')
+                ? new THREE.OrbitControls(camera, renderer.domElement)
+                : createFallbackControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.maxPolarAngle = Math.PI * 0.499;
+            controls.minDistance = 8;
+            controls.maxDistance = 80;
+
+            addLights();
+            addGridFloor();
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('keydown', onGlobalKeyDown);
+            document.addEventListener('pointerdown', onOutsidePointerDown, true);
+
+            initDefaultBuilderCircuit();
+            switchMode('home');
+            animate();
+        }
+
+        function onGlobalKeyDown(e) {
+            if (currentMode !== 'builder') return;
+            const tag = document.activeElement && document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+
+            if (e.key === 'Escape') {
+                if (builderData.wireStart) {
+                    builderData.wireStart = null;
+                    builderData.wirePoints = [];
+                    drawBuilder2D();
+                } else if (builderData.zoomed) {
+                    toggleBuilderZoom();
+                }
+                return;
+            }
+            if ((e.key === 'r' || e.key === 'R') && builderData.selectedId) {
+                e.preventDefault(); rotateSelectedNode(); return;
+            }
+            if ((e.key === 'Delete' || e.key === 'Backspace') && builderData.selectedId) {
+                e.preventDefault(); deleteSelectedNode();
+            }
+        }
+
+        function toggleHelp() {
+            const m = document.getElementById('help-modal');
+            m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        function updateHint() {
+            const hintEl = document.getElementById('hint');
+            if (!hintEl) return;
+            if (currentMode !== 'builder') {
+                hintEl.textContent = '[ドラッグ] 視点回転 | [ホイール] 拡大・縮小';
+                return;
+            }
+            if (builderData.activeTool === 'wire') {
+                hintEl.textContent = '[ピン] 始点/終点 | [空白部] 折れ点を追加 | [Esc] 中止';
+            } else if (builderData.activeTool === 'erase') {
+                hintEl.textContent = '[クリック] 削除したい導線をクリック';
+            } else {
+                hintEl.textContent = '[ドラッグ] 部品を移動 | [R] 回転 | [Delete] 削除';
+            }
+        }
+
+        function addLights() {
+            scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+            const key = new THREE.DirectionalLight(0xffffff, 0.75);
+            key.position.set(18, 30, 14); scene.add(key);
+            const fill = new THREE.DirectionalLight(0xdff0f8, 0.45);
+            fill.position.set(-20, 14, -18); scene.add(fill);
+            const under = new THREE.DirectionalLight(0xffffff, 0.25);
+            under.position.set(0, -12, 6); scene.add(under);
+        }
+
+        function addGridFloor() {
+            const group = new THREE.Group();
+            const grid = new THREE.GridHelper(90, 30, 0x9db6c4, 0xd7e2e9);
+            grid.position.y = -0.1;
+            grid.material.transparent = true;
+            grid.material.opacity = 0.8;
+            group.add(grid);
+            scene.add(group);
+            activeObjects.floorGroup = group;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            if (currentMode === 'builder') initBuilder2DCanvas();
+        }
+
+        function clearScene() {
+            while (scene.children.length > 0) scene.remove(scene.children[0]);
+            addLights();
+            addGridFloor();
+            activeObjects = {};
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const homeScr = document.getElementById('home-screen');
+            const uiPanel = document.getElementById('ui-panel');
+            const backBtn = document.getElementById('btn-home-return');
+
+            if (mode !== 'builder') { builderData.zoomed = false; applyBuilderZoom(); }
+
+            if (mode === 'home') {
+                homeScr.style.display = 'flex';
+                uiPanel.style.display = 'none';
+                if (backBtn) backBtn.style.display = 'none';
+                clearScene();
+                buildHomeBackground();
+                updateHint();
+                return;
+            } else {
+                homeScr.style.display = 'none';
+                uiPanel.style.display = 'block';
+                if (backBtn) backBtn.style.display = 'flex';
+            }
+
+            buildUI();
+            setupMode(mode, false);
+            updateHint();
+        }
+
+        function buildHomeBackground() {
+            camera.position.set(0, 20, 35);
+            controls.target.set(0, 0, 0);
+            if (controls.syncFromCamera) controls.syncFromCamera();
+            controls.update();
+
+            const ringGroup = new THREE.Group();
+            const ring = new THREE.Mesh(
+                new THREE.TorusGeometry(12, 0.15, 16, 100),
+                new THREE.MeshBasicMaterial({ color: 0x2a8bb5, transparent: true, opacity: 0.55 })
+            );
+            ring.rotation.x = Math.PI / 2;
+            ringGroup.add(ring);
+
+            for (let i = 0; i < 60; i++) {
+                const angle = (i / 60) * Math.PI * 2;
+                const e = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 10), electronMaterial());
+                e.position.set(Math.cos(angle) * 12, 0, Math.sin(angle) * 12);
+                ringGroup.add(e);
+            }
+            scene.add(ringGroup);
+            activeObjects.homeGroup = ringGroup;
+        }
+
+        // ============ UI構築 ============
+        function buildUI() {
+            const c = document.getElementById('controls-content');
+            let html = '';
+
+            if (currentMode === 'crookes') {
+                html = `
+                    <h2>クルックス管と陰極線</h2>
+                    <div class="subhead">CROOKES TUBE &amp; CATHODE RAYS</div>
+                    <div class="control-group">
+                        <label>高電圧 <span class="value-display">${state.k_accel} kV</span></label>
+                        <input type="range" min="2" max="10" step="0.5" value="${state.k_accel}" oninput="updateParam('k_accel', this.value)">
+                    </div>
+                    <button class="btn-action ${state.k_switchOn ? '' : 'toggle-off'}" onclick="toggleCrookesSwitch()">
+                        高圧電源: ${state.k_switchOn ? 'ON（通電中）' : 'OFF（停止）'}
+                    </button>
+                    <div class="control-group" style="margin-top:12px;">
+                        <label>左右極性</label>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+                            <button class="btn-action ${state.k_polarity === 'normal' ? '' : 'toggle-off'}" onclick="setCrookesPolarity('normal')">左[－] / 右[＋]</button>
+                            <button class="btn-action ${state.k_polarity === 'reversed' ? '' : 'toggle-off'}" onclick="setCrookesPolarity('reversed')">左[＋] / 右[－]</button>
+                        </div>
+                    </div>
+                    <div class="control-group" style="margin-top:12px;">
+                        <label>上下電極</label>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
+                            <button class="btn-action ${state.k_vertPolarity === 'up_plus' ? '' : 'toggle-off'}" onclick="setCrookesVertPolarity('up_plus')">上[＋]/下[－]</button>
+                            <button class="btn-action ${state.k_vertPolarity === 'none' ? '' : 'toggle-off'}" onclick="setCrookesVertPolarity('none')">なし</button>
+                            <button class="btn-action ${state.k_vertPolarity === 'up_minus' ? '' : 'toggle-off'}" onclick="setCrookesVertPolarity('up_minus')">上[－]/下[＋]</button>
+                        </div>
+                    </div>
+                    <div class="legend-row">
+                        <span><span class="legend-dot green"></span>陰極線（蛍光する光の筋）</span>
+                        <span><span class="legend-dot cyan"></span>電子</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:6px; line-height:1.6;">
+                        真空中の電子は、導線の中とは違ってじゃまをする原子がないため、
+                        高電圧で一気に加速され、秒速数千km以上という猛烈な速さで飛びます。
+                        （導線の中の電子は1秒に0.1mm程度しか進みません）
+                    </div>
+                `;
+            } else if (currentMode === 'shadow') {
+                const M = (SH_SCREEN_X - SH_CATHODE_X) / (state.s_crossX - SH_CATHODE_X);
+                html = `
+                    <h2>陰極線と影のでき方</h2>
+                    <div class="subhead">CATHODE RAY SHADOW EXPERIMENT</div>
+                    <div class="control-group">
+                        <label>高電圧 <span class="value-display">${state.s_accel} kV</span></label>
+                        <input type="range" min="2" max="10" step="0.5" value="${state.s_accel}" oninput="updateParam('s_accel', this.value)">
+                    </div>
+                    <div class="control-group">
+                        <label>十字板の位置 <span class="value-display">${state.s_crossX > 0 ? '+' : ''}${state.s_crossX}</span></label>
+                        <input type="range" min="-9" max="9" step="0.5" value="${state.s_crossX}" oninput="updateParam('s_crossX', this.value)">
+                        <div style="font-size:0.68rem; color:var(--text-dim); margin-top:2px;">左（陰極寄り）ほど影は大きく、右（蛍光板寄り）ほど小さくなります</div>
+                    </div>
+                    <button class="btn-action ${state.s_switchOn ? '' : 'toggle-off'}" onclick="toggleShadowSwitch()">
+                        高圧電源: ${state.s_switchOn ? 'ON（通電中）' : 'OFF（停止）'}
+                    </button>
+                    <button class="btn-action ${state.s_crossOn ? '' : 'toggle-off'}" style="margin-top:6px;" onclick="toggleCross()">
+                        十字板: ${state.s_crossOn ? 'あり' : 'なし'}
+                    </button>
+                    <div class="lcd lcd-ok">
+                        <div class="lcd-label">SHADOW MAGNIFICATION</div>
+                        <div class="lcd-value">×${M.toFixed(2)}</div>
+                        <div class="lcd-sub">影の倍率 ＝ 陰極から蛍光板までの距離 ÷ 陰極から十字板までの距離</div>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:8px; line-height:1.6;">
+                        真空中を飛ぶ電子は秒速数千km以上と非常に速く、まっすぐ進みます。
+                        だからこそ十字板のかげがはっきりと影として映ります。
+                    </div>
+                `;
+            } else if (currentMode === 'flow') {
+                const isAC = state.f_source === 'ac';
+                const i = state.f_switchOn ? (state.f_voltage / 5).toFixed(2) : '0.00';
+                html = `
+                    <h2>電流と電子の運動</h2>
+                    <div class="subhead">DC / AC CIRCUIT MODEL</div>
+                    <div class="control-group">
+                        <label>電源の種類</label>
+                        <select onchange="updateParam('f_source', this.value)">
+                            <option value="dc" ${!isAC ? 'selected' : ''}>直流（一定の向き）</option>
+                            <option value="ac" ${isAC ? 'selected' : ''}>交流（向きが入れかわる）</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>電源電圧 <span class="value-display">${state.f_voltage} V</span></label>
+                        <input type="range" min="1" max="12" step="1" value="${state.f_voltage}" oninput="updateParam('f_voltage', this.value)">
+                    </div>
+                    ${isAC ? `
+                    <div class="control-group">
+                        <label>交流の周波数 <span class="value-display">${state.f_freq.toFixed(1)} Hz</span></label>
+                        <input type="range" min="0.2" max="3" step="0.1" value="${state.f_freq}" oninput="updateParam('f_freq', this.value)">
+                        <div style="font-size:0.68rem; color:var(--text-dim); margin-top:2px;">観察しやすいよう、実際の50/60Hzよりゆっくりにしています</div>
+                    </div>` : ''}
+                    <button class="btn-action ${state.f_switchOn ? '' : 'toggle-off'}" onclick="toggleSwitch()">
+                        スイッチ: ${state.f_switchOn ? 'ON（閉）' : 'OFF（開）'}
+                    </button>
+                    <div class="lcd ${state.f_switchOn ? 'lcd-ok' : 'lcd-warn'}">
+                        <div class="lcd-label"><span><span class="status-dot"></span>CIRCUIT CURRENT</span></div>
+                        <div class="lcd-value">${i}<span style="font-size:0.9rem;"> A</span></div>
+                        <div class="lcd-sub">${state.f_switchOn
+                            ? (isAC ? '交流：電流の向きが周期的に入れかわります' : '直流：電流の向きは一定です')
+                            : 'スイッチが開いているため電流は流れません'}</div>
+                    </div>
+                    <div class="legend-row">
+                        <span><span class="legend-dot cyan"></span>電子：導線内の青い粒</span>
+                        <span><span class="legend-dot amber"></span>電流の向き：橙の矢印</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:6px; line-height:1.6;">
+                        ${isAC
+                            ? '交流では電子は行ったり来たりをくり返すだけで、ほとんど移動しません。それでも電流は流れ、電球は光ります。'
+                            : '電流の向きは、電子の実際の動きとは逆向きに定められています。'}
+                    </div>
+                    ${driftPanelHtml()}
+                `;
+            } else if (currentMode === 'ohm') {
+                const cur = (state.o_voltage / state.o_resistance).toFixed(2);
+                html = `
+                    <h2>オームの法則と抵抗</h2>
+                    <div class="subhead">OHM'S LAW: I = V / R</div>
+                    <div class="control-group">
+                        <label>電源電圧 (V) <span class="value-display">${state.o_voltage} V</span></label>
+                        <input type="range" min="1" max="12" step="0.5" value="${state.o_voltage}" oninput="updateParam('o_voltage', this.value)">
+                    </div>
+                    <div class="control-group">
+                        <label>抵抗値 (R) <span class="value-display">${state.o_resistance} Ω</span></label>
+                        <input type="range" min="2" max="20" step="1" value="${state.o_resistance}" oninput="updateParam('o_resistance', this.value)">
+                    </div>
+                    <div class="lcd lcd-ok">
+                        <div class="lcd-label">CURRENT (I = V ÷ R)</div>
+                        <div class="lcd-value">${cur}<span style="font-size:0.9rem;"> A</span></div>
+                    </div>
+                    <div class="legend-row">
+                        <span><span class="legend-dot cyan"></span>電子（－→＋）</span>
+                        <span><span class="legend-dot amber"></span>電流（＋→－）</span>
+                    </div>
+                    ${driftPanelHtml()}
+                `;
+            } else if (currentMode === 'circuit') {
+                const r1 = parseFloat(state.c_r1), r2 = parseFloat(state.c_r2), v = parseFloat(state.c_voltage);
+                const isSeries = state.c_type === 'series';
+                const rAll = isSeries ? (r1 + r2) : ((r1 * r2) / (r1 + r2));
+                const iAll = v / rAll;
+                const i1 = isSeries ? iAll : v / r1;
+                const i2 = isSeries ? iAll : v / r2;
+
+                html = `
+                    <h2>直列回路と並列回路</h2>
+                    <div class="subhead">GRID-BASED CIRCUIT TOPOLOGY</div>
+                    <div class="control-group">
+                        <label>回路の接続方式</label>
+                        <select onchange="updateParam('c_type', this.value)">
+                            <option value="series" ${isSeries ? 'selected' : ''}>直列回路</option>
+                            <option value="parallel" ${!isSeries ? 'selected' : ''}>並列回路</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>電源電圧 <span class="value-display">${v} V</span></label>
+                        <input type="range" min="2" max="12" step="1" value="${v}" oninput="updateParam('c_voltage', this.value)">
+                    </div>
+                    <div class="control-group">
+                        <label>抵抗 R1 <span class="value-display">${r1} Ω</span></label>
+                        <input type="range" min="1" max="10" step="1" value="${r1}" oninput="updateParam('c_r1', this.value)">
+                    </div>
+                    <div class="control-group">
+                        <label>抵抗 R2 <span class="value-display">${r2} Ω</span></label>
+                        <input type="range" min="1" max="10" step="1" value="${r2}" oninput="updateParam('c_r2', this.value)">
+                    </div>
+                    <div class="lcd lcd-ok">
+                        <div class="lcd-label">TOTAL RESISTANCE &amp; CURRENT</div>
+                        <div class="lcd-value">${rAll.toFixed(2)}<span style="font-size:0.85rem;"> Ω</span></div>
+                        <div class="lcd-sub">
+                            全体電流: ${iAll.toFixed(2)} A<br>
+                            R1を流れる電流: ${i1.toFixed(2)} A<br>
+                            R2を流れる電流: ${i2.toFixed(2)} A
+                        </div>
+                    </div>
+                    <div class="legend-row">
+                        <span><span class="legend-dot cyan"></span>電子（－→＋）</span>
+                        <span><span class="legend-dot amber"></span>電流（＋→－）</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:6px; line-height:1.6;">
+                        ${isSeries ? '直列：どこでも電流の大きさは同じです。' : '並列：抵抗が小さい枝ほど多くの電流が流れます（矢印の速さを見比べてください）。'}
+                    </div>
+                    ${driftPanelHtml()}
+                `;
+            } else if (currentMode === 'builder') {
+                html = `
+                    <h2>回路自由構築 (2D CAD &amp; 3D)</h2>
+                    <div class="subhead">SCHEMATIC DESIGNER</div>
+
+                    <div class="builder-tools">
+                        <button class="tool-btn ${builderData.activeTool==='select'?'active':''}" onclick="setBuilderTool('select')">選択/移動</button>
+                        <button class="tool-btn ${builderData.activeTool==='wire'?'active':''}" onclick="setBuilderTool('wire')">導線接続</button>
+                        <button class="tool-btn danger ${builderData.activeTool==='erase'?'active':''}" onclick="setBuilderTool('erase')">配線削除</button>
+                    </div>
+                    <div class="builder-tools">
+                        <button class="tool-btn" onclick="autoAssignLabels()">ラベル整理</button>
+                        <button class="tool-btn" onclick="rotateSelectedNode()">記号を回転</button>
+                        <button class="tool-btn ${builderData.zoomed?'active':''}" onclick="toggleBuilderZoom()">パレット拡大</button>
+                    </div>
+
+                    <label style="font-size:0.75rem;">回路記号を追加 (クリックで設置):</label>
+                    <div class="builder-tools">
+                        <button class="tool-btn" onclick="addBuilderNode('battery')">電源</button>
+                        <button class="tool-btn" onclick="addBuilderNode('resistor')">抵抗</button>
+                        <button class="tool-btn" onclick="addBuilderNode('bulb')">電球</button>
+                        <button class="tool-btn" onclick="addBuilderNode('switch')">スイッチ</button>
+                        <button class="tool-btn" onclick="addBuilderNode('ammeter')">電流計</button>
+                        <button class="tool-btn" onclick="addBuilderNode('voltmeter')">電圧計</button>
+                    </div>
+
+                    <div id="builder-canvas-container">
+                        <canvas id="builder-2d-canvas"></canvas>
+                    </div>
+
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn-action btn-secondary" onclick="clearBuilderCircuit()">全削除</button>
+                        <button class="btn-action" onclick="syncBuilderTo3D()">3Dモデル更新・接続</button>
+                    </div>
+
+                    <div class="lcd ${builderData.isClosedCircuit ? 'lcd-ok' : 'lcd-warn'}">
+                        <div class="lcd-label"><span><span class="status-dot"></span>CIRCUIT STATUS</span></div>
+                        <div class="lcd-value" style="font-size:1.1rem;">${builderData.isClosedCircuit ? builderData.calculatedCurrent.toFixed(2) + ' A' : '通電なし'}</div>
+                        <div class="lcd-sub">${builderData.isClosedCircuit ? '閉回路形成中（通電状態）' : (builderData.statusReason || '回路が開いているか未接続です')}</div>
+                    </div>
+
+                    ${driftPanelHtml()}
+
+                    <div id="selected-node-props" style="margin-top:10px;"></div>
+                `;
+            }
+            c.innerHTML = html;
+
+            if (currentMode === 'builder') {
+                setTimeout(() => { initBuilder2DCanvas(); updateSelectedPropsUI(); }, 30);
+            }
+        }
+
+        function updateParam(key, val) {
+            state[key] = isNaN(parseFloat(val)) ? val : parseFloat(val);
+            if (key.startsWith('c_')) { setupMode('circuit', true); buildUI(); return; }
+            if (key === 'o_resistance' || key === 'o_voltage') { setupMode('ohm', true); buildUI(); return; }
+            if (key === 'f_voltage' || key === 'f_source' || key === 'f_freq') { setupMode('flow', true); buildUI(); return; }
+            if (key === 'k_accel') { setupMode('crookes', true); buildUI(); return; }
+            if (key === 's_accel' || key === 's_crossX') { setupMode('shadow', true); buildUI(); return; }
+            buildUI();
+        }
+
+        function toggleCrookesSwitch() { state.k_switchOn = !state.k_switchOn; setupMode('crookes', true); buildUI(); }
+        function setCrookesPolarity(pol) { state.k_polarity = pol; setupMode('crookes', true); buildUI(); }
+        function setCrookesVertPolarity(vPol) { state.k_vertPolarity = vPol; setupMode('crookes', true); buildUI(); }
+        function toggleShadowSwitch() { state.s_switchOn = !state.s_switchOn; updateShadowTexture(); buildUI(); }
+        function toggleCross() {
+            state.s_crossOn = !state.s_crossOn;
+            if (activeObjects.crossGroup) activeObjects.crossGroup.visible = state.s_crossOn;
+            updateShadowTexture();
+            buildUI();
+        }
+        function toggleSwitch() { state.f_switchOn = !state.f_switchOn; setupMode('flow', true); buildUI(); }
+
+        // ============ CAD (2D) ============
+        function initDefaultBuilderCircuit() {
+            builderData.nodes = [
+                { id: 1, type: 'battery', x: 2, y: 3, label: 'Bat1', val: 6, state: true, rot: 0 },
+                { id: 2, type: 'switch', x: 2, y: 1, label: 'S1', val: 0, state: true, rot: 0 },
+                { id: 3, type: 'resistor', x: 7, y: 1, label: 'R1', val: 10, state: true, rot: 0 },
+                { id: 4, type: 'ammeter', x: 7, y: 3, label: 'A1', val: 0, state: true, rot: 0 }
+            ];
+            builderData.wires = [
+                { id: 101, fromId: 1, fromPin: 0, toId: 2, toPin: 0, pts: [] },
+                { id: 102, fromId: 2, fromPin: 1, toId: 3, toPin: 0, pts: [] },
+                { id: 103, fromId: 3, fromPin: 1, toId: 4, toPin: 0, pts: [] },
+                { id: 104, fromId: 4, fromPin: 2, toId: 1, toPin: 1, pts: [] }
+            ];
+            autoAssignLabels();
+        }
+
+        function setBuilderTool(tool) {
+            builderData.activeTool = tool;
+            builderData.wireStart = null;
+            builderData.wirePoints = [];
+            if (tool === 'wire') setBuilderZoom(true);
+            buildUI();
+            updateHint();
+            refreshFrameTools();
+        }
+
+        // 拡大状態の切り替え。キャンバスの解像度も即座に作り直す
+        function setBuilderZoom(on) {
+            if (builderData.zoomed === on) return;
+            builderData.zoomed = on;
+            applyBuilderZoom();
+            initBuilder2DCanvas();
+        }
+
+        function toggleBuilderZoom() { setBuilderZoom(!builderData.zoomed); }
+
+        // 拡大中にHUDの外側（3D画面など）をタップしたら縮小する
+        function onOutsidePointerDown(e) {
+            if (currentMode !== 'builder' || !builderData.zoomed) return;
+            const panel = document.getElementById('ui-panel');
+            if (panel && panel.contains(e.target)) return;
+            if (e.target && e.target.closest &&
+                e.target.closest('#help-modal, #nav-panel, #err-banner, #help-btn')) return;
+            setBuilderZoom(false);
+        }
+
+        function refreshFrameTools() {
+            document.querySelectorAll('#ui-panel .tool-btn').forEach(b => {
+                if (b.textContent.indexOf('パレット') >= 0) {
+                    b.classList.toggle('active', builderData.zoomed);
+                    b.textContent = builderData.zoomed ? 'パレット縮小' : 'パレット拡大';
+                }
+            });
+        }
+
+        function applyBuilderZoom() {
+            const c = document.getElementById('builder-canvas-container');
+            const panel = document.getElementById('ui-panel');
+            const on = builderData.zoomed && currentMode === 'builder';
+            if (c) c.classList.toggle('bc-zoomed', on);
+            if (panel) panel.classList.toggle('hud-zoom', on);
+            refreshFrameTools();
+        }
+
+        function addBuilderNode(type) {
+            setBuilderZoom(true); // 記号の設置＝構築開始 → 自動で拡大
+            const id = Date.now();
+            builderData.nodes.push({
+                id, type, x: 4, y: 2, label: 'X', rot: 0,
+                val: (type === 'battery' ? 6 : (type === 'resistor' ? 10 : 0)),
+                state: true
+            });
+            autoAssignLabels();
+            drawBuilder2D();
+            syncBuilderTo3D();
+        }
+
+        function autoAssignLabels() {
+            const counts = { battery: 1, resistor: 1, bulb: 1, switch: 1, ammeter: 1, voltmeter: 1 };
+            const mapPrefix = { battery: 'Bat', resistor: 'R', bulb: 'L', switch: 'S', ammeter: 'A', voltmeter: 'V' };
+            builderData.nodes.forEach(n => { n.label = mapPrefix[n.type] + counts[n.type]++; });
+            drawBuilder2D();
+        }
+
+        function clearBuilderCircuit() {
+            builderData.nodes = [];
+            builderData.wires = [];
+            builderData.selectedId = null;
+            builderData.wireStart = null;
+            builderData.wirePoints = [];
+            drawBuilder2D();
+            syncBuilderTo3D();
+        }
+
+        function rotateSelectedNode() {
+            const n = builderData.nodes.find(x => x.id === builderData.selectedId);
+            if (!n) return;
+            n.rot = ((n.rot || 0) + 90) % 360;
+            drawBuilder2D();
+            syncBuilderTo3D();
+        }
+
+        function initBuilder2DCanvas() {
+            applyBuilderZoom();
+            const cvs = document.getElementById('builder-2d-canvas');
+            if (!cvs) return;
+            const container = document.getElementById('builder-canvas-container');
+            // 拡大時はHUD幅に合わせ、マス目が正方形になる 9:5 の高さを明示的に与える
+            if (builderData.zoomed) {
+                const w = container.clientWidth;
+                const h = Math.max(200, Math.min(Math.round(w * 5 / 9), Math.round(window.innerHeight * 0.52)));
+                container.style.height = h + 'px';
+            } else {
+                container.style.height = '';
+            }
+            // 高精細ディスプレイでも線がぼやけないよう devicePixelRatio を反映
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            cvs.width = Math.max(1, Math.round(container.clientWidth * dpr));
+            cvs.height = Math.max(1, Math.round(container.clientHeight * dpr));
+
+            // マウス・タッチ・ペンを Pointer Events に一本化
+            // （従来の onmouseXXX / ontouchXXX は使わず、二重発火を防ぐ）
+            cvs.onpointerdown = (e) => {
+                if (e.pointerType === 'mouse' && e.button !== 0) return; // 右クリックは contextmenu 側で処理
+                e.preventDefault();
+                if (cvs.setPointerCapture) { try { cvs.setPointerCapture(e.pointerId); } catch (err) { /* noop */ } }
+                onBuilderCanvasMouseDown(e);
+            };
+            cvs.onpointermove = (e) => { onBuilderCanvasMouseMove(e); };
+            cvs.onpointerup = (e) => { onBuilderCanvasMouseUp(); };
+            cvs.onpointercancel = (e) => { onBuilderCanvasMouseUp(); };
+            cvs.oncontextmenu = (e) => {
+                e.preventDefault();
+                builderData.wireStart = null; builderData.wirePoints = [];
+                drawBuilder2D();
+            };
+
+            cvs.style.cursor = builderData.activeTool === 'erase' ? 'not-allowed' : (builderData.activeTool === 'wire' ? 'crosshair' : 'default');
+            drawBuilder2D();
+        }
+
+        // 描画スケール（拡大表示でも記号が適切な大きさになるよう追従）
+        function builderMetrics() {
+            const cvs = document.getElementById('builder-2d-canvas');
+            if (!cvs || !cvs.width) return null;
+            const gx = cvs.width / 9;
+            const gy = cvs.height / 5;
+            const k = Math.max(0.85, Math.min(gx / 35, gy / 46));
+            return { cvs, gx, gy, k };
+        }
+
+        function getCanvasPoint(e) {
+            const cvs = document.getElementById('builder-2d-canvas');
+            const rect = cvs.getBoundingClientRect();
+            const sx = cvs.width / rect.width, sy = cvs.height / rect.height;
+            return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+        }
+
+        // 電流計・電圧計は円の四方向（右・下・左・上）を端子とする
+        function getPinCount(type) { return (type === 'ammeter' || type === 'voltmeter') ? 4 : 2; }
+
+        function getPinLocalOffset(node, pinIdx) {
+            const R = 22;
+            if (getPinCount(node.type) === 4) {
+                const dirs = [[R, 0], [0, R], [-R, 0], [0, -R]];
+                return dirs[pinIdx % 4];
+            }
+            return pinIdx === 0 ? [-R, 0] : [R, 0];
+        }
+
+        function getNodePinCoords(node, pinIdx) {
+            const m = builderMetrics();
+            if (!m) return { x: 0, y: 0 };
+            const off = getPinLocalOffset(node, pinIdx);
+            const a = ((node.rot || 0) * Math.PI) / 180;
+            const rx = off[0] * Math.cos(a) - off[1] * Math.sin(a);
+            const ry = off[0] * Math.sin(a) + off[1] * Math.cos(a);
+            return { x: node.x * m.gx + rx * m.k, y: node.y * m.gy + ry * m.k };
+        }
+
+        function toLocal(node, mx, my) {
+            const m = builderMetrics();
+            const dx = mx - node.x * m.gx, dy = my - node.y * m.gy;
+            const a = -((node.rot || 0) * Math.PI) / 180;
+            return {
+                x: (dx * Math.cos(a) - dy * Math.sin(a)) / m.k,
+                y: (dx * Math.sin(a) + dy * Math.cos(a)) / m.k
+            };
+        }
+
+        function wpToCanvas(p) {
+            const m = builderMetrics();
+            return { x: p.gx * m.gx, y: p.gy * m.gy };
+        }
+
+        function wirePolyline(w) {
+            const n1 = builderData.nodes.find(n => n.id === w.fromId);
+            const n2 = builderData.nodes.find(n => n.id === w.toId);
+            if (!n1 || !n2) return null;
+            const seq = [getNodePinCoords(n1, w.fromPin)];
+            (w.pts || []).forEach(p => seq.push(wpToCanvas(p)));
+            seq.push(getNodePinCoords(n2, w.toPin));
+            return seq;
+        }
+
+        function strokeOrthoPath(ctx, seq) {
+            ctx.beginPath();
+            ctx.moveTo(seq[0].x, seq[0].y);
+            for (let i = 1; i < seq.length; i++) {
+                ctx.lineTo(seq[i].x, seq[i - 1].y);
+                ctx.lineTo(seq[i].x, seq[i].y);
+            }
+            ctx.stroke();
+        }
+
+        function distToSegment(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1, dy = y2 - y1;
+            const lenSq = dx * dx + dy * dy;
+            let t = lenSq === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / lenSq;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+        }
+
+        function hitTestWire(mx, my) {
+            const m = builderMetrics();
+            const th = 9 * Math.max(1, m ? m.k : 1); // 高解像度キャンバスでも当たり判定の実寸を保つ
+            for (const w of builderData.wires) {
+                const seq = wirePolyline(w);
+                if (!seq) continue;
+                for (let i = 1; i < seq.length; i++) {
+                    const ax = seq[i - 1].x, ay = seq[i - 1].y;
+                    const bx = seq[i].x, by = seq[i].y;
+                    if (distToSegment(mx, my, ax, ay, bx, ay) < th) return w;
+                    if (distToSegment(mx, my, bx, ay, bx, by) < th) return w;
+                }
+            }
+            return null;
+        }
+
+        // ============ 回路図記号（JIS準拠の簡易表現・回転対応） ============
+        function drawNodeSymbol(ctx, n) {
+            const col = n.state === false ? '#cf3b3b' : '#15607a';
+            ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.8;
+
+            if (getPinCount(n.type) === 4) {
+                ctx.beginPath();
+                ctx.moveTo(13, 0); ctx.lineTo(22, 0);
+                ctx.moveTo(-13, 0); ctx.lineTo(-22, 0);
+                ctx.moveTo(0, 13); ctx.lineTo(0, 22);
+                ctx.moveTo(0, -13); ctx.lineTo(0, -22);
+                ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.stroke();
+                ctx.font = '14px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(n.type === 'ammeter' ? 'A' : 'V', 0, 1);
+                return;
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(-22, 0); ctx.lineTo(-11, 0);
+            ctx.moveTo(11, 0); ctx.lineTo(22, 0);
+            ctx.stroke();
+
+            if (n.type === 'battery') {
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(-5, -11); ctx.lineTo(-5, 11); ctx.stroke();
+                ctx.lineWidth = 4.5;
+                ctx.beginPath(); ctx.moveTo(5, -6); ctx.lineTo(5, 6); ctx.stroke();
+                ctx.lineWidth = 1.8;
+                ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(-5, 0); ctx.moveTo(5, 0); ctx.lineTo(11, 0); ctx.stroke();
+                ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('+', -5, -17);
+                ctx.fillText('-', 5, -17);
+            } else if (n.type === 'resistor') {
+                ctx.strokeRect(-13, -9, 26, 18);
+            } else if (n.type === 'bulb') {
+                ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(-7.8, -7.8); ctx.lineTo(7.8, 7.8);
+                ctx.moveTo(7.8, -7.8); ctx.lineTo(-7.8, 7.8);
+                ctx.stroke();
+            } else if (n.type === 'switch') {
+                ctx.beginPath(); ctx.arc(-11, 0, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(11, 0, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath();
+                if (n.state) { ctx.moveTo(-11, 0); ctx.lineTo(11, 0); }
+                else { ctx.moveTo(-11, 0); ctx.lineTo(6, -10); }
+                ctx.stroke();
+            }
+        }
+
+        function drawBuilder2D() {
+            const m = builderMetrics();
+            if (!m) return;
+            const { cvs, gx, gy, k } = m;
+            const ctx = cvs.getContext('2d');
+
+            ctx.clearRect(0, 0, cvs.width, cvs.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+            ctx.strokeStyle = '#dde7ed';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 9; i++) { ctx.beginPath(); ctx.moveTo(i * gx, 0); ctx.lineTo(i * gx, cvs.height); ctx.stroke(); }
+            for (let j = 0; j <= 5; j++) { ctx.beginPath(); ctx.moveTo(0, j * gy); ctx.lineTo(cvs.width, j * gy); ctx.stroke(); }
+
+            if (builderData.nodes.length === 0) {
+                ctx.fillStyle = 'rgba(30,55,75,0.4)';
+                ctx.font = `${13 * k}px sans-serif`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('上のボタンから回路記号を追加してください', cvs.width / 2, cvs.height / 2);
+            }
+
+            // 導線（折れ点対応）
+            ctx.lineWidth = 3 * Math.min(k, 2);
+            ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+            builderData.wires.forEach(w => {
+                const seq = wirePolyline(w);
+                if (!seq) return;
+                ctx.strokeStyle = builderData.isClosedCircuit ? '#0d8f63' : (builderData.activeTool === 'erase' ? '#cf3b3b' : '#1a86d0');
+                strokeOrthoPath(ctx, seq);
+                // 折れ点マーカー
+                (w.pts || []).forEach(p => {
+                    const c = wpToCanvas(p);
+                    ctx.fillStyle = '#1a86d0';
+                    ctx.beginPath(); ctx.arc(c.x, c.y, 3 * k, 0, Math.PI * 2); ctx.fill();
+                });
+            });
+
+            // 配線中プレビュー
+            if (builderData.wireStart) {
+                const sn = builderData.nodes.find(n => n.id === builderData.wireStart.nodeId);
+                if (sn) {
+                    const seq = [getNodePinCoords(sn, builderData.wireStart.pinIndex)];
+                    builderData.wirePoints.forEach(p => seq.push(wpToCanvas(p)));
+                    seq.push(builderData.mousePos2D);
+                    ctx.strokeStyle = '#d97a06';
+                    ctx.setLineDash([5 * k, 5 * k]);
+                    strokeOrthoPath(ctx, seq);
+                    ctx.setLineDash([]);
+                    builderData.wirePoints.forEach(p => {
+                        const c = wpToCanvas(p);
+                        ctx.fillStyle = '#d97a06';
+                        ctx.beginPath(); ctx.arc(c.x, c.y, 3.5 * k, 0, Math.PI * 2); ctx.fill();
+                    });
+                }
+            }
+
+            // 記号
+            builderData.nodes.forEach(n => {
+                const cx = n.x * gx, cy = n.y * gy;
+                const four = getPinCount(n.type) === 4;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+
+                if (builderData.selectedId === n.id) {
+                    ctx.strokeStyle = '#0d8f63';
+                    ctx.lineWidth = 1.8;
+                    const s = (four ? 26 : 27) * k;
+                    ctx.strokeRect(-s, -s * (four ? 1 : 0.72), s * 2, s * 2 * (four ? 1 : 0.72));
+                }
+
+                ctx.save();
+                ctx.rotate(((n.rot || 0) * Math.PI) / 180);
+                ctx.scale(k, k);
+                ctx.fillStyle = 'rgba(240, 247, 251, 0.95)';
+                if (four) ctx.fillRect(-20, -20, 40, 40); else ctx.fillRect(-21, -15, 42, 30);
+                drawNodeSymbol(ctx, n);
+                ctx.restore();
+
+                // 端子ピン
+                for (let p = 0; p < getPinCount(n.type); p++) {
+                    const pc = getNodePinCoords(n, p);
+                    ctx.fillStyle = '#d97a06';
+                    ctx.beginPath();
+                    ctx.arc(pc.x - cx, pc.y - cy, 3.5 * k, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#16232e';
+                ctx.font = `${10 * k}px sans-serif`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(n.label, 0, (four ? 30 : 24) * k);
+
+                ctx.restore();
+            });
+        }
+
+        function hitTestNode(mx, my) {
+            let hitNode = null, hitPin = -1;
+            const m = builderMetrics();
+            if (!m) return { hitNode, hitPin };
+
+            // まず端子ピンを優先判定
+            for (const n of builderData.nodes) {
+                for (let p = 0; p < getPinCount(n.type); p++) {
+                    const pc = getNodePinCoords(n, p);
+                    if (Math.hypot(mx - pc.x, my - pc.y) < 11 * m.k) return { hitNode: n, hitPin: p };
+                }
+            }
+            for (const n of builderData.nodes) {
+                const l = toLocal(n, mx, my);
+                const four = getPinCount(n.type) === 4;
+                if (four ? (Math.abs(l.x) < 20 && Math.abs(l.y) < 20) : (Math.abs(l.x) < 21 && Math.abs(l.y) < 15)) {
+                    hitNode = n; break;
+                }
+            }
+            return { hitNode, hitPin };
+        }
+
+        function onBuilderCanvasMouseDown(e) {
+            const m = builderMetrics();
+            if (!m) return;
+            const p = getCanvasPoint(e);
+            const mx = p.x, my = p.y;
+
+            if (builderData.activeTool === 'erase') {
+                const w = hitTestWire(mx, my);
+                if (w) { builderData.wires = builderData.wires.filter(x => x.id !== w.id); syncBuilderTo3D(); }
+                drawBuilder2D();
+                return;
+            }
+
+            const { hitNode, hitPin } = hitTestNode(mx, my);
+
+            if (builderData.activeTool === 'wire') {
+                if (hitNode && hitPin !== -1) {
+                    if (!builderData.wireStart) {
+                        builderData.wireStart = { nodeId: hitNode.id, pinIndex: hitPin };
+                        builderData.wirePoints = [];
+                        setBuilderZoom(true); // 配線の構築開始 → 自動で拡大
+                    } else {
+                        const sameNode = builderData.wireStart.nodeId === hitNode.id;
+                        const samePin = sameNode && builderData.wireStart.pinIndex === hitPin;
+                        if (!samePin) {
+                            builderData.wires.push({
+                                id: Date.now(),
+                                fromId: builderData.wireStart.nodeId,
+                                fromPin: builderData.wireStart.pinIndex,
+                                toId: hitNode.id,
+                                toPin: hitPin,
+                                pts: builderData.wirePoints.slice()
+                            });
+                            syncBuilderTo3D();
+                        }
+                        builderData.wireStart = null;
+                        builderData.wirePoints = [];
+                    }
+                } else if (builderData.wireStart) {
+                    // 空白部クリックで折れ点を追加（好きなタイミングで折り曲げ）
+                    builderData.wirePoints.push({ gx: mx / m.gx, gy: my / m.gy });
+                }
+            } else {
+                builderData.selectedId = hitNode ? hitNode.id : null;
+                if (hitNode) {
+                    builderData.dragNodeId = hitNode.id;
+                    builderData.dragOffset = { x: mx - hitNode.x * m.gx, y: my - hitNode.y * m.gy };
+                    if (!builderData.zoomed) {
+                        // 部品の移動開始 → 自動で拡大。座標系が変わるため掴み位置を中心に補正
+                        setBuilderZoom(true);
+                        builderData.dragOffset = { x: 0, y: 0 };
+                    }
+                }
+            }
+
+            drawBuilder2D();
+            updateSelectedPropsUI();
+        }
+
+        function onBuilderCanvasMouseMove(e) {
+            const m = builderMetrics();
+            if (!m) return;
+            const p = getCanvasPoint(e);
+            builderData.mousePos2D = { x: p.x, y: p.y };
+
+            if (builderData.dragNodeId !== null && builderData.activeTool === 'select') {
+                const n = builderData.nodes.find(node => node.id === builderData.dragNodeId);
+                if (n) {
+                    n.x = Math.max(1, Math.min(8, Math.round((p.x - builderData.dragOffset.x) / m.gx)));
+                    n.y = Math.max(1, Math.min(4, Math.round((p.y - builderData.dragOffset.y) / m.gy)));
+                    drawBuilder2D();
+                }
+            } else if (builderData.wireStart) {
+                drawBuilder2D();
+            }
+        }
+
+        function onBuilderCanvasMouseUp() {
+            if (builderData.dragNodeId !== null) {
+                builderData.dragNodeId = null;
+                syncBuilderTo3D();
+            }
+        }
+
+        function updateSelectedPropsUI() {
+            const container = document.getElementById('selected-node-props');
+            if (!container) return;
+            const n = builderData.nodes.find(node => node.id === builderData.selectedId);
+            if (!n) { container.innerHTML = ''; return; }
+
+            let html = `<div style="font-size:0.75rem; border-top:1px solid var(--panel-border); padding-top:8px;">`;
+            html += `<strong>選択中: ${n.label}</strong> (${n.type}) / 向き ${n.rot || 0}°`;
+            if (n.type === 'battery') {
+                html += `<br>電圧: <input type="number" value="${n.val}" min="1" max="15" style="width:60px;" onchange="updateNodeVal(${n.id}, this.value)"> V`;
+            } else if (n.type === 'resistor') {
+                html += `<br>抵抗値: <input type="number" value="${n.val}" min="1" max="50" style="width:60px;" onchange="updateNodeVal(${n.id}, this.value)"> Ω`;
+            } else if (n.type === 'switch') {
+                html += `<br><button class="btn-action ${n.state ? '' : 'toggle-off'}" onclick="toggleNodeState(${n.id})">スイッチ: ${n.state ? 'ON（閉）' : 'OFF（開）'}</button>`;
+            }
+            html += `<div style="display:flex; gap:6px; margin-top:6px;">
+                        <button class="btn-action btn-secondary" onclick="rotateSelectedNode()">90°回転 (R)</button>
+                        <button class="btn-action btn-secondary" onclick="deleteSelectedNode()">削除 (Del)</button>
+                     </div></div>`;
+            container.innerHTML = html;
+        }
+
+        function updateNodeVal(id, val) {
+            const n = builderData.nodes.find(node => node.id === id);
+            if (n) { n.val = parseFloat(val); syncBuilderTo3D(); }
+        }
+        function toggleNodeState(id) {
+            const n = builderData.nodes.find(node => node.id === id);
+            if (n) { n.state = !n.state; syncBuilderTo3D(); }
+        }
+        function deleteSelectedNode() {
+            if (!builderData.selectedId) return;
+            builderData.nodes = builderData.nodes.filter(n => n.id !== builderData.selectedId);
+            builderData.wires = builderData.wires.filter(w => w.fromId !== builderData.selectedId && w.toId !== builderData.selectedId);
+            builderData.selectedId = null;
+            autoAssignLabels();
+            syncBuilderTo3D();
+        }
+
+        // ============ 回路計算 ============
+        function calculateBuilderCircuit() {
+            const bat = builderData.nodes.find(n => n.type === 'battery');
+            builderData.statusReason = '';
+            builderData.loopWires = [];
+            builderData.loopNodeIds = [];
+
+            if (!bat) {
+                builderData.isClosedCircuit = false; builderData.calculatedCurrent = 0;
+                builderData.statusReason = '電源（電池）が配置されていません'; return;
+            }
+            if (builderData.wires.length < 1) {
+                builderData.isClosedCircuit = false; builderData.calculatedCurrent = 0;
+                builderData.statusReason = '導線が接続されていません'; return;
+            }
+
+            const byId = id => builderData.nodes.find(n => n.id === id);
+            // 電圧計は並列につなぐ計器で電流を流さない（理想的な内部抵抗＝無限大）。
+            // 開いたスイッチと同様、経路として通さない。
+            const blocked = n => !n || n.type === 'voltmeter' || (n.type === 'switch' && n.state === false);
+
+            // 電池の＋端子から出発し、電池に戻る「実際の1周の経路」を深さ優先で探す。
+            // 経路そのものを保持することで、電子が離れた導線へ飛ぶことがなくなる。
+            const visiting = new Set();
+            function dfs(nodeId, used) {
+                if (nodeId === bat.id) return used.slice();
+                if (visiting.has(nodeId)) return null;
+                const node = byId(nodeId);
+                if (blocked(node)) return null;
+                visiting.add(nodeId);
+                for (const w of builderData.wires) {
+                    if (used.indexOf(w) >= 0) continue;
+                    let nx = null;
+                    if (w.fromId === nodeId) nx = w.toId;
+                    else if (w.toId === nodeId) nx = w.fromId;
+                    else continue;
+                    used.push(w);
+                    const r = dfs(nx, used);
+                    if (r) { visiting.delete(nodeId); return r; }
+                    used.pop();
+                }
+                visiting.delete(nodeId);
+                return null;
+            }
+
+            let found = null;
+            const startWires = builderData.wires.filter(w =>
+                (w.fromId === bat.id && w.fromPin === 0) || (w.toId === bat.id && w.toPin === 0));
+            for (const sw of startWires) {
+                const next = (sw.fromId === bat.id && sw.fromPin === 0) ? sw.toId : sw.fromId;
+                visiting.clear();
+                found = dfs(next, [sw]);
+                if (found) break;
+            }
+
+            // 経路上のノード列を復元
+            const seq = [bat.id];
+            if (found) {
+                let cur = bat.id;
+                found.forEach(w => {
+                    const nx = (w.fromId === cur) ? w.toId : w.fromId;
+                    seq.push(nx);
+                    cur = nx;
+                });
+            }
+
+            // 抵抗は経路上のものだけを合算する
+            let totalR = 0;
+            Array.from(new Set(seq)).forEach(id => {
+                const n = byId(id);
+                if (!n) return;
+                if (n.type === 'resistor') totalR += (n.val || 10);
+                if (n.type === 'bulb') totalR += 3;
+            });
+            if (totalR <= 0) totalR = 1;
+
+            builderData.isClosedCircuit = !!found;
+            builderData.calculatedCurrent = found ? (bat.val / totalR) : 0;
+            builderData.loopWires = found || [];
+            builderData.loopNodeIds = found ? seq : [];
+
+            if (!found) {
+                const anyOpen = builderData.nodes.some(n => n.type === 'switch' && !n.state);
+                const onlyVolt = builderData.nodes.some(n => n.type === 'voltmeter');
+                builderData.statusReason = anyOpen
+                    ? 'スイッチが開いているため回路が閉じていません'
+                    : (onlyVolt
+                        ? '閉回路になっていません（電圧計は電流を流さないため経路にはなりません）'
+                        : '配線が輪のようにつながっていません（閉回路を作ってください）');
+            }
+        }
+
+        function setupMode(mode, keepCamera = false) {
+            clearScene();
+            if (!keepCamera) {
+                if (mode === 'crookes' || mode === 'shadow') {
+                    camera.position.set(0, 14, 34);
+                    controls.target.set(0, CK_Y, 0);
+                } else {
+                    camera.position.set(0, 20, 25);
+                    controls.target.set(0, 0, 0);
+                }
+                if (controls.syncFromCamera) controls.syncFromCamera();
+                controls.update();
+            }
+
+            if (mode === 'crookes') buildCrookesScene();
+            else if (mode === 'shadow') buildShadowScene();
+            else if (mode === 'flow') buildFlowScene();
+            else if (mode === 'ohm') buildOhmScene();
+            else if (mode === 'circuit') buildCircuitScene();
+            else if (mode === 'builder') syncBuilderTo3D();
+        }
+
+        const WIRE_RADIUS = 0.35;
+        // 導線：不透明度を引き上げて導線としてはっきり判別できるようにしつつ、
+        // depthWrite は無効のままにして内部の電子を隠さない。
+        function createTransparentWireMaterial() {
+            return new THREE.MeshPhysicalMaterial({
+                color: 0x2a8bb5, transparent: true, opacity: 0.45,
+                roughness: 0.08, metalness: 0.05, transmission: 0.6,
+                depthWrite: false, side: THREE.DoubleSide
+            });
+        }
+
+        function createGridAlignedWire(points) {
+            // 不正な座標・重複点は TubeGeometry の例外要因になるため事前に除去する
+            const clean = [];
+            (points || []).forEach(p => {
+                if (!p || !isFinite(p.x) || !isFinite(p.y) || !isFinite(p.z)) return;
+                const last = clean[clean.length - 1];
+                if (last && last.distanceTo(p) < 1e-6) return;
+                clean.push(p.clone ? p.clone() : p);
+            });
+            if (clean.length < 2) return;
+
+            const path = new THREE.CurvePath();
+            for (let i = 0; i < clean.length - 1; i++) {
+                path.add(new THREE.LineCurve3(clean[i], clean[i + 1]));
+            }
+            if (path.curves.length === 0) return;
+
+            try {
+                const geo = new THREE.TubeGeometry(path, clean.length * 10, WIRE_RADIUS, 12, false);
+                const mesh = new THREE.Mesh(geo, createTransparentWireMaterial());
+                mesh.renderOrder = 1;
+                scene.add(mesh);
+            } catch (e) {
+                // 1本の導線の生成失敗で回路全体が消えないようにする
+            }
+        }
+
+        // ============ 01 クルックス管 ============
+        const CK_Y = 6.5;               // マス目（床）と重ならない高さ
+        const CK_X0 = -12, CK_X1 = 12;
+
+        function crookesDeflection() {
+            if (state.k_vertPolarity === 'up_plus') return 0.35;
+            if (state.k_vertPolarity === 'up_minus') return -0.35;
+            return 0;
+        }
+
+        // 陰極からの距離 s(0-1) に対する陰極線の軌跡（放物線）
+        function crookesPoint(s) {
+            const isNormal = (state.k_polarity === 'normal');
+            const x = isNormal ? (CK_X0 + 24 * s) : (CK_X1 - 24 * s);
+            const y = crookesDeflection() * 8.6 * s * s;
+            return new THREE.Vector3(x, y, 0);
+        }
+
+        function buildCrookesScene() {
+            const root = new THREE.Group();
+            root.position.y = CK_Y;
+            scene.add(root);
+            activeObjects.crookesRoot = root;
+
+            const tube = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 26, 40, 1, true), glassTubeMaterial());
+            tube.rotation.z = Math.PI / 2;
+            tube.renderOrder = 1;
+            root.add(tube);
+
+            // 管の支柱（床とのつながりを示す）
+            const standMat = new THREE.MeshStandardMaterial({ color: 0x8a97a3, roughness: 0.6 });
+            [-8, 8].forEach(px => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, CK_Y, 12), standMat);
+                leg.position.set(px, -CK_Y / 2 - 4.2 + 4.2, 0);
+                leg.position.y = -CK_Y / 2;
+                root.add(leg);
+            });
+            const baseBoard = new THREE.Mesh(new THREE.BoxGeometry(22, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0xb9c6d0, roughness: 0.7 }));
+            baseBoard.position.y = -CK_Y + 0.2;
+            root.add(baseBoard);
+
+            const isNormal = (state.k_polarity === 'normal');
+            const matMinus = new THREE.MeshStandardMaterial({ color: 0x3161c9, metalness: 0.7, roughness: 0.3 });
+            const matPlus = new THREE.MeshStandardMaterial({ color: 0xcf3b3b, metalness: 0.7, roughness: 0.3 });
+
+            const leftPole = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.4, 32), isNormal ? matMinus : matPlus);
+            leftPole.rotation.z = Math.PI / 2; leftPole.position.x = -12.2; root.add(leftPole);
+
+            const rightPole = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.4, 32), isNormal ? matPlus : matMinus);
+            rightPole.rotation.z = Math.PI / 2; rightPole.position.x = 12.2; root.add(rightPole);
+
+            // 上下の偏向電極
+            if (state.k_vertPolarity !== 'none') {
+                const upPlus = state.k_vertPolarity === 'up_plus';
+                const plateGeo = new THREE.BoxGeometry(6, 0.25, 3.2);
+                const top = new THREE.Mesh(plateGeo, upPlus ? matPlus : matMinus);
+                top.position.set(0, 2.6, 0); root.add(top);
+                const bottom = new THREE.Mesh(plateGeo, upPlus ? matMinus : matPlus);
+                bottom.position.set(0, -2.6, 0); root.add(bottom);
+            }
+
+            // --- 陰極線そのものを「光の筋」として描画 ---
+            if (state.k_switchOn) {
+                const samples = [];
+                for (let i = 0; i <= 48; i++) samples.push(crookesPoint(i / 48));
+                const curve = new THREE.CatmullRomCurve3(samples);
+                const bright = 0.45 + (state.k_accel / 10) * 0.5;
+
+                const halo = new THREE.Mesh(
+                    new THREE.TubeGeometry(curve, 96, 0.55, 14, false),
+                    new THREE.MeshBasicMaterial({ color: 0x63e0a8, transparent: true, opacity: 0.26 * bright, depthWrite: false })
+                );
+                halo.renderOrder = 3; root.add(halo);
+
+                const core = new THREE.Mesh(
+                    new THREE.TubeGeometry(curve, 96, 0.17, 12, false),
+                    new THREE.MeshBasicMaterial({ color: 0x12a562, transparent: true, opacity: 0.55 + 0.4 * bright, depthWrite: false })
+                );
+                core.renderOrder = 4; root.add(core);
+
+                // 管壁に当たった蛍光スポット
+                const hit = crookesPoint(1);
+                const spot = new THREE.Mesh(
+                    new THREE.CircleGeometry(1.5, 24),
+                    new THREE.MeshBasicMaterial({ color: 0x2ee08f, transparent: true, opacity: 0.5 * bright, depthWrite: false })
+                );
+                spot.position.copy(hit);
+                spot.rotation.y = Math.PI / 2;
+                spot.renderOrder = 3;
+                root.add(spot);
+            }
+
+            // 電子粒子
+            const pCount = 260;
+            const pGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(pCount * 3);
+            const progress = new Float32Array(pCount);
+            const jitter = new Float32Array(pCount * 2);
+            for (let i = 0; i < pCount; i++) {
+                progress[i] = Math.random();
+                jitter[i * 2] = (Math.random() - 0.5) * 0.35;
+                jitter[i * 2 + 1] = (Math.random() - 0.5) * 0.35;
+                const p = crookesPoint(progress[i]);
+                positions[i * 3] = p.x; positions[i * 3 + 1] = p.y; positions[i * 3 + 2] = 0;
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particles = new THREE.Points(pGeo, beamPointsMaterial(0.75));
+            particles.renderOrder = 5;
+            root.add(particles);
+
+            activeObjects.electrons = particles;
+            activeObjects.crookesProgress = progress;
+            activeObjects.crookesJitter = jitter;
+        }
+
+        // ============ 02 陰極線と影 ============
+        const SH_CATHODE_X = -12, SH_SCREEN_X = 12.5, SH_SCREEN_R = 3.8;
+
+        function buildShadowScene() {
+            const root = new THREE.Group();
+            root.position.y = CK_Y;
+            scene.add(root);
+
+            const tube = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 26, 40, 1, true), glassTubeMaterial());
+            tube.rotation.z = Math.PI / 2; tube.renderOrder = 1; root.add(tube);
+
+            const standMat = new THREE.MeshStandardMaterial({ color: 0x8a97a3, roughness: 0.6 });
+            [-8, 8].forEach(px => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, CK_Y, 12), standMat);
+                leg.position.set(px, -CK_Y / 2, 0);
+                root.add(leg);
+            });
+            const baseBoard = new THREE.Mesh(new THREE.BoxGeometry(24, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0xb9c6d0, roughness: 0.7 }));
+            baseBoard.position.y = -CK_Y + 0.2; root.add(baseBoard);
+
+            const cathode = new THREE.Mesh(
+                new THREE.CylinderGeometry(2.2, 2.2, 0.4, 32),
+                new THREE.MeshStandardMaterial({ color: 0x3161c9, metalness: 0.7, roughness: 0.3 })
+            );
+            cathode.rotation.z = Math.PI / 2;
+            cathode.position.x = SH_CATHODE_X - 0.2;
+            root.add(cathode);
+
+            const crossGroup = new THREE.Group();
+            const armMat = new THREE.MeshStandardMaterial({ color: 0x5c6873, metalness: 0.6, roughness: 0.4 });
+            crossGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.6, 0.6), armMat));
+            crossGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 3.6), armMat));
+            crossGroup.position.x = state.s_crossX;
+            crossGroup.visible = state.s_crossOn;
+            root.add(crossGroup);
+            activeObjects.crossGroup = crossGroup;
+
+            const screenCanvas = document.createElement('canvas');
+            screenCanvas.width = 512; screenCanvas.height = 512;
+            const screenTex = new THREE.CanvasTexture(screenCanvas);
+            const screenMesh = new THREE.Mesh(
+                new THREE.CircleGeometry(SH_SCREEN_R, 64),
+                new THREE.MeshBasicMaterial({ map: screenTex, side: THREE.DoubleSide })
+            );
+            screenMesh.rotation.y = Math.PI / 2;
+            screenMesh.position.x = SH_SCREEN_X;
+            root.add(screenMesh);
+
+            activeObjects.shadowCanvas = screenCanvas;
+            activeObjects.shadowTex = screenTex;
+            updateShadowTexture();
+
+            const pCount = 900;
+            const pGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(pCount * 3);
+            for (let i = 0; i < pCount; i++) {
+                positions[i * 3] = SH_CATHODE_X + Math.random() * (SH_SCREEN_X - SH_CATHODE_X);
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 5.0;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 5.0;
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particles = new THREE.Points(pGeo, beamPointsMaterial(0.42));
+            particles.renderOrder = 5;
+            root.add(particles);
+            activeObjects.shadowElectrons = particles;
+        }
+
+        function isBlockedByCross(y, z) {
+            if (!state.s_crossOn) return false;
+            if (Math.abs(y) <= 1.8 && Math.abs(z) <= 0.3) return true;
+            if (Math.abs(y) <= 0.3 && Math.abs(z) <= 1.8) return true;
+            return false;
+        }
+
+        function updateShadowTexture() {
+            if (!activeObjects.shadowCanvas) return;
+            const cvs = activeObjects.shadowCanvas;
+            const ctx = cvs.getContext('2d');
+            const S = cvs.width, C = S / 2, R = S / 2 - 16;
+
+            ctx.clearRect(0, 0, S, S);
+            const rim = ctx.createRadialGradient(C, C, R, C, C, R + 16);
+            rim.addColorStop(0, '#59636c'); rim.addColorStop(1, '#2b3339');
+            ctx.fillStyle = rim;
+            ctx.beginPath(); ctx.arc(C, C, R + 16, 0, Math.PI * 2); ctx.fill();
+
+            ctx.save();
+            ctx.beginPath(); ctx.arc(C, C, R, 0, Math.PI * 2); ctx.clip();
+            ctx.fillStyle = '#151d21'; ctx.fillRect(0, 0, S, S);
+
+            if (state.s_switchOn) {
+                const intensity = 0.3 + ((state.s_accel - 2) / 8) * 0.7;
+                const grad = ctx.createRadialGradient(C, C, 4, C, C, R * 1.1);
+                grad.addColorStop(0, `rgba(214,255,238,${0.98 * intensity})`);
+                grad.addColorStop(0.22, `rgba(96,255,196,${0.95 * intensity})`);
+                grad.addColorStop(0.55, `rgba(26,196,138,${0.72 * intensity})`);
+                grad.addColorStop(0.85, `rgba(10,120,84,${0.55 * intensity})`);
+                grad.addColorStop(1, `rgba(6,64,46,${0.45 * intensity})`);
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, S, S);
+
+                ctx.globalAlpha = 0.05;
+                for (let i = 0; i < 1200; i++) {
+                    const a = Math.random() * Math.PI * 2;
+                    const r = Math.sqrt(Math.random()) * R;
+                    ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#00301f';
+                    ctx.fillRect(C + Math.cos(a) * r, C + Math.sin(a) * r, 2, 2);
+                }
+                ctx.globalAlpha = 1;
+
+                if (state.s_crossOn) {
+                    // 十字板の位置に応じた投影倍率
+                    const M = (SH_SCREEN_X - SH_CATHODE_X) / (state.s_crossX - SH_CATHODE_X);
+                    const pxU = R / SH_SCREEN_R;
+                    const vW = 0.3 * M * pxU, vH = 1.8 * M * pxU;
+                    const hW = 1.8 * M * pxU, hH = 0.3 * M * pxU;
+                    const penumbra = Math.max(2.5, 11 - state.s_accel * 0.75) * Math.min(2.2, M / 2);
+
+                    ctx.filter = `blur(${penumbra}px)`;
+                    ctx.fillStyle = 'rgba(9, 22, 20, 0.97)';
+                    ctx.fillRect(C - vW, C - vH, vW * 2, vH * 2);
+                    ctx.fillRect(C - hW, C - hH, hW * 2, hH * 2);
+                    ctx.filter = 'none';
+                }
+
+                const vig = ctx.createRadialGradient(C, C, R * 0.7, C, C, R);
+                vig.addColorStop(0, 'rgba(0,0,0,0)');
+                vig.addColorStop(1, 'rgba(0,0,0,0.45)');
+                ctx.fillStyle = vig; ctx.fillRect(0, 0, S, S);
+            }
+
+            const gloss = ctx.createLinearGradient(0, 0, S * 0.7, S);
+            gloss.addColorStop(0, 'rgba(255,255,255,0.14)');
+            gloss.addColorStop(0.35, 'rgba(255,255,255,0.03)');
+            gloss.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gloss; ctx.fillRect(0, 0, S, S);
+
+            ctx.restore();
+            activeObjects.shadowTex.needsUpdate = true;
+        }
+
+        // ============ 03/04/05 回路 ============
+        function buildFlowScene() {
+            const pts = [
+                new THREE.Vector3(-10, 0, -6), new THREE.Vector3(10, 0, -6),
+                new THREE.Vector3(10, 0, 6), new THREE.Vector3(-10, 0, 6),
+                new THREE.Vector3(-10, 0, -6)
+            ];
+            createGridAlignedWire(pts);
+
+            const bat = createBatteryMesh(state.f_voltage); bat.position.set(-10, 0, 0); scene.add(bat);
+            const bulb = createBulbMesh(state.f_switchOn); bulb.position.set(10, 0, 0); scene.add(bulb);
+            const sw = createSwitchMesh(state.f_switchOn); sw.position.set(0, 0, 6); scene.add(sw);
+
+            const i = state.f_switchOn ? state.f_voltage / 5 : 0;
+            const isAC = state.f_source === 'ac';
+            if (isAC) add3DLabel('AC ～', -10, 2.6, 0);
+
+            // 交流では電子は同じ場所で前後に振動するだけで、正味の移動はほぼ無い
+            createGridElectrons(80, pts, i, isAC);
+            // 電流（＋→－）のモデル。電子とは必ず逆向きに流れ、交流では向きが反転する。
+            createCurrentArrows(16, pts, i, undefined, isAC);
+        }
+
+        function buildOhmScene() {
+            const pts = [
+                new THREE.Vector3(-10, 0, -5), new THREE.Vector3(10, 0, -5),
+                new THREE.Vector3(10, 0, 5), new THREE.Vector3(-10, 0, 5),
+                new THREE.Vector3(-10, 0, -5)
+            ];
+            createGridAlignedWire(pts);
+
+            const bat = createBatteryMesh(state.o_voltage); bat.position.set(-10, 0, 0); scene.add(bat);
+            const res = createResistor3DMesh(state.o_resistance); res.position.set(0, 0, 5); scene.add(res);
+
+            const i = state.o_voltage / state.o_resistance;
+            createGridElectrons(80, pts, i);
+            createCurrentArrows(14, pts, i);
+        }
+
+        function buildCircuitScene() {
+            const v = parseFloat(state.c_voltage);
+            const r1 = parseFloat(state.c_r1), r2 = parseFloat(state.c_r2);
+
+            if (state.c_type === 'series') {
+                const pts = [
+                    new THREE.Vector3(-12, 0, -5), new THREE.Vector3(12, 0, -5),
+                    new THREE.Vector3(12, 0, 5), new THREE.Vector3(-12, 0, 5),
+                    new THREE.Vector3(-12, 0, -5)
+                ];
+                createGridAlignedWire(pts);
+
+                const bat = createBatteryMesh(v); bat.position.set(-12, 0, 0); scene.add(bat);
+                const m1 = createResistor3DMesh(r1); m1.position.set(-3, 0, 5); scene.add(m1);
+                const m2 = createResistor3DMesh(r2); m2.position.set(5, 0, 5); scene.add(m2);
+                add3DLabel('R1 ' + r1 + 'Ω', -3, 2.0, 5);
+                add3DLabel('R2 ' + r2 + 'Ω', 5, 2.0, 5);
+
+                createGridElectrons(90, pts, v / (r1 + r2));
+                createCurrentArrows(16, pts, v / (r1 + r2));
+            } else {
+                // はしご型の並列回路。左端の縦線に電源、2本の桟にそれぞれ抵抗。
+                const zT = -5, zB = 5;
+                const xL = -12, xA = -1, xB = 8;
+
+                createGridAlignedWire([new THREE.Vector3(xL, 0, zT), new THREE.Vector3(xL, 0, zB)]);       // 電源側
+                createGridAlignedWire([new THREE.Vector3(xL, 0, zT), new THREE.Vector3(xB, 0, zT)]);       // 上の幹線
+                createGridAlignedWire([new THREE.Vector3(xL, 0, zB), new THREE.Vector3(xB, 0, zB)]);       // 下の幹線
+                createGridAlignedWire([new THREE.Vector3(xA, 0, zT), new THREE.Vector3(xA, 0, zB)]);       // R1の枝
+                createGridAlignedWire([new THREE.Vector3(xB, 0, zT), new THREE.Vector3(xB, 0, zB)]);       // R2の枝
+
+                const bat = createBatteryMesh(v); bat.position.set(xL, 0, 0); scene.add(bat);
+                const m1 = createResistor3DMesh(r1); m1.rotation.y = Math.PI / 2; m1.position.set(xA, 0, 0); scene.add(m1);
+                const m2 = createResistor3DMesh(r2); m2.rotation.y = Math.PI / 2; m2.position.set(xB, 0, 0); scene.add(m2);
+                add3DLabel('R1 ' + r1 + 'Ω', xA, 2.0, 0);
+                add3DLabel('R2 ' + r2 + 'Ω', xB, 2.0, 0);
+
+                // 枝ごとに独立した電子の経路を作り、抵抗にも必ず電流が流れるようにする
+                const branch1 = [
+                    new THREE.Vector3(xL, 0, 0), new THREE.Vector3(xL, 0, zT),
+                    new THREE.Vector3(xA, 0, zT), new THREE.Vector3(xA, 0, zB),
+                    new THREE.Vector3(xL, 0, zB), new THREE.Vector3(xL, 0, 0)
+                ];
+                const branch2 = [
+                    new THREE.Vector3(xL, 0, 0), new THREE.Vector3(xL, 0, zT),
+                    new THREE.Vector3(xB, 0, zT), new THREE.Vector3(xB, 0, zB),
+                    new THREE.Vector3(xL, 0, zB), new THREE.Vector3(xL, 0, 0)
+                ];
+                // 枝ごとの表示数の合計が直列回路と同じになるようにする。
+                // （並列の方が粒や矢印の総数が多いと「電流が増える」誤概念につながるため）
+                createGridElectrons(45, branch1, v / r1);
+                createGridElectrons(45, branch2, v / r2);
+                createCurrentArrows(8, branch1, v / r1, 1.6);
+                createCurrentArrows(8, branch2, v / r2, 2.3);
+            }
+        }
+
+        // ============ 06 CAD → 3D ============
+        function syncBuilderTo3D() {
+            if (currentMode !== 'builder') return;
+            clearScene();
+            calculateBuilderCircuit();
+
+            const map3DX = (g) => (g - 4.5) * 4.0;
+            const map3DZ = (g) => (g - 2.5) * 4.0;
+
+            const bat = builderData.nodes.find(n => n.type === 'battery');
+
+            builderData.nodes.forEach(n => {
+                const x = map3DX(n.x), z = map3DZ(n.y);
+                let mesh;
+                if (n.type === 'battery') mesh = createBatteryMesh(n.val);
+                else if (n.type === 'resistor') mesh = createResistor3DMesh(n.val);
+                else if (n.type === 'bulb') mesh = createBulbMesh(builderData.isClosedCircuit);
+                else if (n.type === 'switch') mesh = createSwitchMesh(n.state);
+                else if (n.type === 'ammeter') mesh = createMeterMesh('A', builderData.calculatedCurrent.toFixed(2));
+                else if (n.type === 'voltmeter') mesh = createMeterMesh('V', ((builderData.isClosedCircuit && bat) ? bat.val : 0).toFixed(1));
+
+                if (mesh) {
+                    mesh.position.set(x, 0, z);
+                    mesh.rotation.y = -((n.rot || 0) * Math.PI) / 180; // 記号の向きを3Dにも反映
+                    scene.add(mesh);
+                    add3DLabel(n.label, x, 2.2, z);
+                }
+            });
+
+            // 1本の導線を、始点ノード→終点ノードの順に3D座標へ変換する
+            const wireToPoints = (n1, n2, waypoints) => {
+                const grid = [{ gx: n1.x, gy: n1.y }];
+                (waypoints || []).forEach(p => grid.push(p));
+                grid.push({ gx: n2.x, gy: n2.y });
+
+                const pts = [];
+                for (let i = 0; i < grid.length; i++) {
+                    const cx = map3DX(grid[i].gx), cz = map3DZ(grid[i].gy);
+                    if (i === 0) { pts.push(new THREE.Vector3(cx, 0, cz)); continue; }
+                    const prevZ = pts[pts.length - 1].z;
+                    pts.push(new THREE.Vector3(cx, 0, prevZ));
+                    pts.push(new THREE.Vector3(cx, 0, cz));
+                }
+                return pts;
+            };
+
+            builderData.wires.forEach(w => {
+                const n1 = builderData.nodes.find(n => n.id === w.fromId);
+                const n2 = builderData.nodes.find(n => n.id === w.toId);
+                if (!n1 || !n2) return;
+                createGridAlignedWire(wireToPoints(n1, n2, w.pts));
+            });
+
+            // 電子・電流は「実際にたどれる1周の経路」だけを流れる。
+            // すべての導線を単純に連結していた従来方式では、電圧計のような
+            // 並列の枝があると経路が途切れ、電子が離れた導線へ飛んでいた。
+            if (builderData.isClosedCircuit && bat && builderData.loopWires.length > 0) {
+                let cur = bat.id;
+                const loopPts = [];
+                builderData.loopWires.forEach(w => {
+                    const n1 = builderData.nodes.find(n => n.id === w.fromId);
+                    const n2 = builderData.nodes.find(n => n.id === w.toId);
+                    if (!n1 || !n2) return;
+
+                    // 導線の形は必ず from→to の向きで作り、逆にたどる時は
+                    // 出来上がった点列を反転させる。こうしないと折れ曲がった導線で
+                    // 電子だけが別の角を通ってしまう。
+                    const forward = (w.fromId === cur);
+                    let seg = wireToPoints(n1, n2, w.pts);
+                    if (!forward) seg = seg.slice().reverse();
+
+                    seg.forEach(p => {
+                        const last = loopPts[loopPts.length - 1];
+                        if (!last || last.distanceTo(p) > 1e-6) loopPts.push(p);
+                    });
+                    cur = forward ? w.toId : w.fromId;
+                });
+
+                if (loopPts.length > 1) {
+                    createGridElectrons(80, loopPts, builderData.calculatedCurrent);
+                    createCurrentArrows(14, loopPts, builderData.calculatedCurrent);
+                }
+            }
+            buildUI();
+        }
+
+        // ============ 3D メッシュ ============
+        function createBatteryMesh(v) {
+            const g = new THREE.Group();
+            g.add(new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.0, 1.8), new THREE.MeshStandardMaterial({ color: 0xc23b32, roughness: 0.55 })));
+            const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.6), new THREE.MeshStandardMaterial({ color: 0xe86a5c }));
+            pin.position.set(1.0, 1.1, 0); g.add(pin);
+            return g;
+        }
+
+        function createResistor3DMesh() {
+            const g = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 3.0, 16), new THREE.MeshStandardMaterial({ color: 0xd6b485, roughness: 0.6 }));
+            body.rotation.z = Math.PI / 2; g.add(body);
+            return g;
+        }
+
+        function createBulbMesh(isLit = true) {
+            const g = new THREE.Group();
+            g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 1.0), new THREE.MeshStandardMaterial({ color: 0x8a97a3, metalness: 0.7, roughness: 0.35 })));
+            const glass = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), new THREE.MeshPhysicalMaterial({
+                color: isLit ? 0xffd447 : 0xdfe8ee,
+                emissive: isLit ? 0xffa000 : 0x000000,
+                emissiveIntensity: isLit ? 0.9 : 0,
+                transparent: true, opacity: 0.82, transmission: 0.35, roughness: 0.1,
+                depthWrite: false
+            }));
+            glass.position.y = 1.2; g.add(glass);
+            if (isLit) { const l = new THREE.PointLight(0xffb020, 1.4, 8); l.position.y = 1.2; g.add(l); }
+            return g;
+        }
+
+        function createSwitchMesh(isClosed) {
+            const g = new THREE.Group();
+            g.add(new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.2, 1.0), new THREE.MeshStandardMaterial({ color: 0x46545f, roughness: 0.6 })));
+            const lever = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.15, 0.15), new THREE.MeshStandardMaterial({ color: 0x8e9aa5, metalness: 0.6, roughness: 0.35 }));
+            lever.geometry.translate(-1.0, 0, 0);
+            lever.position.set(1.0, 0.2, 0);
+            lever.rotation.z = isClosed ? 0 : -0.7;
+            g.add(lever);
+            activeObjects.switchLever = lever;
+            return g;
+        }
+
+        function createMeterMesh(type, valText = '') {
+            const g = new THREE.Group();
+            g.add(new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 1.2), new THREE.MeshStandardMaterial({ color: 0x3e4b56, roughness: 0.6 })));
+            const face = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.4), new THREE.MeshBasicMaterial({ color: 0xf7fbfd }));
+            face.position.set(0, 0.2, 0.61); g.add(face);
+            add3DLabel(type + (valText ? `: ${valText}` : ''), 0, 0.3, 0.65, g);
+            return g;
+        }
+
+        function add3DLabel(text, x, y, z, parent = scene) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 160; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(255,255,255,0.94)';
+            ctx.fillRect(0, 0, 160, 64);
+            ctx.strokeStyle = '#15607a'; ctx.lineWidth = 4;
+            ctx.strokeRect(2, 2, 156, 60);
+            ctx.fillStyle = '#12222e';
+            ctx.font = 'bold 22px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(text, 80, 32);
+
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthTest: false }));
+            sprite.renderOrder = 6;
+            sprite.scale.set(2.8, 1.12, 1.0);
+            sprite.position.set(x, y, z);
+            parent.add(sprite);
+        }
+
+        // 経路の弧長（各点までの累積距離）を求める。
+        // これが無いと、線分ごとに同じ時間を配分してしまい、短い線分で粒が
+        // 停滞して「部品のところで止まる」ように見えてしまう。
+        function buildPathMeta(points) {
+            const cum = [0];
+            let total = 0;
+            for (let i = 1; i < points.length; i++) {
+                total += points[i].distanceTo(points[i - 1]);
+                cum.push(total);
+            }
+            return { cum, total };
+        }
+
+        // 電流を表す矢印群。導線のすこし上を、電子と逆向きに進む。
+        function createCurrentArrows(count, points, current, yOff, osc) {
+            if (!activeObjects.electronPaths) activeObjects.electronPaths = [];
+            // 部品の筐体（電流計は高さ±1.1）に埋もれない高さに浮かせる
+            const h = (yOff === undefined) ? 1.6 : yOff;
+            const rev = points.slice().reverse().map(p => new THREE.Vector3(p.x, p.y + h, p.z));
+            const meta = buildPathMeta(rev);
+            if (meta.total < 1e-6) return;
+
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0xd97a06, emissive: 0x8a4a00, emissiveIntensity: 0.35, roughness: 0.4,
+                depthTest: false
+            });
+            const group = new THREE.Group();
+            for (let i = 0; i < count; i++) {
+                const a = new THREE.Mesh(new THREE.ConeGeometry(0.34, 1.05, 10), mat);
+                a.userData = { progress: i / count };
+                a.renderOrder = 5;
+                group.add(a);
+            }
+            scene.add(group);
+            activeObjects.electronPaths.push({
+                group, points: rev, current: current || 0, arrow: true,
+                cum: meta.cum, total: meta.total,
+                osc: !!osc, amp: 0.020
+            });
+        }
+
+        // 経路ごとに電子群を作る（並列回路では枝ごとに独立して動く）
+        function createGridElectrons(count, points, current, osc) {
+            if (!activeObjects.electronPaths) activeObjects.electronPaths = [];
+            const meta = buildPathMeta(points);
+            if (meta.total < 1e-6) return; // 長さのない経路には粒を作らない
+            const group = new THREE.Group();
+            for (let i = 0; i < count; i++) {
+                const e = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), electronMaterial());
+                e.userData = { progress: i / count };
+                e.renderOrder = 4;
+                group.add(e);
+            }
+            scene.add(group);
+            activeObjects.electronPaths.push({
+                group, points, current: current || 0,
+                cum: meta.cum, total: meta.total,
+                thermal: true, osc: !!osc, amp: 0.020
+            });
+        }
+
+        // ============ アニメーション ============
+        let animErrorShown = false;
+        let acPhase = 0;   // 交流の位相
+
+        function animate() {
+            requestAnimationFrame(animate);
+            try {
+                animateFrame();
+            } catch (err) {
+                // 1フレームの例外で3Dが消えてしまわないよう、ループ自体は継続する
+                if (!animErrorShown) { animErrorShown = true; showErrorBanner(err.message); }
+                try { renderer.render(scene, camera); } catch (e) { /* 描画も不可能な場合は次フレームへ */ }
+            }
+        }
+
+        function animateFrame() {
+            const delta = Math.min(clock.getDelta(), 0.05);
+            controls.update();
+            acPhase += delta * 2 * Math.PI * (state.f_freq || 1);
+            if (acPhase > Math.PI * 2) acPhase -= Math.PI * 2;
+
+            if (currentMode === 'home') {
+                if (activeObjects.homeGroup) activeObjects.homeGroup.rotation.y += delta * 0.2;
+            } else if (currentMode === 'crookes') animateCrookes(delta);
+            else if (currentMode === 'shadow') animateShadow(delta);
+
+            if (activeObjects.electronPaths) {
+                activeObjects.electronPaths.forEach(p => {
+                    if (!p || !p.group || !p.points || p.points.length < 2) return;
+                    const on = p.current > 0.0001;
+                    p.group.visible = on;
+                    if (!on) return;
+                    // 電子は実際のドリフト速度に合わせてごくゆっくり進む。
+                    // 電流（矢印）の伝わりは速いので、その差が見えるようにする。
+                    const speed = p.current * 0.15 * (p.arrow ? 1 : driftFactor());
+                    const pts = p.points;
+                    const cum = p.cum, total = p.total;
+                    if (!cum || !total) return;
+
+                    const up = p.arrow ? new THREE.Vector3(0, 1, 0) : null;
+                    const dir = p.arrow ? new THREE.Vector3() : null;
+
+                    // 交流：正味の移動をせず、同じ場所で前後に往復する
+                    const oscAmp = p.amp * (state.realisticDrift ? 1 : 3);
+                    const oscOffset = p.osc ? oscAmp * Math.sin(acPhase) : 0;
+                    const oscBackward = p.osc && Math.cos(acPhase) < 0;
+
+                    p.group.children.forEach(e => {
+                        let prog;
+                        if (p.osc) {
+                            if (e.userData.base === undefined) e.userData.base = e.userData.progress;
+                            prog = e.userData.base + oscOffset;
+                        } else {
+                            e.userData.progress += delta * speed;
+                            prog = e.userData.progress;
+                        }
+                        prog = ((prog % 1) + 1) % 1;
+                        e.userData.progress = prog;
+
+                        // 進んだ距離から、いま乗っている線分を求める（弧長基準）
+                        const d = prog * total;
+                        let idx = 0;
+                        while (idx < cum.length - 2 && cum[idx + 1] < d) idx++;
+                        const segLen = cum[idx + 1] - cum[idx];
+                        const f = segLen > 1e-6 ? (d - cum[idx]) / segLen : 0;
+
+                        if (pts[idx] && pts[idx + 1]) {
+                            e.position.lerpVectors(pts[idx], pts[idx + 1], f);
+
+                            // 熱運動：電子はその場で細かく震えている
+                            if (p.thermal) {
+                                if (e.userData.jx === undefined) { e.userData.jx = 0; e.userData.jy = 0; e.userData.jz = 0; }
+                                // 導線（半径0.35）からはみ出さない範囲で震えさせる
+                                const lim = 0.13;
+                                e.userData.jx = Math.max(-lim, Math.min(lim, e.userData.jx + (Math.random() - 0.5) * 0.11));
+                                e.userData.jy = Math.max(-lim, Math.min(lim, e.userData.jy + (Math.random() - 0.5) * 0.11));
+                                e.userData.jz = Math.max(-lim, Math.min(lim, e.userData.jz + (Math.random() - 0.5) * 0.11));
+                                e.position.x += e.userData.jx;
+                                e.position.y += e.userData.jy;
+                                e.position.z += e.userData.jz;
+                            }
+
+                            if (p.arrow) {
+                                dir.subVectors(pts[idx + 1], pts[idx]);
+                                if (dir.lengthSq() > 1e-8) {
+                                    dir.normalize();
+                                    if (oscBackward) dir.negate(); // 交流：半周期ごとに向きが反転
+                                    e.quaternion.setFromUnitVectors(up, dir);
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function animateCrookes(delta) {
+            const particles = activeObjects.electrons;
+            if (!particles) return;
+            particles.visible = state.k_switchOn;
+            if (!state.k_switchOn) return;
+
+            const pos = particles.geometry.attributes.position.array;
+            const prog = activeObjects.crookesProgress;
+            const jit = activeObjects.crookesJitter;
+            const speed = state.k_accel * 0.12;
+
+            for (let i = 0; i < prog.length; i++) {
+                prog[i] += delta * speed;
+                if (prog[i] > 1) prog[i] -= 1;
+                const p = crookesPoint(prog[i]);
+                pos[i * 3] = p.x;
+                pos[i * 3 + 1] = p.y + jit[i * 2];
+                pos[i * 3 + 2] = jit[i * 2 + 1];
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+        }
+
+        function animateShadow(delta) {
+            const particles = activeObjects.shadowElectrons;
+            if (!particles) return;
+            particles.visible = state.s_switchOn;
+            if (!state.s_switchOn) return;
+
+            const pos = particles.geometry.attributes.position.array;
+            const speed = state.s_accel * 4.0 * delta;
+            const plateX = state.s_crossX;
+
+            for (let i = 0; i < pos.length / 3; i++) {
+                const prevX = pos[i * 3];
+                pos[i * 3] += speed;
+                const y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+
+                if (prevX < plateX && pos[i * 3] >= plateX && isBlockedByCross(y, z)) {
+                    pos[i * 3] = SH_CATHODE_X;
+                    pos[i * 3 + 1] = (Math.random() - 0.5) * 5.0;
+                    pos[i * 3 + 2] = (Math.random() - 0.5) * 5.0;
+                    continue;
+                }
+                if (pos[i * 3] > SH_SCREEN_X) {
+                    pos[i * 3] = SH_CATHODE_X;
+                    pos[i * 3 + 1] = (Math.random() - 0.5) * 5.0;
+                    pos[i * 3 + 2] = (Math.random() - 0.5) * 5.0;
+                }
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+        }
+
+        window.onload = function () {
+            try {
+                init();
+            } catch (err) {
+                showErrorBanner(err.message);
+                console.error(err);
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>液状化現象メカニズム・シミュレーター【地盤固定修正版】</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --panel-bg: rgba(30, 41, 59, 0.85);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --accent-blue: #38bdf8;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+
+    body {
+      -webkit-tap-highlight-color: transparent;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-blue);
+      margin-bottom: 6px;
+    }
+
+    p.subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .main-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      max-width: 850px;
+    }
+
+    .canvas-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 16px;
+      position: relative;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    canvas {
+      background: #020617;
+      border-radius: 12px;
+      width: 100%;
+      /* 内部解像度800x400の縦横比を維持（スマホ縦持ちでの引き伸ばし歪みを防止） */
+      height: auto;
+      aspect-ratio: 2 / 1;
+      display: block;
+      touch-action: manipulation;
+    }
+
+    .gauge-container {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--panel-border);
+      padding: 10px 14px;
+      border-radius: 10px;
+      width: 180px;
+    }
+
+    .gauge-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .gauge-bar-bg {
+      width: 100%;
+      height: 10px;
+      background: #334155;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .gauge-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #ef4444);
+      transition: width 0.1s linear;
+    }
+
+    .status-box {
+      margin-top: 12px;
+      width: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      border-left: 4px solid var(--accent-blue);
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--text-primary);
+    }
+
+    .controls-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    button {
+      flex: 1;
+      touch-action: manipulation;
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-quake {
+      background: var(--accent-red);
+      color: #fff;
+    }
+    .btn-quake:hover { background: #dc2626; }
+    .btn-quake.active {
+      animation: pulse 0.5s infinite alternate;
+    }
+
+    .btn-reset {
+      background: #475569;
+      color: #fff;
+    }
+    .btn-reset:hover { background: #64748b; }
+
+    .slider-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 200px;
+    }
+
+    .slider-box label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-blue);
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.02); }
+    }
+
+    /* 小さい画面：ゲージがキャンバスを覆いすぎないように縮小 */
+    @media (max-width: 600px) {
+      body { padding: 12px; }
+      .gauge-container {
+        width: 140px;
+        top: 24px;
+        right: 24px;
+        padding: 8px 10px;
+      }
+      .btn-group { flex-direction: column; }
+    }
+
+    /* タッチ端末向け：ボタンとスライダーのつまみを大きく */
+    @media (pointer: coarse) {
+      button { min-height: 44px; }
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 30px;
+        background: transparent;
+      }
+      input[type="range"]::-webkit-slider-runnable-track {
+        height: 6px;
+        background: #334155;
+        border-radius: 3px;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--accent-blue);
+        border: 2px solid #fff;
+        margin-top: -10px;
+      }
+      input[type="range"]::-moz-range-track {
+        height: 6px;
+        background: #334155;
+        border-radius: 3px;
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--accent-blue);
+        border: 2px solid #fff;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>液状化現象 メカニズム・シミュレーター</h1>
+    <p class="subtitle">なぜ地震で「建物が沈み」「マンホールが浮き上がる」のか？粒子レベルで可視化</p>
+  </header>
+
+  <div class="main-container">
+    <div class="canvas-card">
+      <canvas id="simCanvas" width="800" height="400"></canvas>
+
+      <div class="gauge-container">
+        <div class="gauge-label">
+          <span>間隙水圧 (水圧)</span>
+          <span id="pressureVal">0%</span>
+        </div>
+        <div class="gauge-bar-bg">
+          <div class="gauge-bar-fill" id="pressureBar"></div>
+        </div>
+      </div>
+
+      <div class="status-box" id="statusText">
+        【安定状態】砂粒子同士がしっかり噛み合い、骨組みを作って重い建物を支えています。
+      </div>
+    </div>
+
+    <div class="controls-card">
+      <div class="btn-group">
+        <button class="btn-quake" id="quakeBtn" onclick="toggleQuake()">震動を開始する (地震発生)</button>
+        <button class="btn-reset" onclick="resetSim()">地盤をリセット</button>
+      </div>
+
+      <div class="control-group">
+        <div class="slider-box">
+          <label>地震の強さ (加速度): <span id="intensityVal">中 (Medium)</span></label>
+          <input type="range" id="intensitySlider" min="1" max="3" value="2" oninput="updateIntensity(this.value)">
+        </div>
+        <div class="slider-box">
+          <label>地盤の土質: <span>飽和砂質土 (水で満たされた砂)</span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+
+  let isQuaking = false;
+  let quakeIntensity = 2;
+  let porePressure = 0;
+  let quakeTime = 0;
+
+  let building = { x: 300, y: 140, w: 100, h: 120, angle: 0 };
+  let manhole = { x: 520, y: 260, r: 22 };
+
+  const particles = [];
+  const GROUND_Y = 220;
+  const sandBoils = [];
+
+  class SandParticle {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.ox = x; // 初期位置 (かみ合い位置)
+      this.oy = y;
+      this.r = 6 + Math.random() * 3;
+      this.vx = 0;
+      this.vy = 0;
+    }
+
+    update() {
+      if (isQuaking || porePressure > 0) {
+        // 地震動または水圧の上昇により、粒子が外れて流動化
+        const power = (porePressure / 100) * 1.8 + (isQuaking ? quakeIntensity * 0.4 : 0);
+        this.vx += (Math.random() - 0.5) * power;
+        this.vy += (Math.random() - 0.5) * power;
+
+        // 減衰
+        this.vx *= 0.82;
+        this.vy *= 0.82;
+
+        // 水圧が上がるほど浮遊感（浮力）が強まり、沈降しにくくなる
+        if (porePressure < 50) {
+          this.vy += 0.1; // 水圧が低い時のみ緩やかに沈降
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+      } else {
+        // 地震発生前・復元時：初期の噛み合い位置に吸着して安定静止
+        this.x += (this.ox - this.x) * 0.1;
+        this.y += (this.oy - this.y) * 0.1;
+        this.vx = 0;
+        this.vy = 0;
+      }
+
+      // 境界チェック (地盤内におさめる)
+      if (this.y > canvas.height - 15) this.y = canvas.height - 15;
+      if (this.y < GROUND_Y + 12) this.y = GROUND_Y + 12;
+      if (this.x < 60) this.x = 60;
+      if (this.x > canvas.width - 60) this.x = canvas.width - 60;
+    }
+
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      // 水圧が高い（液状化）ほど粒子同士が離れて明るい発光色に変化
+      ctx.fillStyle = porePressure > 50 ? '#fbbf24' : '#d97706';
+      ctx.fill();
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  function init() {
+    particles.length = 0;
+    sandBoils.length = 0;
+    porePressure = 0;
+    isQuaking = false;
+    
+    document.getElementById('quakeBtn').classList.remove('active');
+    document.getElementById('quakeBtn').innerText = '震動を開始する (地震発生)';
+
+    building.y = 140;
+    building.angle = 0;
+    manhole.y = 260;
+
+    // 地盤全体へ綺麗なメッシュ状＋ランダムの自然な層で砂粒子を配置
+    const cols = 22;
+    const rows = 7;
+    const startX = 75;
+    const startY = GROUND_Y + 20;
+    const spacingX = (canvas.width - 150) / cols;
+    const spacingY = (canvas.height - GROUND_Y - 40) / rows;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = startX + c * spacingX + (Math.random() - 0.5) * 12;
+        const y = startY + r * spacingY + (Math.random() - 0.5) * 8;
+        particles.push(new SandParticle(x, y));
+      }
+    }
+  }
+
+  function toggleQuake() {
+    isQuaking = !isQuaking;
+    const btn = document.getElementById('quakeBtn');
+    if (isQuaking) {
+      btn.classList.add('active');
+      btn.innerText = '震動を停止する';
+    } else {
+      btn.classList.remove('active');
+      btn.innerText = '震動を開始する (地震発生)';
+    }
+  }
+
+  function updateIntensity(val) {
+    quakeIntensity = parseInt(val);
+    const labels = ['', '弱 (Low)', '中 (Medium)', '強 (High)'];
+    document.getElementById('intensityVal').innerText = labels[quakeIntensity];
+  }
+
+  function resetSim() {
+    init();
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let shakeX = 0;
+    let shakeY = 0;
+
+    if (isQuaking) {
+      quakeTime += 0.2;
+      const amp = quakeIntensity * 4;
+      shakeX = Math.sin(quakeTime * 5) * amp;
+      shakeY = Math.cos(quakeTime * 7) * (amp * 0.3);
+
+      if (porePressure < 100) {
+        porePressure += 0.3 * quakeIntensity;
+      }
+    } else {
+      if (porePressure > 0) {
+        porePressure -= 0.2;
+      }
+    }
+
+    porePressure = Math.max(0, Math.min(100, porePressure));
+
+    document.getElementById('pressureBar').style.width = `${porePressure}%`;
+    document.getElementById('pressureVal').innerText = `${Math.round(porePressure)}%`;
+
+    updateExplanation();
+
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+
+    // 地下水描画
+    const waterAlpha = 0.15 + (porePressure / 100) * 0.35;
+    ctx.fillStyle = `rgba(56, 189, 248, ${waterAlpha})`;
+    ctx.fillRect(50, GROUND_Y, canvas.width - 100, canvas.height - GROUND_Y);
+
+    // 空白領域
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, canvas.width, GROUND_Y);
+
+    // 地表ライン
+    ctx.beginPath();
+    ctx.moveTo(50, GROUND_Y);
+    ctx.lineTo(canvas.width - 50, GROUND_Y);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 砂粒子の描画・物理更新
+    particles.forEach(p => {
+      p.update();
+      p.draw();
+    });
+
+    // 建物の沈下物理
+    if (porePressure > 35) {
+      const sinkSpeed = (porePressure / 100) * 0.8;
+      building.y += sinkSpeed;
+      building.angle += (Math.random() - 0.4) * 0.008;
+      if (building.y > GROUND_Y + 40) building.y = GROUND_Y + 40;
+    }
+
+    // 建物描画
+    ctx.save();
+    ctx.translate(building.x + building.w / 2, building.y + building.h / 2);
+    ctx.rotate(building.angle);
+    
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(-building.w / 2, -building.h / 2, building.w, building.h);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-building.w / 2, -building.h / 2, building.w, building.h);
+
+    ctx.fillStyle = '#fef08a';
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 2; col++) {
+        ctx.fillRect(-35 + col * 40, -45 + row * 35, 25, 20);
+      }
+    }
+    ctx.restore();
+
+    // マンホールの浮上物理
+    if (porePressure > 50) {
+      manhole.y -= 0.6;
+      if (manhole.y < GROUND_Y - 10) manhole.y = GROUND_Y - 10;
+    }
+
+    // マンホール描画
+    ctx.beginPath();
+    ctx.arc(manhole.x, manhole.y, manhole.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fill();
+    ctx.strokeStyle = '#f8fafc';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(manhole.x - 10, manhole.y);
+    ctx.lineTo(manhole.x + 10, manhole.y);
+    ctx.moveTo(manhole.x, manhole.y - 10);
+    ctx.lineTo(manhole.x, manhole.y + 10);
+    ctx.strokeStyle = '#475569';
+    ctx.stroke();
+
+    // 噴砂エフェクト
+    if (porePressure > 75 && Math.random() < 0.3) {
+      sandBoils.push({
+        x: 420 + (Math.random() - 0.5) * 40,
+        y: GROUND_Y,
+        vx: (Math.random() - 0.5) * 2,
+        vy: -Math.random() * 5 - 2,
+        life: 30
+      });
+    }
+
+    for (let i = sandBoils.length - 1; i >= 0; i--) {
+      const b = sandBoils[i];
+      b.x += b.vx;
+      b.y += b.vy;
+      b.vy += 0.15;
+      b.life--;
+
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+
+      if (b.life <= 0) sandBoils.splice(i, 1);
+    }
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 12px Inter';
+    ctx.fillText('重い建物 (支持力喪失で沈下)', building.x - 10, building.y - 10);
+    ctx.fillText('軽いマンホール (浮力で浮上)', manhole.x - 50, manhole.y - 20);
+
+    ctx.restore();
+
+    requestAnimationFrame(animate);
+  }
+
+  function updateExplanation() {
+    const box = document.getElementById('statusText');
+    if (porePressure < 20) {
+      box.innerHTML = `<strong>【1. 安定状態】</strong><br>砂粒子同士がしっかり噛み合って配置され、骨組み（支持力）を作って上の重い建物を支えています。`;
+      box.style.borderColor = '#38bdf8';
+    } else if (porePressure >= 20 && porePressure < 60) {
+      box.innerHTML = `<strong>【2. 地震動と水圧の上昇】</strong><br>揺れによって砂の噛み合わせが外れ始め、隙間の「水圧（間隙水圧）」が上昇しています。`;
+      box.style.borderColor = '#f59e0b';
+    } else if (porePressure >= 60 && porePressure < 85) {
+      box.innerHTML = `<strong>【3. 完全な液状化（液体化）】</strong><br>水圧で砂粒子が水中に浮き上がり、土全体が流動化！支えを失った建物が沈み、軽いマンホールが浮上します。`;
+      box.style.borderColor = '#ef4444';
+    } else {
+      box.innerHTML = `<strong>【4. 噴砂（泥水の噴出）】</strong><br>限界まで高まった水圧により、地表の亀裂から水と砂が勢いよく吹き出しています。`;
+      box.style.borderColor = '#dc2626';
+    }
+  }
+
+  window.onload = () => {
+    init();
+    animate();
+  };
+</script>
+</body>
+</html>

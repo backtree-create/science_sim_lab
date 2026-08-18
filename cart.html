@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>台車はなぜ動かないのか ― 力のつり合い</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:var(--force);}
+  #stage{width:100%;height:680px;}
+  .modebar{display:flex;gap:8px;margin-bottom:18px;}
+  .statebadge{
+    display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);
+    font-size:12px;padding:8px 14px;border-radius:100px;border:1px solid var(--border);
+    background:var(--bg-panel-2);margin-bottom:16px;
+  }
+  .statebadge .lamp{width:8px;height:8px;border-radius:50%;background:var(--normal);}
+  .statebadge.moving .lamp{background:var(--force);animation:blink 1s infinite;}
+  @keyframes blink{50%{opacity:.3;}}
+
+  /* --- モバイル対応 --- */
+  body{-webkit-tap-highlight-color:transparent;min-height:100dvh;}
+  button{touch-action:manipulation;}
+  #stage{display:block;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+  @media (max-width:600px){
+    #stage{height:440px;}
+    .modebar{flex-wrap:wrap;}
+  }
+  @media (pointer:coarse){
+    button.btn{min-height:44px;}
+    input[type=range]::-webkit-slider-thumb{width:26px;height:26px;}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">01 ／ 力のつり合い</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Force Balance</span>
+  <h1>台車はなぜ動かないのか</h1>
+  <p>平面の上に置かれた台車には、地球からの重力がずっと働いている。それでも台車が動き出さないのはなぜか。台車に働く力をすべて矢印で可視化し、「力がつり合っている」とはどういう状態かを確かめる。</p>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h2><span class="dot"></span>シミュレーション</h2>
+    <div class="modebar">
+      <button class="btn active" id="modeFlat">水平面で押す</button>
+      <button class="btn" id="modeSlope">斜面に置く</button>
+    </div>
+    <div id="stateBadge" class="statebadge"><span class="lamp"></span><span id="stateText">静止 ― 力がつり合っています</span></div>
+    <div class="stage"><canvas id="stage"></canvas></div>
+    <div class="legend" style="margin-top:14px;">
+      <div class="item"><span class="sw" style="background:var(--force);"></span>重力 mg</div>
+      <div class="item"><span class="sw" style="background:var(--normal);"></span>垂直抗力 N</div>
+      <div class="item"><span class="sw" style="background:var(--highlight);"></span>押す力 F（水平面のみ）</div>
+      <div class="item"><span class="sw" style="background:var(--velocity);"></span>摩擦力 f（水平面のみ）</div>
+    </div>
+    <p style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-top:8px;line-height:1.7;">
+      斜面モードでは、この単元の他のシミュレーターと同様に<strong>まさつを考えません</strong>。斜面方向の力は常に重力の分力 mg sinθ だけになります。
+    </p>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>パラメータ</h2>
+    <div class="controls">
+      <div class="control">
+        <label>台車の質量 <span class="val"><span id="massVal">10</span> kg</span></label>
+        <input type="range" id="mass" min="2" max="40" value="10" step="1">
+      </div>
+      <div class="control" id="forceCtl">
+        <label>横から押す力 F <span class="val"><span id="forceVal">0</span> N</span></label>
+        <input type="range" id="force" min="0" max="200" value="0" step="1">
+      </div>
+    </div>
+    <div class="btnrow" id="flatBtnRow" style="margin-top:14px;">
+      <button class="btn" id="releaseForceBtn">力を離す（F=0）</button>
+      <button class="btn" id="flatResetBtn">リセット</button>
+    </div>
+    <div class="controls" style="margin-top:14px;">
+      <div class="control" id="angleCtl" style="display:none;">
+        <label>斜面の角度 θ <span class="val"><span id="angleVal">30</span>°</span></label>
+        <input type="range" id="angle" min="5" max="40" value="30" step="1">
+      </div>
+      <div class="control" id="slopeSubCtl" style="display:none;">
+        <label>斜面のシナリオ</label>
+        <div class="btnrow">
+          <button class="btn active" id="subDown">下り坂（静止から放す）</button>
+          <button class="btn" id="subUp">上り坂（勢いをつけて打ち出す）</button>
+        </div>
+      </div>
+      <div class="control" id="pushCtl" style="display:none;">
+        <label>打ち出す速さ <span class="val"><span id="pushVal">3.0</span> m/s</span></label>
+        <input type="range" id="pushSpeed" min="0.5" max="6" value="3" step="0.1">
+      </div>
+    </div>
+    <div class="btnrow" id="slopeBtnRow" style="display:none;margin-top:14px;">
+      <button class="btn primary" id="releaseBtn">放す</button>
+      <button class="btn" id="slopeResetBtn">リセット</button>
+    </div>
+
+    <h2 style="margin-top:22px;"><span class="dot"></span>力の内訳</h2>
+    <div class="readout">
+      <div class="item"><div class="k">重力 mg</div><div class="v force" id="rW">0 N</div></div>
+      <div class="item"><div class="k">垂直抗力 N</div><div class="v normal" id="rN">0 N</div></div>
+      <div class="item"><div class="k">最大静止摩擦力</div><div class="v" id="rFsMax">0 N</div></div>
+      <div class="item"><div class="k">実際の摩擦力 f</div><div class="v velocity" id="rF">0 N</div></div>
+      <div class="item"><div class="k">合力</div><div class="v" id="rNet">0 N</div></div>
+      <div class="item"><div class="k">加速度 a</div><div class="v" id="rA">0.00 m/s²</div></div>
+    </div>
+
+    <div class="explain" id="explainText">
+      台車には<strong>重力</strong>が下向きに、面からの<strong>垂直抗力</strong>が上向きに働き、大きさが等しく打ち消し合っています。これが「力のつり合い」です。
+      <div class="note">よくある誤解：重力と垂直抗力は「作用・反作用」ではありません。作用・反作用は<strong>2つの異なる物体</strong>の間で生まれる力の組ですが、この2力は<strong>台車という1つの物体</strong>に働く別々の力が、たまたま大きさが等しく向きが逆になっているだけです。</div>
+    </div>
+  </div>
+</div>
+
+<footer class="source">
+  <h3>Reference</h3>
+  力のつり合いの条件（合力ゼロ）と作用・反作用の法則の区別は、中学校学習指導要領解説理科編の力学分野に基づく。水平面モードの静止摩擦力・動摩擦力の扱い（f_s,max = μs N、動摩擦力 μk N、一般に μk &lt; μs）は高校物理基礎の標準的な摩擦モデルに準拠し、摩擦係数はコンクリート上のゴム車輪を想定した代表値（μs=0.5, μk=0.35）を使用。斜面モードは、本シミュレーター群の他の単元と同様にまさつを無視し、斜面方向の運動方程式 ma=mg sinθ（質量に依存せず a=g sinθ）に基づく。
+</footer>
+
+<script>
+const canvas=document.getElementById('stage');
+const ctx=canvas.getContext('2d');
+function resize(){
+  canvas.style.height=''; // メディアクエリによる高さ変更をインラインスタイルが上書きしないよう一旦解除
+  const r=canvas.parentElement.getBoundingClientRect();
+  canvas.width=r.width*devicePixelRatio; canvas.height=r.height*devicePixelRatio;
+  canvas.style.width=r.width+'px'; canvas.style.height=r.height+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener('resize',resize);
+
+const massEl=document.getElementById('mass'), forceEl=document.getElementById('force'), angleEl=document.getElementById('angle');
+const massVal=document.getElementById('massVal'), forceVal=document.getElementById('forceVal'), angleVal=document.getElementById('angleVal');
+const modeFlatBtn=document.getElementById('modeFlat'), modeSlopeBtn=document.getElementById('modeSlope');
+const forceCtl=document.getElementById('forceCtl'), angleCtl=document.getElementById('angleCtl');
+const slopeSubCtl=document.getElementById('slopeSubCtl'), pushCtl=document.getElementById('pushCtl');
+const slopeBtnRow=document.getElementById('slopeBtnRow');
+const subDownBtn=document.getElementById('subDown'), subUpBtn=document.getElementById('subUp');
+const pushSpeedEl=document.getElementById('pushSpeed'), pushVal=document.getElementById('pushVal');
+const releaseBtn=document.getElementById('releaseBtn'), slopeResetBtn=document.getElementById('slopeResetBtn');
+const releaseForceBtn=document.getElementById('releaseForceBtn'), flatResetBtn=document.getElementById('flatResetBtn');
+const stateBadge=document.getElementById('stateBadge'), stateText=document.getElementById('stateText');
+const explainText=document.getElementById('explainText');
+
+let mode='flat'; // 'flat' or 'slope'
+let slopeScenario='down'; // 'down'(静止から放す) or 'up'(勢いをつけて打ち出す)
+const g=9.8, muS=0.5, muK=0.35;
+let cartX=0, cartV=0; // 水平面モード：面に沿った位置(m)
+const CART_TRACK_M=8.0; // 水平面モードの走行可能距離(m)。摩擦で止まるまでの余裕を持たせて拡大。
+let slopeD=0.15, slopeV=0, slopeRunning=false, slopeLanded=false, slopeToppedOut=false; // 斜面モード：斜面上端からの距離の割合(0=上端,1=下端)と速度(m/s、下向き正)
+const SLOPE_LEN_M=3.0; // 斜面の実長(見た目のスケール用、m)
+
+function resetSlope(){
+  if(slopeScenario==='down'){ slopeD=0.06; slopeV=0; }
+  else { slopeD=0.92; slopeV=0; }
+  slopeRunning=false; slopeLanded=false; slopeToppedOut=false;
+}
+function resetFlat(){ cartX=0; cartV=0; forceEl.value=0; forceVal.textContent='0'; }
+
+releaseForceBtn.onclick=()=>{ forceEl.value=0; forceVal.textContent='0'; };
+flatResetBtn.onclick=()=>resetFlat();
+
+modeFlatBtn.onclick=()=>{
+  mode='flat'; modeFlatBtn.classList.add('active'); modeSlopeBtn.classList.remove('active');
+  forceCtl.style.display=''; angleCtl.style.display='none'; slopeSubCtl.style.display='none';
+  pushCtl.style.display='none'; slopeBtnRow.style.display='none';
+  resetFlat();
+};
+modeSlopeBtn.onclick=()=>{
+  mode='slope'; modeSlopeBtn.classList.add('active'); modeFlatBtn.classList.remove('active');
+  forceCtl.style.display='none'; angleCtl.style.display=''; slopeSubCtl.style.display='';
+  pushCtl.style.display = slopeScenario==='up'? '' : 'none';
+  slopeBtnRow.style.display='';
+  resetSlope();
+};
+subDownBtn.onclick=()=>{
+  slopeScenario='down'; subDownBtn.classList.add('active'); subUpBtn.classList.remove('active');
+  pushCtl.style.display='none'; releaseBtn.textContent='放す';
+  resetSlope();
+};
+subUpBtn.onclick=()=>{
+  slopeScenario='up'; subUpBtn.classList.add('active'); subDownBtn.classList.remove('active');
+  pushCtl.style.display=''; releaseBtn.textContent='打ち出す';
+  resetSlope();
+};
+releaseBtn.textContent='放す';
+releaseBtn.onclick=()=>{
+  if(slopeLanded || slopeToppedOut) resetSlope();
+  if(slopeScenario==='up'){ slopeV=-parseFloat(pushSpeedEl.value); }
+  slopeRunning=true;
+};
+slopeResetBtn.onclick=()=>resetSlope();
+
+angleEl.addEventListener('input',()=>{angleVal.textContent=angleEl.value; resetSlope();});
+pushSpeedEl.addEventListener('input',()=>pushVal.textContent=parseFloat(pushSpeedEl.value).toFixed(1));
+massEl.addEventListener('input',()=>massVal.textContent=massEl.value);
+forceEl.addEventListener('input',()=>forceVal.textContent=forceEl.value);
+
+function arrow(x0,y0,x1,y1,color,label,labelOffset){
+  const headlen=9;
+  const dx=x1-x0, dy=y1-y0, angle=Math.atan2(dy,dx);
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x1-headlen*Math.cos(angle-Math.PI/6), y1-headlen*Math.sin(angle-Math.PI/6));
+  ctx.lineTo(x1-headlen*Math.cos(angle+Math.PI/6), y1-headlen*Math.sin(angle+Math.PI/6));
+  ctx.closePath(); ctx.fill();
+  if(label){
+    ctx.font='600 12px "JetBrains Mono",monospace';
+    ctx.fillStyle=color;
+    const lo=labelOffset||[8,-8];
+    ctx.fillText(label,x1+lo[0],y1+lo[1]);
+  }
+}
+
+function step(dt){
+  const m=parseFloat(massEl.value);
+  let a=0;
+  if(mode==='flat'){
+    const F=parseFloat(forceEl.value);
+    const N=m*g;
+    const fsMax=muS*N;
+    let f, net;
+    if(cartV===0 && Math.abs(F)<=fsMax){
+      f=F; net=0; a=0;
+    } else {
+      f=Math.sign(cartV||F)*muK*N;
+      net=F-f; a=net/m;
+    }
+    cartV+=a*dt;
+    if(cartV<0)cartV=0;
+    cartX+=cartV*dt;
+    if(cartX>CART_TRACK_M){cartX=CART_TRACK_M;cartV=0;}
+    document.getElementById('rW').textContent=(m*g).toFixed(1)+' N';
+    document.getElementById('rN').textContent=N.toFixed(1)+' N';
+    document.getElementById('rFsMax').textContent=fsMax.toFixed(1)+' N';
+    document.getElementById('rF').textContent=f.toFixed(1)+' N';
+    document.getElementById('rNet').textContent=net.toFixed(1)+' N';
+    document.getElementById('rA').textContent=a.toFixed(2)+' m/s²';
+    if(cartV>0.01 && net>0.01){
+      stateBadge.classList.add('moving'); stateText.textContent='動いている ― 加速しています';
+      explainText.innerHTML='押す力 <strong>F</strong> が動摩擦力 <strong>μk N</strong> より大きいため、動いている向きに合力が生じ、<strong>速さがどんどん増して</strong>います。';
+    } else if(cartV>0.01){
+      stateBadge.classList.add('moving'); stateText.textContent='動いている ― 摩擦で減速しています';
+      explainText.innerHTML= F===0
+        ? '力を離したので、進む向きと逆向きの<strong>動摩擦力 μk N</strong> だけが働き続け、台車は<strong>だんだん遅く</strong>なっています。摩擦は運動エネルギーを熱に変えながら、やがて台車を止めます。'
+        : '押す力 <strong>F</strong> より動摩擦力 <strong>μk N</strong> の方が大きいため、進む向きと逆に合力が生じ、台車は<strong>だんだん遅く</strong>なっています。';
+    } else {
+      stateBadge.classList.remove('moving'); stateText.textContent='静止 ― 力がつり合っています';
+      if(F===0){
+        explainText.innerHTML='台車には<strong>重力</strong>が下向きに、面からの<strong>垂直抗力</strong>が上向きに働き、大きさが等しく打ち消し合っています。これが「力のつり合い」です。<div class="note">よくある誤解：重力と垂直抗力は「作用・反作用」ではありません。作用・反作用は2つの異なる物体の間で生まれる力の組ですが、この2力は台車という1つの物体に働く別々の力が、たまたま大きさが等しく向きが逆になっているだけです。</div>';
+      } else {
+        explainText.innerHTML='押す力 <strong>F</strong> に対して、面からの<strong>静止摩擦力</strong>が同じ大きさで逆向きに生まれ、台車を動かないように押し返しています。静止摩擦力は最大値（μs N）まで、押す力に合わせて自動的に大きさを変えます。';
+      }
+    }
+  } else {
+    const theta=parseFloat(angleEl.value)*Math.PI/180;
+    const N=m*g*Math.cos(theta);
+    const Wpar=m*g*Math.sin(theta); // 常に「下り向き」を正とする、重力の斜面方向成分
+    // この斜面はまさつを考えない(空気抵抗と同様に無視する)。
+    // よって斜面方向の力はつねに mg sinθ だけで、加速度は速さの向きによらず
+    // つねに「下り向き」に a = g sinθ の一定値になる。
+    a = g*Math.sin(theta);
+
+    if(slopeRunning){
+      slopeV += a*dt;
+      slopeD += (slopeV*dt)/SLOPE_LEN_M; // 0(上端)〜1(下端)の比率で位置を管理
+      if(slopeD<=0){ slopeD=0; slopeV=0; slopeRunning=false; slopeToppedOut=true; }
+      if(slopeD>=1){ slopeD=1; slopeV=0; slopeRunning=false; slopeLanded=true; }
+    }
+
+    document.getElementById('rW').textContent=(m*g).toFixed(1)+' N';
+    document.getElementById('rN').textContent=N.toFixed(1)+' N';
+    document.getElementById('rFsMax').textContent='考えない';
+    document.getElementById('rF').textContent='0 N（まさつなし）';
+    document.getElementById('rNet').textContent=Wpar.toFixed(1)+' N';
+    document.getElementById('rA').textContent=a.toFixed(2)+' m/s²（常に下り向き）';
+
+    if(!slopeRunning && slopeLanded){
+      stateBadge.classList.remove('moving'); stateText.textContent='ふもとに到達 ― リセットして再実行できます';
+      explainText.innerHTML='まさつを考えないため、下向きの分力 <strong>mg sinθ</strong> だけがそのまま合力になり、下る間ずっと一定の加速度で<strong>加速し続け</strong>ました。';
+    } else if(!slopeRunning && slopeToppedOut){
+      stateBadge.classList.remove('moving'); stateText.textContent='斜面の上端を飛び出しました ― リセットして再実行できます';
+      explainText.innerHTML='この角度では、打ち出した勢いに対して重力の分力（減速させる力）が小さすぎたため、頂上で止まりきらずに斜面の上端まで達しました。角度を大きくするか、打ち出す速さを小さくすると、斜面の途中で折り返す様子を確認できます。';
+    } else if(!slopeRunning){
+      stateBadge.classList.remove('moving'); stateText.textContent='静止 ― 準備完了';
+      explainText.innerHTML=slopeScenario==='down'
+        ? '「放す」を押すと、まさつを考えないこの斜面では、どんな角度でも必ず滑り出します。'
+        : '「打ち出す」を押すと、台車は斜面を勢いよく登り始めます。';
+    } else if(slopeV>0.03){
+      stateBadge.classList.add('moving'); stateText.textContent='下向きに移動中 ― 加速しています';
+      explainText.innerHTML='まさつが無いため、下向きの分力 <strong>mg sinθ</strong> がそのまま合力になり、下る間<strong>速さがどんどん増して</strong>います。';
+    } else if(slopeV<-0.03){
+      stateBadge.classList.add('moving'); stateText.textContent='上向きに移動中 ― 減速しています';
+      explainText.innerHTML='台車が斜面を登っている間も、重力の分力 <strong>mg sinθ</strong> は常に下向きに働くため、上向きの速さはどんどん<strong>小さくなり</strong>ます。';
+    } else {
+      stateBadge.classList.remove('moving'); stateText.textContent='最高点 ― 一瞬静止しています';
+      explainText.innerHTML='登り切って速さが0になった瞬間です。まさつが無いこの斜面では、静止しているのはこの一瞬だけで、次の瞬間には重力の分力によって<strong>必ず下向きに滑り始め</strong>ます。';
+    }
+  }
+}
+
+function draw(){
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const m=parseFloat(massEl.value);
+
+  if(mode==='flat'){
+    const groundY=h*0.76;
+    const marginL=70, marginR=120; // 右側は力の矢印・ラベル分の余白
+    const pxPerMeter=(w-marginL-marginR)/CART_TRACK_M; // 走行距離いっぱいに画面幅を使う
+    ctx.strokeStyle='#c9c9d3'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(marginL-30,groundY); ctx.lineTo(w-marginR+60,groundY); ctx.stroke();
+    for(let x=marginL-30;x<w-marginR+60;x+=18){ctx.beginPath();ctx.moveTo(x,groundY);ctx.lineTo(x-8,groundY+10);ctx.strokeStyle='#dcdce4';ctx.lineWidth=1.5;ctx.stroke();}
+
+    const cx=marginL+cartX*pxPerMeter;
+    const cy=groundY;
+    // cart body
+    ctx.fillStyle='#232a3a'; ctx.strokeStyle='#3a4258'; ctx.lineWidth=1.5;
+    roundRect(cx-38,cy-34,76,30,6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#0d1119';
+    circle(cx-22,cy-2,8); ctx.fill();
+    circle(cx+22,cy-2,8); ctx.fill();
+    ctx.strokeStyle='#3a4258'; circle(cx-22,cy-2,8); ctx.stroke();
+    circle(cx+22,cy-2,8); ctx.stroke();
+
+    const F=parseFloat(forceEl.value);
+    const N=m*g, fsMax=muS*N;
+    const f = (cartV===0 && Math.abs(F)<=fsMax) ? F : Math.sign(cartV||F)*muK*N;
+
+    // weight
+    arrow(cx,cy-18,cx,cy-18+Math.min(m*g,60)*0.9,getCss('--force'),'mg='+(m*g).toFixed(0)+'N',[8,4]);
+    // normal
+    arrow(cx,cy-18,cx,cy-18-Math.min(N,60)*0.9,getCss('--normal'),'N='+N.toFixed(0)+'N',[8,-6]);
+    // applied force
+    if(F>0.5) arrow(cx+42,cy-18,cx+42+Math.min(F,120)*0.45,cy-18,getCss('--highlight'),'F='+F.toFixed(0)+'N',[4,-6]);
+    // friction
+    if(Math.abs(f)>0.5) arrow(cx-42,cy-18,cx-42-Math.min(Math.abs(f),120)*0.45,cy-18,getCss('--velocity'),'f='+f.toFixed(0)+'N',[-70,-6]);
+
+  } else {
+    const theta=parseFloat(angleEl.value)*Math.PI/180;
+    // 上端付近では垂直抗力の矢印が上に、下端付近では重力の矢印が下に伸びるため、
+    // どちらの端(＝下り坂の開始点・上り坂の開始点)でも矢印が画面からはみ出さないよう、
+    // 上下に大きめの余白をとる。軸の矢じるし分の余白もあわせて確保する。
+    const marginL=70, marginTop=110, marginR=90, marginBottom=95;
+    const topX=marginL, topY=marginTop;
+    const len=Math.min(w-marginL-marginR, h-marginTop-marginBottom); // 使える範囲いっぱいに斜面を伸ばす
+    const baseX=topX+len*Math.cos(theta), baseY=topY+len*Math.sin(theta);
+    const originX=topX, originY=baseY; // 縦軸と横軸の交点(原点)
+
+    // 縦軸(y軸)：原点から上向き、矢じるし付き
+    const axisColor='#4a5268';
+    ctx.strokeStyle=axisColor; ctx.fillStyle=axisColor; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(originX,originY+14); ctx.lineTo(originX,topY-34); ctx.stroke();
+    drawArrowHead(originX,topY-34,-Math.PI/2,axisColor);
+    ctx.font='600 12px "JetBrains Mono",monospace'; ctx.fillStyle=axisColor;
+    ctx.fillText('高さ',originX+8,topY-36);
+
+    // 横軸(x軸)：原点から右向き、矢じるし付き
+    ctx.beginPath(); ctx.moveTo(originX-14,originY); ctx.lineTo(baseX+40,originY); ctx.stroke();
+    drawArrowHead(baseX+40,originY,0,axisColor);
+    ctx.fillText('水平距離',baseX-30,originY+22);
+
+    // 軸の目盛り(斜面の実長を等分して表示)
+    ctx.strokeStyle=axisColor; ctx.lineWidth=1.2; ctx.font='10px "JetBrains Mono",monospace'; ctx.fillStyle='#5a6376';
+    for(let i=1;i<=4;i++){
+      const ty=topY+(originY-topY)*i/4;
+      ctx.beginPath(); ctx.moveTo(originX-5,ty); ctx.lineTo(originX+5,ty); ctx.stroke();
+      const tx=originX+(baseX-originX)*i/4;
+      ctx.beginPath(); ctx.moveTo(tx,originY-5); ctx.lineTo(tx,originY+5); ctx.stroke();
+    }
+
+    // 斜面(＝軸に立てた直角三角形の斜辺／左上＝高い方、右下＝低い方)
+    ctx.strokeStyle='#c9c9d3'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(topX,topY); ctx.lineTo(baseX,baseY); ctx.stroke();
+    // 三角形の残り一辺(高さを示す破線)
+    ctx.strokeStyle='#dcdce4'; ctx.setLineDash([3,4]); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(topX,topY); ctx.lineTo(originX,originY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 底辺(横軸)と斜面のなす角θを、底辺の頂点(baseX,baseY)に弧と数値で表示
+    const arcR=34;
+    ctx.strokeStyle=getCss('--highlight'); ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.arc(baseX,baseY,arcR,Math.PI,Math.PI+theta); ctx.stroke();
+    ctx.fillStyle=getCss('--highlight'); ctx.font='600 12px "JetBrains Mono",monospace';
+    ctx.fillText('θ='+angleEl.value+'°',baseX-arcR-56,baseY-10);
+
+    // 地面のハッチング
+    ctx.strokeStyle='#dcdce4'; ctx.lineWidth=1.5;
+    for(let x=originX-14;x<baseX+40;x+=16){ctx.beginPath();ctx.moveTo(x,originY);ctx.lineTo(x-8,originY+10);ctx.stroke();}
+
+    const dPx=slopeD*len;
+    const px=topX+dPx*Math.cos(theta), py=topY+dPx*Math.sin(theta);
+    ctx.save();
+    ctx.translate(px,py); ctx.rotate(theta);
+    ctx.fillStyle='#232a3a'; ctx.strokeStyle='#3a4258'; ctx.lineWidth=1.5;
+    roundRect(-30,-30,60,26,5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#0d1119';
+    circle(-16,0,7); ctx.fill(); circle(16,0,7); ctx.fill();
+    ctx.strokeStyle='#3a4258'; circle(-16,0,7); ctx.stroke(); circle(16,0,7); ctx.stroke();
+    ctx.restore();
+
+    const N=m*g*Math.cos(theta);
+    const normalDir=[Math.sin(theta),-Math.cos(theta)]; // 斜面から離れる向き(外向き法線)
+
+    // 重力(常に真下)
+    arrow(px,py-14,px,py-14+Math.min(m*g,60)*0.9,getCss('--force'),'mg',[8,6]);
+    // 垂直抗力(斜面から外向き)
+    arrow(px,py-14,px+normalDir[0]*Math.min(N,60)*0.9,py-14+normalDir[1]*Math.min(N,60)*0.9,getCss('--normal'),'N',[-6,-14]);
+    // まさつは考えないため、摩擦力の矢印は表示しない
+  }
+}
+function getCss(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function circle(x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);}
+function drawArrowHead(x,y,angle,color){
+  const headlen=8;
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(x,y);
+  ctx.lineTo(x-headlen*Math.cos(angle-Math.PI/6), y-headlen*Math.sin(angle-Math.PI/6));
+  ctx.lineTo(x-headlen*Math.cos(angle+Math.PI/6), y-headlen*Math.sin(angle+Math.PI/6));
+  ctx.closePath(); ctx.fill();
+}
+
+let last=performance.now();
+function loop(t){
+  const dt=Math.min((t-last)/1000,0.033); last=t;
+  step(dt); draw();
+  requestAnimationFrame(loop);
+}
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

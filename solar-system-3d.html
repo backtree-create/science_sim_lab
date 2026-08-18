@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>太陽系3Dシミュレーター</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+      background-color: #030508;
+      font-family: 'Space Grotesk', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+      color: #fff;
+    }
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+    }
+    /* タッチでのカメラ操作時にページスクロール・テキスト選択を抑止 */
+    #canvas-container canvas {
+      display: block;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ローディング画面 */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background-color: #0b0f19;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.8s ease;
+    }
+    .loading-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #38bdf8;
+      letter-spacing: 1px;
+    }
+    .progress-box {
+      width: 320px;
+      max-width: 80vw;
+      background: rgba(255, 255, 255, 0.1);
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    #loading-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      transition: width 0.2s ease;
+    }
+    #loading-text {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    /* 画面左側のコントロール & ポップアップパネル群 */
+    #ui-wrapper {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 320px;
+      max-width: calc(100vw - 40px);
+      pointer-events: none;
+    }
+
+    /* 汎用UIコンテナ（ドロップダウン & スライダー共通） */
+    .ui-container {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+    }
+
+    .ui-label {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .ui-label span.value-display {
+      color: #38bdf8;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    #planet-select {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(30, 41, 59, 0.9);
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: all 0.2s ease;
+    }
+
+    #planet-select:hover {
+      border-color: #38bdf8;
+    }
+
+    #planet-select option {
+      background: #0f172a;
+      color: #fff;
+    }
+
+    /* 時間速度スライダー */
+    #speed-slider {
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+      accent-color: #38bdf8;
+    }
+
+    /* 画面左上のUIパネル */
+    #info-panel {
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      transition: all 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-10px);
+    }
+
+    #info-panel.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    #info-panel h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+      color: #38bdf8;
+      border-bottom: 2px solid rgba(56, 189, 248, 0.3);
+      padding-bottom: 6px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .info-label {
+      color: #94a3b8;
+    }
+
+    .info-value {
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: #f8fafc;
+    }
+
+    #planet-desc {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+
+    #reset-btn {
+      margin-top: 16px;
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background 0.2s;
+    }
+
+    #reset-btn:hover {
+      background: linear-gradient(135deg, #0369a1, #1d4ed8);
+    }
+
+    /* ガイド指示 */
+    #instruction {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      pointer-events: none;
+    }
+
+    /* スマートフォン向けレスポンシブ対応 */
+    @media (max-width: 600px) {
+      #ui-wrapper {
+        top: 12px;
+        left: 12px;
+        max-width: calc(100vw - 24px);
+      }
+      #info-panel {
+        max-height: 45vh;
+        max-height: 45dvh;
+        overflow-y: auto;
+      }
+      #instruction {
+        width: max-content;
+        max-width: calc(100vw - 24px);
+        text-align: center;
+      }
+    }
+
+    /* タッチデバイス向け: 操作ターゲット拡大 */
+    @media (pointer: coarse) {
+      #reset-btn, #planet-select { min-height: 44px; }
+      #speed-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 8px;
+      }
+      #speed-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: #38bdf8;
+        border: none;
+      }
+      #speed-slider::-moz-range-thumb {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: #38bdf8;
+        border: none;
+      }
+    }
+  </style>
+
+  <!-- ES Modulesのマップ定義 -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- ローディング画面 -->
+  <div id="loading-screen">
+    <div class="loading-title">太陽系リアルグラフィックを生成中...</div>
+    <div class="progress-box">
+      <div id="loading-bar"></div>
+    </div>
+    <div id="loading-text">0%</div>
+  </div>
+
+  <!-- 画面左側 UIエリア -->
+  <div id="ui-wrapper">
+    <!-- 惑星選択ドロップダウン -->
+    <div class="ui-container">
+      <label class="ui-label" for="planet-select">惑星を選択 / 視点移動</label>
+      <select id="planet-select">
+        <option value="">全体表示 (太陽系)</option>
+      </select>
+    </div>
+
+    <!-- 時間経過速度コントロール -->
+    <div class="ui-container">
+      <label class="ui-label" for="speed-slider">
+        時間経過速度
+        <span id="speed-val" class="value-display">1.0x</span>
+      </label>
+      <input type="range" id="speed-slider" min="0" max="3" step="0.05" value="1">
+    </div>
+
+    <!-- UI ポップアップパネル -->
+    <div id="info-panel">
+      <h2 id="planet-name">太陽</h2>
+      <div class="info-row">
+        <span class="info-label">太陽からの平均距離</span>
+        <span class="info-value" id="planet-distance">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">公転周期</span>
+        <span class="info-value" id="planet-period">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">赤道半径</span>
+        <span class="info-value" id="planet-radius">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">自転軸傾斜角</span>
+        <span class="info-value" id="planet-tilt">-</span>
+      </div>
+      <p id="planet-desc">説明テキスト</p>
+      <button id="reset-btn">全体表示に戻る</button>
+    </div>
+  </div>
+
+  <div id="instruction">惑星をクリックまたはドロップダウンから選択してズーム＆詳細表示</div>
+  <div id="canvas-container"></div>
+
+  <!-- GSAP（スムーズなカメラアニメーション用） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --------------------------------------------------
+    // 1. ローディングマネージャーの設定
+    // --------------------------------------------------
+    const loadingScreen = document.getElementById('loading-screen');
+    const loadingBar = document.getElementById('loading-bar');
+    const loadingText = document.getElementById('loading-text');
+
+    const loadingManager = new THREE.LoadingManager();
+
+    loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+      const progress = (itemsLoaded / itemsTotal) * 100;
+      loadingBar.style.width = `${progress.toFixed(0)}%`;
+      loadingText.textContent = `高解像度データ読込中... ${Math.round(progress)}% (${itemsLoaded}/${itemsTotal})`;
+    };
+
+    const hideLoadingScreen = () => {
+      gsap.to(loadingScreen, {
+        opacity: 0,
+        duration: 0.8,
+        onComplete: () => {
+          loadingScreen.style.display = 'none';
+        }
+      });
+    };
+
+    loadingManager.onLoad = hideLoadingScreen;
+    loadingManager.onError = () => {
+      hideLoadingScreen();
+    };
+
+    // --------------------------------------------------
+    // 2. 基本セットアップ
+    // --------------------------------------------------
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 3000);
+    camera.position.set(0, 200, 400);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    const textureLoader = new THREE.TextureLoader(loadingManager);
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    // --------------------------------------------------
+    // 3. プロシージャル（自動生成）高品位テクスチャ生成器
+    // --------------------------------------------------
+    function createProceduralTexture(type, baseColorHex) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#' + new THREE.Color(baseColorHex).getHexString();
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (type === 'sun') {
+        const grad = ctx.createRadialGradient(512, 256, 10, 512, 256, 500);
+        grad.addColorStop(0, '#fff7d1');
+        grad.addColorStop(0.4, '#ffaa00');
+        grad.addColorStop(1, '#cc2200');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 黒点 & 火炎ノイズパターン
+        for (let i = 0; i < 800; i++) {
+          const x = Math.random() * canvas.width;
+          const y = Math.random() * canvas.height;
+          const r = Math.random() * 25 + 2;
+          ctx.fillStyle = Math.random() > 0.85 ? 'rgba(80, 10, 0, 0.6)' : 'rgba(255, 230, 120, 0.3)';
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (type === 'jupiter') {
+        // 木星の縞模様＆大赤斑
+        for (let y = 0; y < canvas.height; y++) {
+          const band = Math.sin(y * 0.08) * 0.5 + Math.cos(y * 0.02) * 0.5;
+          const noise = (Math.random() - 0.5) * 30;
+          const r = Math.min(255, Math.max(140, 200 + band * 40 + noise));
+          const g = Math.min(255, Math.max(100, 160 + band * 30 + noise));
+          const b = Math.min(255, Math.max(60, 110 + band * 20));
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.fillRect(0, y, canvas.width, 1);
+        }
+        // 大赤斑
+        ctx.fillStyle = 'rgba(180, 50, 30, 0.85)';
+        ctx.beginPath();
+        ctx.ellipse(650, 320, 70, 40, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'earth') {
+        // 大陸と海
+        ctx.fillStyle = '#1a5276'; // 海
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#229954'; // 大陸
+        for (let i = 0; i < 40; i++) {
+          const x = Math.random() * canvas.width;
+          const y = Math.random() * canvas.height * 0.7 + canvas.height * 0.15;
+          const rx = Math.random() * 120 + 30;
+          const ry = Math.random() * 80 + 20;
+          ctx.beginPath();
+          ctx.ellipse(x, y, rx, ry, Math.random(), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (type === 'clouds') {
+        // 地球の雲模様（透明背景）
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        for (let i = 0; i < 120; i++) {
+          const x = Math.random() * canvas.width;
+          const y = Math.random() * canvas.height;
+          const rx = Math.random() * 150 + 40;
+          const ry = Math.random() * 30 + 10;
+          ctx.beginPath();
+          ctx.ellipse(x, y, rx, ry, Math.random() * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (type === 'saturn-ring') {
+        // 土星の環（カッシーニの間隙を含む同心円パターン）
+        const rCanvas = document.createElement('canvas');
+        rCanvas.width = 512;
+        rCanvas.height = 1;
+        const rCtx = rCanvas.getContext('2d');
+        for (let x = 0; x < 512; x++) {
+          const norm = x / 512;
+          let alpha = Math.sin(norm * Math.PI * 25) * 0.3 + 0.6;
+          if (norm < 0.1 || norm > 0.95) alpha = 0;
+          if (norm > 0.55 && norm < 0.62) alpha = 0.05; // カッシーニの隙間
+          rCtx.fillStyle = `rgba(226, 191, 125, ${alpha.toFixed(2)})`;
+          rCtx.fillRect(x, 0, 1, 1);
+        }
+        return new THREE.CanvasTexture(rCanvas);
+      } else {
+        // ノイズグラデーション (水星・火星・金星・天王星・海王星用)
+        for (let i = 0; i < 500; i++) {
+          const x = Math.random() * canvas.width;
+          const y = Math.random() * canvas.height;
+          const r = Math.random() * 40 + 5;
+          ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)';
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // 火星の極冠（氷）
+        if (type === 'mars') {
+          ctx.fillStyle = 'rgba(240, 245, 255, 0.9)';
+          ctx.beginPath();
+          ctx.arc(canvas.width / 2, 20, 60, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
+    }
+
+    // --------------------------------------------------
+    // 4. ライティングと背景 (リアルライティング表現)
+    // --------------------------------------------------
+    // 基礎環境光（ほんのり明るい宇宙の暗闇）
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+    scene.add(ambientLight);
+
+    // 宇宙空間の微弱な星間反射光
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x080820, 0.5);
+    scene.add(hemiLight);
+
+    // 太陽本体からの強力なポイントライト（メイン光源）
+    const sunLight = new THREE.PointLight(0xfff5ea, 5.0, 0, 0.2);
+    sunLight.position.set(0, 0, 0);
+    scene.add(sunLight);
+
+    // カメラ追尾用の補助光（裏側も適度に見えるよう調整）
+    const cameraLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    camera.add(cameraLight);
+    scene.add(camera);
+
+    // 多彩なリアル星空背景
+    const starsGeometry = new THREE.BufferGeometry();
+    const starsCount = 8000;
+    const starPositions = new Float32Array(starsCount * 3);
+    const starColors = new Float32Array(starsCount * 3);
+
+    const palette = [
+      new THREE.Color(0xffffff),
+      new THREE.Color(0x9bb0ff),
+      new THREE.Color(0xffcc6f),
+      new THREE.Color(0xff7b7b)
+    ];
+
+    for (let i = 0; i < starsCount; i++) {
+      starPositions[i * 3] = (Math.random() - 0.5) * 2400;
+      starPositions[i * 3 + 1] = (Math.random() - 0.5) * 2400;
+      starPositions[i * 3 + 2] = (Math.random() - 0.5) * 2400;
+
+      const c = palette[Math.floor(Math.random() * palette.length)];
+      starColors[i * 3] = c.r;
+      starColors[i * 3 + 1] = c.g;
+      starColors[i * 3 + 2] = c.b;
+    }
+    starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    starsGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+    const starsMaterial = new THREE.PointsMaterial({ size: 1.1, vertexColors: true, transparent: true, opacity: 0.9 });
+    const starField = new THREE.Points(starsGeometry, starsMaterial);
+    scene.add(starField);
+
+    // --------------------------------------------------
+    // 5. 物理演算用定数 & 速度コントロール
+    // --------------------------------------------------
+    const G = 100;
+    const SUN_MASS = 10000;
+    const DT = 0.016;
+
+    let timeScale = 1.0;
+    const speedSlider = document.getElementById('speed-slider');
+    const speedVal = document.getElementById('speed-val');
+
+    speedSlider.addEventListener('input', (e) => {
+      timeScale = parseFloat(e.target.value);
+      speedVal.textContent = `${timeScale.toFixed(2)}x`;
+    });
+
+    const TEXTURE_BASE = 'https://cdn.jsdelivr.net/gh/stemkoski/stemkoski.github.io@master/Three.js/images/';
+    const MOON_TEX_URL = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/moon_1024.jpg';
+
+    // --------------------------------------------------
+    // 6. 惑星 & 衛星データ構造
+    // --------------------------------------------------
+    const planetDataList = [
+      {
+        id: 'mercury',
+        name: '水星 (Mercury)',
+        radius: 1.2,
+        color: 0xa6a6a6,
+        type: 'mercury',
+        roughness: 0.9,
+        metalness: 0.1,
+        semiMajorAxis: 35,
+        eccentricity: 0.2056,
+        inclination: 7.00,
+        axialTilt: 0.03,
+        textureUrl: TEXTURE_BASE + 'mercurymap.jpg',
+        realDistance: '5,791万 km',
+        period: '88 日',
+        realRadius: '2,440 km',
+        desc: '太陽に最も近い岩石惑星。クレーターに覆われた極端な寒暖差を持つ世界です。',
+        moons: []
+      },
+      {
+        id: 'venus',
+        name: '金星 (Venus)',
+        radius: 2.0,
+        color: 0xe3bb76,
+        type: 'venus',
+        roughness: 0.5,
+        metalness: 0.0,
+        semiMajorAxis: 52,
+        eccentricity: 0.0067,
+        inclination: 3.39,
+        axialTilt: 177.3,
+        textureUrl: TEXTURE_BASE + 'venusmap.jpg',
+        realDistance: '1億820万 km',
+        period: '225 日',
+        realRadius: '6,052 km',
+        desc: '二酸化炭素の厚い大気に覆われた高温の惑星。自転軸が177度傾き逆向きに自転します。',
+        moons: []
+      },
+      {
+        id: 'earth',
+        name: '地球 (Earth)',
+        radius: 2.2,
+        color: 0x2b82c5,
+        type: 'earth',
+        roughness: 0.3,
+        metalness: 0.1,
+        hasClouds: true,
+        hasAtmosphere: true,
+        semiMajorAxis: 75,
+        eccentricity: 0.0167,
+        inclination: 0.00,
+        axialTilt: 23.44,
+        textureUrl: TEXTURE_BASE + 'earthmap1k.jpg',
+        realDistance: '1億4,960万 km',
+        period: '365.25 日',
+        realRadius: '6,371 km',
+        desc: '豊かな水と命を育む大気を持つ惑星。美しい青い海と流動する白色の雲に覆われています。',
+        moons: [
+          {
+            name: '月 (Moon)',
+            radius: 0.55,
+            color: 0xc8c8c8,
+            distance: 5.5,
+            eccentricity: 0.0549,
+            periodDays: 27.32,
+            textureUrl: MOON_TEX_URL
+          }
+        ]
+      },
+      {
+        id: 'mars',
+        name: '火星 (Mars)',
+        radius: 1.6,
+        color: 0xc1440e,
+        type: 'mars',
+        roughness: 0.8,
+        metalness: 0.1,
+        semiMajorAxis: 100,
+        eccentricity: 0.0934,
+        inclination: 1.85,
+        axialTilt: 25.19,
+        textureUrl: TEXTURE_BASE + 'marsmap1k.jpg',
+        realDistance: '2億2,790万 km',
+        period: '687 日',
+        realRadius: '3,390 km',
+        desc: '赤い酸化鉄の大地とドライアイスの極冠を持つ惑星。2つの小さな衛星を従えます。',
+        moons: [
+          { name: 'フォボス (Phobos)', radius: 0.25, color: 0xaaaaaa, distance: 3.2, eccentricity: 0.0151, periodDays: 0.32, textureUrl: MOON_TEX_URL },
+          { name: 'ダイモス (Deimos)', radius: 0.20, color: 0x888888, distance: 4.6, eccentricity: 0.0002, periodDays: 1.26, textureUrl: MOON_TEX_URL }
+        ]
+      },
+      {
+        id: 'jupiter',
+        name: '木星 (Jupiter)',
+        radius: 5.5,
+        color: 0xd8ca9d,
+        type: 'jupiter',
+        roughness: 0.4,
+        metalness: 0.0,
+        semiMajorAxis: 145,
+        eccentricity: 0.0489,
+        inclination: 1.30,
+        axialTilt: 3.13,
+        textureUrl: TEXTURE_BASE + 'jupitermap.jpg',
+        realDistance: '7億7,850万 km',
+        period: '11.86 年',
+        realRadius: '69,911 km',
+        desc: '太陽系最大のガス巨大惑星。ダイナミックな縞模様と巨大な渦「大赤斑」が特徴です。',
+        moons: [
+          { name: 'イオ (Io)', radius: 0.5, color: 0xf5df65, distance: 8.5, eccentricity: 0.0041, periodDays: 1.77, textureUrl: MOON_TEX_URL },
+          { name: 'エウロパ (Europa)', radius: 0.45, color: 0xb8b5a1, distance: 11.2, eccentricity: 0.009, periodDays: 3.55, textureUrl: MOON_TEX_URL },
+          { name: 'ガニメデ (Ganymede)', radius: 0.7, color: 0x938e85, distance: 14.5, eccentricity: 0.0013, periodDays: 7.15, textureUrl: MOON_TEX_URL },
+          { name: 'カリスト (Callisto)', radius: 0.65, color: 0x6e6962, distance: 18.0, eccentricity: 0.0074, periodDays: 16.69, textureUrl: MOON_TEX_URL }
+        ]
+      },
+      {
+        id: 'saturn',
+        name: '土星 (Saturn)',
+        radius: 4.5,
+        color: 0xe2bf7d,
+        type: 'saturn',
+        roughness: 0.5,
+        metalness: 0.0,
+        semiMajorAxis: 195,
+        eccentricity: 0.0565,
+        inclination: 2.49,
+        axialTilt: 26.73,
+        textureUrl: TEXTURE_BASE + 'saturnmap.jpg',
+        realDistance: '14億3,400万 km',
+        period: '29.45 年',
+        realRadius: '58,232 km',
+        desc: '氷と岩石の粒子でできた極めて美しく広大な環を持つ巨大ガス惑星。',
+        hasRing: true,
+        ringColor: 0xe2bf7d,
+        moons: [
+          { name: 'タイタン (Titan)', radius: 0.75, color: 0xebad52, distance: 15.0, eccentricity: 0.0288, periodDays: 15.95, textureUrl: MOON_TEX_URL }
+        ]
+      },
+      {
+        id: 'uranus',
+        name: '天王星 (Uranus)',
+        radius: 3.2,
+        color: 0x4b70dd,
+        type: 'uranus',
+        roughness: 0.3,
+        metalness: 0.0,
+        semiMajorAxis: 245,
+        eccentricity: 0.0463,
+        inclination: 0.77,
+        axialTilt: 97.77,
+        textureUrl: TEXTURE_BASE + 'uranusmap.jpg',
+        realDistance: '28億7,100万 km',
+        period: '84 年',
+        realRadius: '25,362 km',
+        desc: 'メタン大気により淡い青緑色に輝く氷巨大惑星。ほぼ横倒しの状態で自転しています。',
+        hasRing: true,
+        ringColor: 0x66aacc,
+        moons: [
+          { name: 'チタニア (Titania)', radius: 0.45, color: 0xa0a0a0, distance: 8.5, eccentricity: 0.0011, periodDays: 8.71, textureUrl: MOON_TEX_URL }
+        ]
+      },
+      {
+        id: 'neptune',
+        name: '海王星 (Neptune)',
+        radius: 3.1,
+        color: 0x274687,
+        type: 'neptune',
+        roughness: 0.3,
+        metalness: 0.0,
+        semiMajorAxis: 290,
+        eccentricity: 0.0095,
+        inclination: 1.77,
+        axialTilt: 28.32,
+        textureUrl: TEXTURE_BASE + 'neptunemap.jpg',
+        realDistance: '44億9,500万 km',
+        period: '164.8 年',
+        realRadius: '24,622 km',
+        desc: '太陽系最外殻を回る深い青色の氷巨大惑星。強烈な暴風が吹き荒れています。',
+        moons: [
+          { name: 'トリトン (Triton)', radius: 0.45, color: 0xb5c4d0, distance: 8.0, eccentricity: 0.00001, periodDays: 5.88, textureUrl: MOON_TEX_URL }
+        ]
+      }
+    ];
+
+    // --------------------------------------------------
+    // 7. 太陽・惑星・衛星の構築 (多層リアル描画構造)
+    // --------------------------------------------------
+    // 7-1. 太陽のリアル構築
+    const sunProceduralTex = createProceduralTexture('sun', 0xffaa00);
+    const sunGeo = new THREE.SphereGeometry(12, 64, 64);
+    const sunMat = new THREE.MeshBasicMaterial({ map: sunProceduralTex });
+    const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    scene.add(sunMesh);
+
+    textureLoader.load(TEXTURE_BASE + 'sun.jpg', (tex) => {
+      sunMat.map = tex;
+      sunMat.needsUpdate = true;
+    });
+
+    // 太陽の内側発光オーラ
+    const sunGlowInnerGeo = new THREE.SphereGeometry(12.8, 32, 32);
+    const sunGlowInnerMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.45, side: THREE.BackSide });
+    scene.add(new THREE.Mesh(sunGlowInnerGeo, sunGlowInnerMat));
+
+    // 太陽の外側コロナグラデーション
+    const sunGlowOuterGeo = new THREE.SphereGeometry(15.0, 32, 32);
+    const sunGlowOuterMat = new THREE.MeshBasicMaterial({ color: 0xff3300, transparent: true, opacity: 0.25, side: THREE.BackSide });
+    const sunGlowOuterMesh = new THREE.Mesh(sunGlowOuterGeo, sunGlowOuterMat);
+    scene.add(sunGlowOuterMesh);
+
+    // 7-2. 惑星の構築
+    const planets = [];
+    const selectElem = document.getElementById('planet-select');
+    const earthMeanMotion = Math.sqrt((G * SUN_MASS) / Math.pow(75, 3));
+
+    planetDataList.forEach((data) => {
+      const opt = document.createElement('option');
+      opt.value = data.id;
+      opt.textContent = data.name;
+      selectElem.appendChild(opt);
+
+      const orbitGroup = new THREE.Group();
+      scene.add(orbitGroup);
+
+      const tiltGroup = new THREE.Group();
+      tiltGroup.rotation.z = THREE.MathUtils.degToRad(data.axialTilt);
+      orbitGroup.add(tiltGroup);
+
+      const a = data.semiMajorAxis;
+      const e = data.eccentricity;
+      const incRad = THREE.MathUtils.degToRad(data.inclination);
+      const meanMotion = Math.sqrt((G * SUN_MASS) / (a * a * a));
+
+      // 即座にリアルなビジュアルを提供するプロシージャルテクスチャ
+      const baseProceduralTex = createProceduralTexture(data.type, data.color);
+      const geo = new THREE.SphereGeometry(data.radius, 64, 64);
+      
+      const mat = new THREE.MeshStandardMaterial({
+        map: baseProceduralTex,
+        roughness: data.roughness,
+        metalness: data.metalness,
+        emissive: new THREE.Color(data.color).multiplyScalar(0.08)
+      });
+
+      // 外部高解像度画像のロード完了時に自動アップグレード
+      textureLoader.load(data.textureUrl, (tex) => {
+        mat.map = tex;
+        mat.emissive.setHex(0x000000); // 高解像度適用時は本来の光で描画
+        mat.needsUpdate = true;
+      });
+
+      const bodyMesh = new THREE.Mesh(geo, mat);
+      tiltGroup.add(bodyMesh);
+
+      // --- 地球専用：雲層 (Clouds Layer) ＆ 大気感 (Atmosphere) ---
+      let cloudMesh = null;
+      if (data.hasClouds) {
+        const cloudTex = createProceduralTexture('clouds', 0xffffff);
+        const cloudGeo = new THREE.SphereGeometry(data.radius * 1.018, 64, 64);
+        const cloudMat = new THREE.MeshStandardMaterial({
+          map: cloudTex,
+          transparent: true,
+          opacity: 0.55,
+          blending: THREE.NormalBlending
+        });
+        cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+        tiltGroup.add(cloudMesh);
+      }
+
+      if (data.hasAtmosphere) {
+        const atmoGeo = new THREE.SphereGeometry(data.radius * 1.05, 32, 32);
+        const atmoMat = new THREE.MeshBasicMaterial({
+          color: 0x0077ff,
+          transparent: true,
+          opacity: 0.2,
+          side: THREE.BackSide
+        });
+        tiltGroup.add(new THREE.Mesh(atmoGeo, atmoMat));
+      }
+
+      // --- 環（土星・天王星）リアル同心円グラデーション ---
+      if (data.hasRing) {
+        const ringGeo = new THREE.RingGeometry(data.radius * 1.35, data.radius * 2.4, 128);
+        const ringTex = createProceduralTexture('saturn-ring', data.ringColor);
+        
+        // RingGeometryのUV座標補正（同心円状にテクスチャを伸ばす）
+        const pos = ringGeo.attributes.position;
+        const uv = ringGeo.attributes.uv;
+        for (let i = 0; i < pos.count; i++) {
+          const vx = pos.getX(i);
+          const vy = pos.getY(i);
+          const distanceFromCenter = Math.sqrt(vx * vx + vy * vy);
+          const normalizedRadius = (distanceFromCenter - data.radius * 1.35) / (data.radius * 1.05);
+          uv.setXY(i, normalizedRadius, 0.5);
+        }
+
+        const ringMat = new THREE.MeshStandardMaterial({
+          map: ringTex,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.9,
+          roughness: 0.4
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.rotation.x = Math.PI / 2;
+        tiltGroup.add(ringMesh);
+      }
+
+      // 軌道線（薄い光のライン）
+      const orbitGeo = new THREE.BufferGeometry();
+      const points = [];
+      const steps = 360;
+      for (let i = 0; i <= steps; i++) {
+        const theta = (i / steps) * Math.PI * 2;
+        const r = (a * (1 - e * e)) / (1 + e * Math.cos(theta));
+        const px = r * Math.cos(theta);
+        const pz = r * Math.sin(theta);
+        const py = -pz * Math.sin(incRad);
+        const pzRot = pz * Math.cos(incRad);
+        points.push(new THREE.Vector3(px, py, pzRot));
+      }
+      orbitGeo.setFromPoints(points);
+      const orbitMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.2 });
+      scene.add(new THREE.LineLoop(orbitGeo, orbitMat));
+
+      // 衛星
+      const moonObjects = [];
+      if (data.moons && data.moons.length > 0) {
+        data.moons.forEach(m => {
+          const moonGroup = new THREE.Group();
+          orbitGroup.add(moonGroup);
+
+          const moonGeo = new THREE.SphereGeometry(m.radius, 32, 32);
+          const moonProceduralTex = createProceduralTexture('mercury', m.color || 0xaaaaaa);
+          const moonMat = new THREE.MeshStandardMaterial({
+            map: moonProceduralTex,
+            roughness: 0.8
+          });
+
+          textureLoader.load(m.textureUrl, (mTex) => {
+            moonMat.map = mTex;
+            moonMat.needsUpdate = true;
+          });
+
+          const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+          moonGroup.add(moonMesh);
+
+          const mOrbitGeo = new THREE.BufferGeometry();
+          const mPoints = [];
+          for (let j = 0; j <= 64; j++) {
+            const mTheta = (j / 64) * Math.PI * 2;
+            mPoints.push(new THREE.Vector3(
+              m.distance * Math.cos(mTheta),
+              0,
+              m.distance * Math.sin(mTheta)
+            ));
+          }
+          mOrbitGeo.setFromPoints(mPoints);
+          const mOrbitMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1 });
+          orbitGroup.add(new THREE.LineLoop(mOrbitGeo, mOrbitMat));
+
+          const moonMeanMotion = earthMeanMotion * (365.25 / m.periodDays);
+
+          moonObjects.push({
+            group: moonGroup,
+            mesh: moonMesh,
+            distance: m.distance,
+            eccentricity: m.eccentricity,
+            meanMotion: moonMeanMotion,
+            meanAnomaly: Math.random() * Math.PI * 2
+          });
+        });
+      }
+
+      planets.push({
+        id: data.id,
+        group: orbitGroup,
+        tiltGroup: tiltGroup,
+        mesh: bodyMesh,
+        cloudMesh: cloudMesh,
+        data: data,
+        a: a,
+        e: e,
+        incRad: incRad,
+        meanMotion: meanMotion,
+        meanAnomaly: 0,
+        moons: moonObjects
+      });
+    });
+
+    // --------------------------------------------------
+    // 8. ケプラー方程式ソルバー
+    // --------------------------------------------------
+    function solveKepler(M, e) {
+      let E = M;
+      for (let i = 0; i < 10; i++) {
+        const f = E - e * Math.sin(E) - M;
+        const fPrime = 1 - e * Math.cos(E);
+        E = E - f / fPrime;
+      }
+      return E;
+    }
+
+    // --------------------------------------------------
+    // 9. 物理・軌道再計算 ＆ アニメーション
+    // --------------------------------------------------
+    function updatePhysics() {
+      const currentDT = DT * timeScale;
+
+      // 太陽のゆらぎ（コロナ脈動）
+      const pulse = Math.sin(Date.now() * 0.002) * 0.05 + 1.0;
+      sunGlowOuterMesh.scale.setScalar(pulse);
+
+      planets.forEach(p => {
+        // 惑星の公転運動
+        p.meanAnomaly += p.meanMotion * currentDT;
+        if (p.meanAnomaly > Math.PI * 2) {
+          p.meanAnomaly -= Math.PI * 2;
+        }
+
+        const E = solveKepler(p.meanAnomaly, p.e);
+        const xOrb = p.a * (Math.cos(E) - p.e);
+        const zOrb = p.a * Math.sqrt(1 - p.e * p.e) * Math.sin(E);
+
+        const px = xOrb;
+        const py = -zOrb * Math.sin(p.incRad);
+        const pz = zOrb * Math.cos(p.incRad);
+
+        p.group.position.set(px, py, pz);
+
+        // 惑星の自転
+        p.tiltGroup.rotation.y += 0.008 * timeScale;
+
+        // 地球の雲層の独立自転（流動感）
+        if (p.cloudMesh) {
+          p.cloudMesh.rotation.y += 0.0095 * timeScale;
+        }
+
+        // 衛星の公転運動
+        p.moons.forEach(m => {
+          m.meanAnomaly += m.meanMotion * currentDT;
+          if (m.meanAnomaly > Math.PI * 2) {
+            m.meanAnomaly -= Math.PI * 2;
+          }
+
+          const mE = solveKepler(m.meanAnomaly, m.eccentricity);
+          const mx = m.distance * (Math.cos(mE) - m.eccentricity);
+          const mz = m.distance * Math.sqrt(1 - m.eccentricity * m.eccentricity) * Math.sin(mE);
+
+          m.mesh.position.set(mx, 0, mz);
+          m.mesh.rotation.y += 0.01 * timeScale;
+        });
+      });
+    }
+
+    // --------------------------------------------------
+    // 10. インタラクション & フォーカス処理
+    // --------------------------------------------------
+    let selectedPlanet = null;
+    const infoPanel = document.getElementById('info-panel');
+
+    function focusPlanet(planet) {
+      selectedPlanet = planet;
+
+      if (planet) {
+        selectElem.value = planet.id;
+      } else {
+        selectElem.value = '';
+      }
+
+      if (!planet) {
+        resetFocus();
+        return;
+      }
+
+      document.getElementById('planet-name').innerText = planet.data.name;
+      document.getElementById('planet-distance').innerText = planet.data.realDistance;
+      document.getElementById('planet-period').innerText = planet.data.period;
+      document.getElementById('planet-radius').innerText = planet.data.realRadius;
+      document.getElementById('planet-tilt').innerText = `${planet.data.axialTilt}°`;
+      document.getElementById('planet-desc').innerText = planet.data.desc;
+      infoPanel.classList.add('visible');
+
+      const targetPos = planet.group.position;
+      const offset = new THREE.Vector3(1, 0.5, 1).normalize().multiplyScalar(planet.data.radius * 6);
+      const camTargetPos = targetPos.clone().add(offset);
+
+      gsap.to(camera.position, {
+        x: camTargetPos.x,
+        y: camTargetPos.y,
+        z: camTargetPos.z,
+        duration: 1.5,
+        ease: 'power2.out'
+      });
+
+      gsap.to(controls.target, {
+        x: targetPos.x,
+        y: targetPos.y,
+        z: targetPos.z,
+        duration: 1.5,
+        ease: 'power2.out'
+      });
+    }
+
+    function resetFocus() {
+      selectedPlanet = null;
+      selectElem.value = '';
+      infoPanel.classList.remove('visible');
+
+      gsap.to(camera.position, {
+        x: 0,
+        y: 200,
+        z: 400,
+        duration: 1.5,
+        ease: 'power2.inOut'
+      });
+
+      gsap.to(controls.target, {
+        x: 0,
+        y: 0,
+        z: 0,
+        duration: 1.5,
+        ease: 'power2.inOut'
+      });
+    }
+
+    document.getElementById('reset-btn').addEventListener('click', resetFocus);
+
+    selectElem.addEventListener('change', (e) => {
+      const targetId = e.target.value;
+      if (!targetId) {
+        resetFocus();
+      } else {
+        const found = planets.find(p => p.id === targetId);
+        if (found) focusPlanet(found);
+      }
+    });
+
+    function onPointerDown(event) {
+      if (event.target.closest('#ui-wrapper')) return;
+
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+
+      const targets = planets.map(p => p.group);
+      const intersects = raycaster.intersectObjects(targets, true);
+
+      if (intersects.length > 0) {
+        let obj = intersects[0].object;
+        while (obj.parent && !planets.some(p => p.group === obj)) {
+          obj = obj.parent;
+        }
+        const targetPlanet = planets.find(p => p.group === obj);
+
+        if (targetPlanet) {
+          focusPlanet(targetPlanet);
+        }
+      }
+    }
+
+    window.addEventListener('pointerdown', onPointerDown);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // --------------------------------------------------
+    // 11. アニメーションメインループ
+    // --------------------------------------------------
+    function animate() {
+      requestAnimationFrame(animate);
+
+      updatePhysics();
+
+      if (selectedPlanet) {
+        controls.target.copy(selectedPlanet.group.position);
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>振り子とニュートンのゆりかご</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:#c98bff;}
+  #stage{width:100%;height:400px;}
+  .modebar{display:flex;gap:8px;margin-bottom:18px;}
+  .energybar{display:flex;height:18px;border-radius:100px;overflow:hidden;border:1px solid var(--border);margin-top:10px;}
+  .energybar .ke{background:var(--velocity);}
+  .energybar .pe{background:var(--force);}
+  .energylabel{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--text-dim);margin-top:6px;}
+  .segrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .segbtn{
+    font-family:var(--font-mono);font-size:12px;padding:8px 14px;border-radius:8px;
+    background:var(--bg-panel-2);border:1px solid var(--border);color:var(--text);cursor:pointer;
+  }
+  .segbtn.active{background:#c98bff;color:#0a0e15;border-color:#c98bff;font-weight:700;}
+
+  /* --- モバイル対応 --- */
+  body{-webkit-tap-highlight-color:transparent;min-height:100dvh;}
+  button{touch-action:manipulation;}
+  #stage{display:block;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+  @media (max-width:600px){
+    #stage{height:360px;}
+    .modebar{flex-wrap:wrap;}
+  }
+  @media (pointer:coarse){
+    button.btn{min-height:44px;}
+    .segbtn{min-height:44px;}
+    input[type=checkbox]{width:22px;height:22px;}
+    input[type=range]::-webkit-slider-thumb{width:26px;height:26px;}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">05 ／ 振り子と衝突</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Pendulum &amp; Newton's Cradle</span>
+  <h1>振り子はなぜ揺れ続けるのか</h1>
+  <p>振り子には常に重力が働いているのに、なぜ一定のリズムで往復し続けるのか。重力を「引き戻す力」と「張力とつり合う力」に分解し、位置エネルギーと運動エネルギーが姿を変えながら保存される様子を見る。ニュートンのゆりかごでは、同じしくみが玉突きの衝突にどうつながるかを確かめる。</p>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h2><span class="dot"></span>シミュレーション</h2>
+    <div class="modebar">
+      <button class="btn active" id="modeSingle">単振り子</button>
+      <button class="btn" id="modeCradle">ニュートンのゆりかご</button>
+    </div>
+    <div class="stage"><canvas id="stage"></canvas></div>
+
+    <div id="singleUI">
+      <div class="legend" style="margin-top:10px;">
+        <div class="item"><span class="sw" style="background:var(--force);"></span>重力 mg</div>
+        <div class="item"><span class="sw" style="background:var(--normal);"></span>張力 T</div>
+        <div class="item"><span class="sw" style="background:var(--highlight);"></span>復元力（接線方向）</div>
+      </div>
+      <div class="energybar"><div class="ke" id="keBar" style="width:0%;"></div><div class="pe" id="peBar" style="width:100%;"></div></div>
+      <div class="energylabel"><span>運動エネルギー KE</span><span>位置エネルギー PE</span></div>
+    </div>
+
+    <div id="cradleUI" style="display:none;">
+      <div class="legend" style="margin-top:10px;">
+        <div class="item"><span class="sw" style="background:var(--highlight);"></span>動いている球</div>
+        <div class="item"><span class="sw" style="background:var(--text-faint);"></span>静止している球</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>パラメータ</h2>
+
+    <div class="controls" id="singleControls">
+      <div class="control">
+        <label>ひもの長さ L <span class="val"><span id="lVal">1.0</span> m</span></label>
+        <input type="range" id="length" min="0.3" max="2.0" value="1.0" step="0.05">
+      </div>
+      <div class="control">
+        <label>初期角度 θ₀ <span class="val"><span id="th0Val">40</span>°</span></label>
+        <input type="range" id="theta0" min="5" max="90" value="40" step="1">
+      </div>
+      <div class="control">
+        <label style="justify-content:flex-start;gap:8px;"><input type="checkbox" id="damping"> 現実的な減衰を含める（摩擦・空気抵抗）</label>
+      </div>
+    </div>
+
+    <div class="controls" id="cradleControls" style="display:none;">
+      <div class="control">
+        <label>引く球の数 k</label>
+        <div class="segrow">
+          <button class="segbtn active" data-k="1">1個</button>
+          <button class="segbtn" data-k="2">2個</button>
+          <button class="segbtn" data-k="3">3個</button>
+        </div>
+      </div>
+      <div class="control">
+        <label>引き上げ角度 <span class="val"><span id="pullVal">40</span>°</span></label>
+        <input type="range" id="pullAngle" min="10" max="70" value="40" step="1">
+      </div>
+      <div class="control">
+        <label style="justify-content:flex-start;gap:8px;"><input type="checkbox" id="cradleDamping"> 衝突ごとにわずかにエネルギーを失う（現実的）</label>
+      </div>
+    </div>
+
+    <div class="btnrow" style="margin-top:16px;">
+      <button class="btn primary" id="launchBtn">放す</button>
+      <button class="btn" id="resetBtn">リセット</button>
+    </div>
+
+    <h2 style="margin-top:22px;"><span class="dot"></span>読み取り値</h2>
+    <div class="readout" id="readoutSingle">
+      <div class="item"><div class="k">角度 θ</div><div class="v" id="rTheta">40.0°</div></div>
+      <div class="item"><div class="k">角速度 ω</div><div class="v velocity" id="rOmega">0.00 rad/s</div></div>
+      <div class="item"><div class="k">張力 T</div><div class="v normal" id="rT">— N</div></div>
+      <div class="item"><div class="k">復元力</div><div class="v force" id="rRestore">— N</div></div>
+      <div class="item"><div class="k">理論周期（小角近似）</div><div class="v" id="rT0">— s</div></div>
+      <div class="item"><div class="k">実測周期</div><div class="v" id="rTmeasured">— s</div></div>
+    </div>
+    <div class="readout" id="readoutCradle" style="display:none;">
+      <div class="item"><div class="k">現在動いている球</div><div class="v" id="rActive">なし</div></div>
+      <div class="item"><div class="k">直前の衝突速度</div><div class="v velocity" id="rCollV">— m/s</div></div>
+    </div>
+
+    <div class="explain" id="explainText">
+      振り子には常に重力 mg が働いていますが、そのうち<strong>ひもに沿った成分</strong>は張力とつり合い、<strong>ひもと垂直な成分（接線方向）</strong>だけが物体を中心（最下点）に引き戻す「復元力」として働きます。この復元力が振り子を往復させ続ける原動力です。
+      <div class="note">角度が小さいときは復元力がほぼ角度に比例し（sinθ≈θ）、周期はおもりの重さによらず T=2π√(L/g) で近似できます。角度が大きくなるとこの近似がずれ、実際の周期は理論値より少しだけ長くなります。</div>
+    </div>
+  </div>
+</div>
+
+<footer class="source">
+  <h3>Reference</h3>
+  振り子の運動方程式 θ''=−(g/L)sinθ は非線形常微分方程式であり、本シミュレーターは小角近似を使わず数値積分（半陰的オイラー法）で解いている。小角近似での周期 T=2π√(L/g) は単振り子の標準的な近似公式（振幅が小さいほど正確）。張力は T=m(g cosθ+Lω²)（重力の半径方向成分＋向心力）で計算。ニュートンのゆりかごは、質量が等しい物体どうしの弾性衝突では運動量とエネルギーの保存則から入射側の速度がそのまま反対側の球へ伝わることに基づく、力学の標準的な連成衝突モデル。
+</footer>
+
+<script>
+const canvas=document.getElementById('stage'), ctx=canvas.getContext('2d');
+function resize(){
+  canvas.style.height=''; // メディアクエリによる高さ変更をインラインスタイルが上書きしないよう一旦解除
+  const r=canvas.parentElement.getBoundingClientRect();
+  canvas.width=r.width*devicePixelRatio; canvas.height=r.height*devicePixelRatio;
+  canvas.style.width=r.width+'px'; canvas.style.height=r.height+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener('resize',resize);
+const g=9.8;
+
+let mode='single';
+const modeSingleBtn=document.getElementById('modeSingle'), modeCradleBtn=document.getElementById('modeCradle');
+const singleUI=document.getElementById('singleUI'), cradleUI=document.getElementById('cradleUI');
+const singleControls=document.getElementById('singleControls'), cradleControls=document.getElementById('cradleControls');
+const readoutSingle=document.getElementById('readoutSingle'), readoutCradle=document.getElementById('readoutCradle');
+
+modeSingleBtn.onclick=()=>{
+  mode='single'; modeSingleBtn.classList.add('active'); modeCradleBtn.classList.remove('active');
+  singleUI.style.display=''; cradleUI.style.display='none';
+  singleControls.style.display=''; cradleControls.style.display='none';
+  readoutSingle.style.display=''; readoutCradle.style.display='none';
+  resetSingle();
+};
+modeCradleBtn.onclick=()=>{
+  mode='cradle'; modeCradleBtn.classList.add('active'); modeSingleBtn.classList.remove('active');
+  singleUI.style.display='none'; cradleUI.style.display='';
+  singleControls.style.display='none'; cradleControls.style.display='';
+  readoutSingle.style.display='none'; readoutCradle.style.display='';
+  resetCradle();
+};
+
+/* ---------------- 単振り子 ---------------- */
+const lengthEl=document.getElementById('length'), theta0El=document.getElementById('theta0'), dampingEl=document.getElementById('damping');
+lengthEl.addEventListener('input',()=>{document.getElementById('lVal').textContent=parseFloat(lengthEl.value).toFixed(2);resetSingle();});
+theta0El.addEventListener('input',()=>{document.getElementById('th0Val').textContent=theta0El.value;resetSingle();});
+
+let sTheta=0, sOmega=0, sRunning=false;
+let turnPoints=[]; // timestamps of omega sign changes, for measured period
+let simTime=0;
+
+function resetSingle(){
+  sTheta=parseFloat(theta0El.value)*Math.PI/180;
+  sOmega=0; sRunning=false; turnPoints=[]; simTime=0;
+  updateSingleReadouts();
+}
+resetSingle();
+
+function stepSingle(dt){
+  if(!sRunning)return;
+  const L=parseFloat(lengthEl.value);
+  const alpha=-(g/L)*Math.sin(sTheta);
+  const prevOmega=sOmega;
+  sOmega+=alpha*dt;
+  if(dampingEl.checked) sOmega*=(1-0.15*dt);
+  sTheta+=sOmega*dt;
+  simTime+=dt;
+  // 発射直後(静止からの立ち上がり)の見かけ上の符号反転だけを除外し、
+  // それ以降の本物の折り返し(角速度の符号反転)はすべて検出する
+  if(simTime>0.05 && Math.sign(prevOmega)!==Math.sign(sOmega)){
+    turnPoints.push(simTime);
+    if(turnPoints.length>4)turnPoints.shift();
+  }
+}
+
+function updateSingleReadouts(){
+  const L=parseFloat(lengthEl.value);
+  const m=1; // 1kg の代表おもりで力を評価（比を見るだけなので質量は結果の傾向に影響しない）
+  const T=m*(g*Math.cos(sTheta)+L*sOmega*sOmega);
+  const restore=m*g*Math.sin(sTheta);
+  const T0=2*Math.PI*Math.sqrt(L/g);
+  document.getElementById('rTheta').textContent=(sTheta*180/Math.PI).toFixed(1)+'°';
+  document.getElementById('rOmega').textContent=sOmega.toFixed(2)+' rad/s';
+  document.getElementById('rT').textContent=T.toFixed(2)+' N';
+  document.getElementById('rRestore').textContent=restore.toFixed(2)+' N';
+  document.getElementById('rT0').textContent=T0.toFixed(2)+' s';
+  if(turnPoints.length>=2){
+    const measured=2*(turnPoints[turnPoints.length-1]-turnPoints[turnPoints.length-2]);
+    document.getElementById('rTmeasured').textContent=measured.toFixed(2)+' s';
+  } else {
+    document.getElementById('rTmeasured').textContent='計測中…';
+  }
+  const KE=0.5*m*(L*sOmega)*(L*sOmega);
+  const PEmax=m*g*L*(1-Math.cos(parseFloat(theta0El.value)*Math.PI/180));
+  const PE=m*g*L*(1-Math.cos(sTheta));
+  const total=Math.max(PEmax,0.0001);
+  document.getElementById('keBar').style.width=Math.min(100,(KE/total)*100)+'%';
+  document.getElementById('peBar').style.width=Math.min(100,100-(KE/total)*100)+'%';
+}
+
+function drawSingle(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const L=parseFloat(lengthEl.value);
+  const scale=Math.min((h-90)/2.0, 130);
+  const pivotX=w/2, pivotY=40;
+  ctx.strokeStyle='#3a4258'; ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(pivotX-40,pivotY);ctx.lineTo(pivotX+40,pivotY);ctx.stroke();
+  ctx.fillStyle='#dcdce4';
+  for(let x=pivotX-40;x<=pivotX+40;x+=10){ctx.beginPath();ctx.moveTo(x,pivotY);ctx.lineTo(x-6,pivotY+10);ctx.strokeStyle='#dcdce4';ctx.lineWidth=2;ctx.stroke();}
+
+  const bx=pivotX+Math.sin(sTheta)*L*scale;
+  const by=pivotY+Math.cos(sTheta)*L*scale;
+
+  // guide arc
+  ctx.strokeStyle='rgba(20,20,30,.10)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(pivotX,pivotY,L*scale,Math.PI/2-1.6,Math.PI/2+1.6); ctx.stroke();
+
+  ctx.strokeStyle='#4a5268'; ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(pivotX,pivotY);ctx.lineTo(bx,by);ctx.stroke();
+
+  // force vectors: gravity mg, tension T (along string), tangential restoring force
+  arrowP(bx,by,bx,by+50,getCss('--force'),'mg');
+  const tx=pivotX-bx, ty=pivotY-by; const tl=Math.hypot(tx,ty)||1;
+  arrowP(bx,by,bx+tx/tl*40,by+ty/tl*40,getCss('--normal'),'T');
+  // tangential unit vector at angle theta (direction of increasing theta): (cos theta, -sin theta)
+  // tangential component of gravity = -mg sin(theta) along that direction -> restoring force vector:
+  const restScale=Math.min(Math.abs(Math.sin(sTheta))*55,48);
+  const sgn=-Math.sin(sTheta)>=0?1:-1;
+  const rx=Math.cos(sTheta)*sgn*restScale, ry=-Math.sin(sTheta)*sgn*restScale;
+  arrowP(bx,by,bx+rx,by+ry,getCss('--highlight'),'F');
+
+  ctx.fillStyle='#232a3a'; ctx.strokeStyle='#c98bff'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(bx,by,16,0,Math.PI*2); ctx.fill(); ctx.stroke();
+}
+function getCss(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function arrowP(x0,y0,x1,y1,color,label){
+  if(Math.hypot(x1-x0,y1-y0)<3)return;
+  const headlen=8; const dx=x1-x0,dy=y1-y0, ang=Math.atan2(dy,dx);
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2.6;
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x1,y1);
+  ctx.lineTo(x1-headlen*Math.cos(ang-Math.PI/6),y1-headlen*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x1-headlen*Math.cos(ang+Math.PI/6),y1-headlen*Math.sin(ang+Math.PI/6));
+  ctx.closePath();ctx.fill();
+  if(label){ctx.font='600 12px "JetBrains Mono",monospace';ctx.fillStyle=color;ctx.fillText(label,x1+6,y1-6);}
+}
+
+/* ---------------- ニュートンのゆりかご ---------------- */
+const N_BALLS=5;
+let dockLo=0, dockHi=N_BALLS-1; // docked (静止)範囲
+let activeSide=null; // 'left' | 'right' | null
+let activeK=0;
+let cTheta=0, cOmega=0;
+let cRunning=false;
+let lastCollisionV=null;
+const cL=0.85; // ひもの長さ(表示用固定)
+
+const pullAngleEl=document.getElementById('pullAngle');
+pullAngleEl.addEventListener('input',()=>{document.getElementById('pullVal').textContent=pullAngleEl.value; if(!cRunning)resetCradle();});
+let pullK=1;
+document.querySelectorAll('.segbtn').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.segbtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); pullK=parseInt(b.dataset.k); if(!cRunning)resetCradle();
+  };
+});
+
+function resetCradle(){
+  dockLo=pullK; dockHi=N_BALLS-1;
+  activeSide='left'; activeK=pullK;
+  cTheta=-parseFloat(pullAngleEl.value)*Math.PI/180; // 左側に引く=負
+  cOmega=0; cRunning=false; lastCollisionV=null;
+  updateCradleReadouts();
+}
+resetCradle();
+
+function stepCradle(dt){
+  if(!cRunning)return;
+  const alpha=-(g/cL)*Math.sin(cTheta);
+  cOmega+=alpha*dt;
+  const prevTheta=cTheta;
+  cTheta+=cOmega*dt;
+
+  // 衝突判定：中心(θ=0)を、中心方向へ向かって通過した瞬間
+  const crossedZero=(prevTheta<0 && cTheta>=0) || (prevTheta>0 && cTheta<=0);
+  if(crossedZero){
+    const v=cOmega; // 符号付き角速度（衝突直前の速度）
+    lastCollisionV=Math.abs(v)*cL;
+    if(activeSide==='left'){
+      // 左のk個がdockに合流 → dockLoが左へk個分拡張 → 右端からk個が新たにactiveへ
+      dockLo=Math.max(0,dockLo-activeK);
+      dockHi=dockHi; // unchanged for now, will shrink from right
+      const newHi=dockHi-activeK;
+      dockHi=newHi;
+      activeSide='right'; activeK=activeK;
+      cTheta=0; cOmega=Math.abs(v); // 角速度をそのまま(同じ大きさ)引き継いで反対向きに発射
+      if(cradleDampingEl.checked) cOmega*=0.97;
+    } else if(activeSide==='right'){
+      dockHi=Math.min(N_BALLS-1,dockHi+activeK);
+      dockLo=dockLo+activeK;
+      activeSide='left'; activeK=activeK;
+      cTheta=0; cOmega=-Math.abs(v);
+      if(cradleDampingEl.checked) cOmega*=0.97;
+    }
+  }
+  updateCradleReadouts();
+}
+const cradleDampingEl=document.getElementById('cradleDamping');
+
+function updateCradleReadouts(){
+  document.getElementById('rActive').textContent = activeSide==='left'?'左側 '+activeK+'個':(activeSide==='right'?'右側 '+activeK+'個':'なし');
+  document.getElementById('rCollV').textContent = lastCollisionV!==null? lastCollisionV.toFixed(2)+' m/s' : '— m/s';
+}
+
+function drawCradle(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const pivotY=40, barY=pivotY;
+  const spacing=44;
+  const totalW=spacing*(N_BALLS-1);
+  const startX=w/2-totalW/2;
+  const scale=Math.min((h-100),240);
+
+  ctx.strokeStyle='#3a4258'; ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(startX-30,barY);ctx.lineTo(startX+totalW+30,barY);ctx.stroke();
+
+  for(let i=0;i<N_BALLS;i++){
+    const px=startX+i*spacing;
+    let theta=0;
+    const isActiveGroup = (activeSide==='left' && i<activeK) || (activeSide==='right' && i>=N_BALLS-activeK);
+    if(isActiveGroup){ theta=cTheta; }
+    const bx=px+Math.sin(theta)*scale;
+    const by=pivotY+Math.cos(theta)*scale;
+    ctx.strokeStyle='#4a5268'; ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.moveTo(px,pivotY);ctx.lineTo(bx,by);ctx.stroke();
+    ctx.beginPath();ctx.arc(px,pivotY,2,0,Math.PI*2);ctx.fillStyle='#3a4258';ctx.fill();
+    ctx.beginPath();ctx.arc(bx,by,15,0,Math.PI*2);
+    ctx.fillStyle= isActiveGroup? getCss('--highlight') : '#5a6376';
+    ctx.fill();
+    ctx.strokeStyle='#0a0e15'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+}
+
+/* ---------------- 共通ボタン・ループ ---------------- */
+document.getElementById('launchBtn').onclick=()=>{
+  if(mode==='single'){ sRunning=true; }
+  else { cRunning=true; }
+};
+document.getElementById('resetBtn').onclick=()=>{
+  if(mode==='single'){ resetSingle(); }
+  else { resetCradle(); }
+};
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,0.02); last=now;
+  if(mode==='single'){ stepSingle(dt); updateSingleReadouts(); drawSingle(); }
+  else { stepCradle(dt); drawCradle(); }
+  requestAnimationFrame(loop);
+}
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

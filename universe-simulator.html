@@ -1,0 +1,2923 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>3D 宇宙物理高精度シミュレーター</title>
+    <!-- Three.js、OrbitControls、GLTFLoader の読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-color: #060911;
+            --panel-bg: rgba(11, 17, 31, 0.82);
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --panel-border-glow: rgba(56, 189, 248, 0.25);
+            --accent-primary: #38bdf8;
+            --accent-hover: #0284c7;
+            --accent-yellow: #f59e0b;
+            --accent-red: #f43f5e;
+            --accent-blue: #60a5fa;
+            --accent-purple: #c084fc;
+            --accent-emerald: #34d399;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --text-muted: #64748b;
+            --font-main: 'Space Grotesk', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes softPulse {
+            0%, 100% { opacity: 0.55; }
+            50% { opacity: 1; }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button, select, .btn, .mode-btn, .tab-btn, .checkbox-label,
+        .home-return-btn, .hud-toggle-btn, .solar-home-btn {
+            touch-action: manipulation;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* タッチ操作時にページスクロール・ダブルタップズームを抑止（3Dドラッグ/ピンチ用） */
+        #canvas-container canvas {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            display: block;
+        }
+
+        /* モード選択ホームモーダル */
+        .home-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            background: rgba(6, 9, 17, 0.88);
+            backdrop-filter: blur(20px) saturate(180%);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .home-modal-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .home-card {
+            position: relative;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 720px;
+            width: 92%;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            text-align: center;
+            overflow: hidden;
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .home-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-purple), var(--accent-emerald), var(--accent-yellow));
+            background-size: 300% 100%;
+            animation: softPulse 4s ease-in-out infinite;
+        }
+
+        .home-card h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-purple));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .home-card p {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+        }
+
+        .mode-btn {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            padding: 18px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: hidden;
+        }
+
+        .mode-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            background: radial-gradient(circle at 30% 20%, var(--mode-accent, var(--accent-primary)) 0%, transparent 65%);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
+        }
+
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.045);
+            border-color: var(--mode-accent, var(--accent-primary));
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 20px color-mix(in srgb, var(--mode-accent, var(--accent-primary)) 30%, transparent);
+            transform: translateY(-3px);
+        }
+
+        .mode-btn:hover::after {
+            opacity: 0.08;
+        }
+
+        .mode-btn-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: color-mix(in srgb, var(--mode-accent, var(--accent-primary)) 14%, transparent);
+            border: 1px solid color-mix(in srgb, var(--mode-accent, var(--accent-primary)) 35%, transparent);
+            color: var(--mode-accent, var(--accent-primary));
+        }
+
+        .mode-btn-icon svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+        }
+
+        .mode-btn-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mode-btn-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            letter-spacing: 0.02em;
+        }
+
+        .mode-btn-desc {
+            font-size: 0.78rem;
+            color: var(--text-sub);
+            line-height: 1.5;
+        }
+
+        .mode-btn-badge {
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--mode-accent, var(--accent-primary)) 25%, transparent);
+            color: var(--mode-accent, var(--accent-primary));
+            border: 1px solid color-mix(in srgb, var(--mode-accent, var(--accent-primary)) 45%, transparent);
+        }
+
+        /* 読み込みバー（プログレスバー）スタイル */
+        .loading-container {
+            margin-top: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .loading-text {
+            font-size: 0.78rem;
+            color: var(--accent-primary);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #f59e0b);
+            border-radius: 4px;
+            transition: width 0.15s ease-out;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+
+        /* 太陽系リアル3D物理モード：独立埋め込みiframeコンテナ */
+        .solar-frame-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            z-index: 500;
+            background: #030508;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .solar-frame-container.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .solar-frame-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .solar-home-btn {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 9px 14px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .solar-home-btn:hover {
+            background: var(--accent-emerald);
+            border-color: var(--accent-emerald);
+            color: #060911;
+            transform: translateY(-1px);
+        }
+
+        /* UIパネル */
+        .ui-panel {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 260px;
+            max-height: calc(100vh - 32px);
+            max-height: calc(100dvh - 32px);
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--panel-border);
+            border-top: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 18px;
+            padding: 14px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+            opacity: 0.92;
+            transform-origin: top right;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
+        }
+
+        .ui-panel:focus-within {
+            width: 380px;
+            opacity: 1.0;
+            border-color: var(--panel-border-glow);
+        }
+
+        @media (hover: hover) {
+            .ui-panel:hover:not(.collapsed) {
+                width: 380px;
+                opacity: 1.0;
+                border-color: var(--panel-border-glow);
+            }
+        }
+
+        /* パネル折りたたみ（Collapsed）スタイル */
+        .ui-panel.collapsed {
+            top: auto;
+            bottom: 16px;
+            right: 16px;
+            width: auto;
+            max-height: 48px;
+            padding: 10px 16px;
+            overflow: hidden;
+            background: rgba(11, 17, 31, 0.95);
+        }
+
+        .ui-panel.collapsed:hover,
+        .ui-panel.collapsed:focus-within {
+            width: auto;
+            opacity: 0.95;
+        }
+
+        .ui-panel.collapsed .tab-header,
+        .ui-panel.collapsed .tab-content,
+        .ui-panel.collapsed .control-group,
+        .ui-panel.collapsed .hud-hint {
+            display: none !important;
+        }
+
+        .panel-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .home-return-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.72rem;
+            font-weight: 500;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .home-return-btn:hover {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: #060911;
+        }
+
+        .hud-toggle-btn {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            color: var(--accent-primary);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .hud-toggle-btn:hover {
+            background: var(--accent-primary);
+            color: #060911;
+        }
+
+        .hud-hint {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-align: right;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        /* タブヘッダー */
+        .tab-header {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 3px;
+            gap: 2px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 6px 4px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--text-sub);
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background: rgba(56, 189, 248, 0.18);
+            color: var(--accent-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        h1 {
+            font-size: 0.88rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .value-disp {
+            color: var(--accent-primary);
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+
+        /* カスタムスライダー */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-primary);
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #ffffff;
+        }
+
+        /* トグルコンテナ */
+        .toggle-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            color: var(--text-main);
+            font-size: 0.76rem;
+            transition: color 0.15s;
+        }
+
+        .checkbox-label:hover {
+            color: #fff;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 3px;
+            background: rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .checkbox-label input[type="checkbox"]:checked {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .checkbox-label input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 1px;
+            width: 3px;
+            height: 7px;
+            border: solid #060911;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .color-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--panel-border);
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: rgba(56, 189, 248, 0.12);
+            border-color: var(--accent-primary);
+            color: #fff;
+        }
+
+        .btn.active {
+            background: var(--accent-primary);
+            color: #060911;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+        }
+
+        .geojson-status {
+            font-size: 0.72rem;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--font-mono);
+        }
+
+        /* 解説・データ表示カード */
+        .info-card {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            width: 280px;
+            max-height: 38vh;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--panel-border);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 18px;
+            padding: 14px;
+            z-index: 10;
+            font-size: 0.78rem;
+            line-height: 1.6;
+            overflow-y: auto;
+            opacity: 0.92;
+            transform-origin: bottom left;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* 時間経過バー等操作時およびホバー・フォーカス時の拡大CSS */
+        .info-card.expanded,
+        .info-card:focus-within {
+            width: 480px;
+            max-height: 52vh;
+            opacity: 1.0;
+            border-color: var(--panel-border-glow);
+        }
+
+        @media (hover: hover) {
+            .info-card:hover {
+                width: 480px;
+                max-height: 52vh;
+                opacity: 1.0;
+                border-color: var(--panel-border-glow);
+            }
+        }
+
+        .info-card h2 {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-bottom: 6px;
+            letter-spacing: 0.02em;
+        }
+
+        .theory-tag {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-primary);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.68rem;
+            margin-bottom: 6px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--panel-border);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.73rem;
+            color: var(--text-sub);
+        }
+
+        /* テーブルスタイル */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.71rem;
+            font-family: var(--font-mono);
+            margin-top: 8px;
+        }
+
+        th, td {
+            padding: 6px 4px;
+            border-bottom: 1px solid var(--panel-border);
+            text-align: center;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .ui-panel {
+                width: calc(100% - 32px);
+                max-height: 40vh;
+                max-height: 40dvh;
+            }
+            .ui-panel:focus-within {
+                width: calc(100% - 32px);
+            }
+            .info-card {
+                width: calc(100% - 32px);
+                bottom: 12px;
+                left: 16px;
+            }
+            .info-card.expanded,
+            .info-card:focus-within {
+                width: calc(100% - 32px);
+            }
+        }
+
+        /* スマートフォン縦持ち（狭幅）向け：ホームカードのはみ出し防止 */
+        @media (max-width: 600px) {
+            .home-card {
+                padding: 24px 18px;
+                width: 94%;
+                max-height: 90vh;
+                max-height: 90dvh;
+                overflow-y: auto;
+            }
+            .mode-grid {
+                grid-template-columns: 1fr;
+            }
+            .info-card.expanded,
+            .info-card:focus-within {
+                max-height: 46vh;
+                max-height: 46dvh;
+            }
+        }
+
+        /* タッチデバイス向け：タップターゲット・スライダーつまみの拡大 */
+        @media (pointer: coarse) {
+            .btn, .tab-btn, .mode-btn,
+            .home-return-btn, .hud-toggle-btn, .solar-home-btn,
+            select.btn {
+                min-height: 44px;
+            }
+            .checkbox-label {
+                min-height: 36px;
+            }
+            .checkbox-label input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+            }
+            .checkbox-label input[type="checkbox"]:checked::after {
+                left: 5px;
+                top: 2px;
+                width: 4px;
+                height: 9px;
+            }
+            input[type="range"] {
+                height: 32px;
+                background: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12)) center / 100% 4px no-repeat;
+            }
+            input[type="range"]::-webkit-slider-thumb {
+                width: 26px;
+                height: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ホーム（モード選択）モーダルダイアログ -->
+    <div class="home-modal-overlay" id="home-modal">
+        <div class="home-card">
+            <h1>3D 宇宙 & 天体 シミュレーター</h1>
+            <p>目的のシミュレーションモードを選択してください</p>
+            <div class="mode-grid">
+                <div class="mode-btn" style="--mode-accent: var(--accent-red);" onclick="selectAppMode('tide')">
+                    <div class="mode-btn-top">
+                        <div class="mode-btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="17.5" cy="6.5" r="2.3"/>
+                                <path d="M2 15c1.6-2.4 3.2-2.4 4.8 0s3.2 2.4 4.8 0 3.2-2.4 4.8 0 3.2 2.4 4.8 0"/>
+                                <path d="M2 19.5c1.6-2.4 3.2-2.4 4.8 0s3.2 2.4 4.8 0 3.2-2.4 4.8 0 3.2 2.4 4.8 0"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="mode-btn-title">潮汐力モード</div>
+                    <div class="mode-btn-desc">月・太陽の引力と潮汐力ベクトルの生成メカニズム、各種学説を検証します。</div>
+                </div>
+                <div class="mode-btn" style="--mode-accent: var(--accent-yellow);" onclick="selectAppMode('sun')">
+                    <div class="mode-btn-top">
+                        <div class="mode-btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 18h18"/>
+                                <path d="M5.5 18a6.5 6.5 0 0 1 13 0"/>
+                                <path d="M12 7.5v2.2M6.5 10l1.4 1.4M17.5 10l-1.4 1.4"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="mode-btn-title">日の出・日の入りモード</div>
+                    <div class="mode-btn-desc">日本主要都市の日の出・南中・日の入り・昼長および季節変動を観測します。</div>
+                </div>
+                <div class="mode-btn" style="--mode-accent: var(--accent-purple);" onclick="selectAppMode('moon')">
+                    <div class="mode-btn-top">
+                        <div class="mode-btn-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                                <path d="M14.2 3.2a9 9 0 1 0 0 17.6c-3.6-2.1-5.9-5.6-5.9-8.8s2.3-6.7 5.9-8.8z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="mode-btn-title">月の満ち欠けモード</div>
+                    <div class="mode-btn-desc">地球・月・太陽の位置関係から生じる月の満ち欠け、月相、月出・月没時刻を観測します。</div>
+                </div>
+                <div class="mode-btn" style="--mode-accent: var(--accent-emerald);" onclick="selectAppMode('solar')">
+                    <div class="mode-btn-top">
+                        <div class="mode-btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="2.6"/>
+                                <ellipse cx="12" cy="12" rx="10" ry="4"/>
+                                <ellipse cx="12" cy="12" rx="4" ry="10" transform="rotate(58 12 12)"/>
+                            </svg>
+                        </div>
+                        <span class="mode-btn-badge">NEW</span>
+                    </div>
+                    <div class="mode-btn-title">太陽系3Dモード</div>
+                    <div class="mode-btn-desc">太陽から海王星まで公転する太陽系全体を3D探索。惑星クリック／選択でズームし、詳細データを確認できます。</div>
+                </div>
+            </div>
+
+            <!-- 太陽3Dモデル読み込みバー -->
+            <div class="loading-container" id="loading-container">
+                <div class="loading-text">
+                    <span id="loading-status-text">リアル太陽3Dモデルを取り込み中...</span>
+                    <span id="loading-percent-text">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <!-- 太陽系リアル3D物理モード（独立埋め込みタブ） -->
+    <div class="solar-frame-container" id="solar-frame-container">
+        <button class="solar-home-btn" id="solar-home-btn" onclick="closeSolarMode()">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            ホームに戻る
+        </button>
+        <iframe id="solar-iframe" title="太陽系3Dシミュレーター" allow="fullscreen"></iframe>
+    </div>
+
+    <!-- UI操作パネル -->
+    <div class="ui-panel" tabindex="0" id="ui-panel">
+        <div class="panel-header-bar">
+            <button class="home-return-btn" onclick="openHomeModal()">ホーム</button>
+            <button class="hud-toggle-btn" id="hud-toggle-btn" onclick="toggleHudCollapse()">下部に折りたたむ</button>
+            <div class="hud-hint">ホバーで拡大</div>
+        </div>
+        
+        <!-- タブ切替ボタン -->
+        <div class="tab-header" id="tab-header">
+            <button class="tab-btn active" id="tab1-btn" onclick="switchTab('tab1')">潮汐モデル</button>
+            <button class="tab-btn" id="tab2-btn" onclick="switchTab('tab2')">膨らむ理由</button>
+            <button class="tab-btn" id="tab3-btn" onclick="switchTab('tab3')">日の出日の入り</button>
+            <button class="tab-btn" id="tab4-btn" onclick="switchTab('tab4')">月の満ち欠け</button>
+        </div>
+
+        <!-- 全体コントロール：縮尺切替 -->
+        <div class="control-group" style="background: rgba(56, 189, 248, 0.08); padding: 8px; border-radius: 8px; border: 1px solid var(--panel-border);">
+            <label style="font-weight: 600; color: var(--text-main);">天体モデル縮尺設定</label>
+            <select id="scale-select" class="btn" style="background:#0b111e; color:#fff; border:1px solid var(--panel-border); text-align: left;" onchange="onScaleChange()">
+                <option value="enhanced">視認強調モデル（視覚的観察優先）</option>
+                <option value="real">物理実際比率 (地球:1, 月:0.27, 太陽:109)</option>
+            </select>
+        </div>
+
+        <!-- タブ1: 基本シミュレーター -->
+        <div id="tab1" class="tab-content active">
+            <h1>潮汐力（起潮力）3Dモデル</h1>
+
+            <div class="geojson-status" id="geojson-status">
+                <span>外部テクスチャ・地図: 読み込み中...</span>
+            </div>
+
+            <div class="control-group">
+                <label>時間経過速度: <span id="speed-val" class="value-disp">1.0</span></label>
+                <input type="range" id="speed-slider" min="0" max="3" step="0.1" value="1.0">
+            </div>
+
+            <!-- 潮汐モード独立の時間・操作コントロール -->
+            <div class="control-group">
+                <label for="tide-date-slider">
+                    <span>潮汐日付 (季節・公転):</span>
+                    <span id="tide-date-display" class="value-disp">6月21日</span>
+                </label>
+                <input type="range" id="tide-date-slider" min="1" max="365" value="172">
+            </div>
+
+            <div class="control-group">
+                <label for="tide-time-slider">
+                    <span>潮汐時刻 (自転・月位置):</span>
+                    <span id="tide-time-display" class="value-disp">12:00</span>
+                </label>
+                <input type="range" id="tide-time-slider" min="0" max="1439" value="720">
+            </div>
+
+            <div class="control-group">
+                <button class="btn active" id="btn-toggle-tide-anim" onclick="toggleTideAnimation()">潮汐時間再生: ON</button>
+            </div>
+
+            <div class="control-group">
+                <label>月の軌道半径: <span id="distance-val" class="value-disp">15.0</span></label>
+                <input type="range" id="distance-slider" min="10" max="80" step="0.5" value="15.0">
+            </div>
+
+            <div class="toggle-container">
+                <label style="font-weight: 600; color: var(--text-main);">天体・軌道・ベクトル設定</label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-sun" checked>
+                    太陽と地球公転軌道の表示
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-sun-tide">
+                    <span class="color-dot" style="background: #ffa500;"></span> 太陽起潮力の影響（大潮・小潮）
+                </label>
+                
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-tidal" checked>
+                    <span class="color-dot" style="background: var(--accent-red);"></span> 潮汐力（差分ベクトル）
+                </label>
+                
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-moon-grav">
+                    <span class="color-dot" style="background: var(--accent-yellow);"></span> 各地点での月の引力
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-center-grav">
+                    <span class="color-dot" style="background: var(--accent-blue);"></span> 地球中心の基準引力
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-ocean" checked>
+                    海面の膨らみ（ラグビーボール形状）
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-terminator-t1" checked>
+                    昼夜明暗境界 (ターミネーター)
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="rotate-earth" checked>
+                    地球の自転
+                </label>
+            </div>
+
+            <button class="btn" onclick="resetCamera()">カメラ視点をリセット</button>
+        </div>
+
+        <!-- タブ2: 学説解説＆モデル切替 -->
+        <div id="tab2" class="tab-content">
+            <h1>反対側にも潮汐力が働く学説</h1>
+
+            <div class="control-group">
+                <label style="font-weight: 600;">視覚モデルの選択</label>
+                <select id="theory-select" class="btn" style="background:#0b111e; color:#fff; border:1px solid var(--panel-border); text-align:left;" onchange="onTheoryChange()">
+                    <option value="gradient">説A: 重力勾配（引力差分）モデル</option>
+                    <option value="barycenter">説B: 共通重心・一様遠心力モデル</option>
+                </select>
+            </div>
+
+            <div class="toggle-container">
+                <label style="font-weight: 600; color: var(--text-main);">学説モデル用オーバーレイ</label>
+
+                <label class="checkbox-label" id="container-barycenter-point">
+                    <input type="checkbox" id="show-barycenter" checked>
+                    <span class="color-dot" style="background: #f1c40f;"></span> 共通重心（バリセンター）表示
+                </label>
+
+                <label class="checkbox-label" id="container-centrifugal">
+                    <input type="checkbox" id="show-centrifugal">
+                    <span class="color-dot" style="background: #a855f7;"></span> 地球の小公転に伴う一様遠心力
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="tab2-show-tidal" checked>
+                    <span class="color-dot" style="background: var(--accent-red);"></span> 合成された潮汐力（起潮力）
+                </label>
+            </div>
+
+            <button class="btn" onclick="resetCamera()">カメラ視点をリセット</button>
+        </div>
+
+        <!-- タブ3: 日本の日の出日の入り同期機能 -->
+        <div id="tab3" class="tab-content">
+            <h1>日本の日の出・日の入りデータ</h1>
+
+            <div class="toggle-container" style="margin-bottom: 4px;">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-terminator-t3" checked>
+                    昼夜明暗境界
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label style="font-weight: 600;">カメラアングル</label>
+                <div class="btn-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <button class="btn active" id="btn-view-sunrise" onclick="setUniversalView('sunrise')">日の出</button>
+                    <button class="btn" id="btn-view-sunset" onclick="setUniversalView('sunset')">日の入り</button>
+                    <button class="btn" id="btn-view-earth" onclick="setUniversalView('earth')">全体</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>季節プリセット</label>
+                <div class="btn-grid">
+                    <button class="btn" id="btn-spring" onclick="setSeason(80)">春分 (3/21)</button>
+                    <button class="btn active" id="btn-summer" onclick="setSeason(172)">夏至 (6/21)</button>
+                    <button class="btn" id="btn-autumn" onclick="setSeason(266)">秋分 (9/23)</button>
+                    <button class="btn" id="btn-winter" onclick="setSeason(356)">冬至 (12/22)</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="date-slider">
+                    <span>日付（年間）:</span>
+                    <span id="date-display" class="value-disp">6月21日</span>
+                </label>
+                <input type="range" id="date-slider" min="1" max="365" value="172">
+            </div>
+
+            <div class="control-group">
+                <label for="time-slider">
+                    <span>時刻 (JST):</span>
+                    <span id="time-display" class="value-disp">12:00</span>
+                </label>
+                <input type="range" id="time-slider" min="0" max="1439" value="720">
+            </div>
+
+            <!-- 時間経過速度調整スライダー -->
+            <div class="control-group">
+                <label for="sun-speed-slider">
+                    <span>時間経過速度:</span>
+                    <span id="sun-speed-val" class="value-disp">1.0</span>
+                </label>
+                <input type="range" id="sun-speed-slider" min="0.1" max="5.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="control-group">
+                <label>アニメーション連動</label>
+                <div class="btn-grid">
+                    <button class="btn" id="btn-toggle-time" onclick="toggleTimeAnimation()">自転再生 (時間)</button>
+                    <button class="btn" id="btn-toggle-date" onclick="toggleDateAnimation()">公転再生 (季節)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- タブ4: 月の満ち欠け（月齢・月相）機能 -->
+        <div id="tab4" class="tab-content">
+            <h1>月の満ち欠け（月齢・月相）データ</h1>
+
+            <div class="control-group">
+                <label style="font-weight: 600;">カメラアングル</label>
+                <div class="btn-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <button class="btn active" id="btn-view-moon-earth" onclick="setUniversalView('moon_earth')">日本視点</button>
+                    <button class="btn" id="btn-view-moon-focus" onclick="setUniversalView('moon_focus')">月追従視点</button>
+                    <button class="btn" id="btn-view-moon-top" onclick="setUniversalView('moon_top')">宇宙軌道全景</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>月相 (月齢) プリセット</label>
+                <div class="btn-grid">
+                    <button class="btn" id="btn-phase-new" onclick="setMoonPhasePreset('new')">新月 (朔 / 0.0)</button>
+                    <button class="btn" id="btn-phase-first" onclick="setMoonPhasePreset('first_quarter')">上弦の月 (7.4)</button>
+                    <button class="btn" id="btn-phase-full" onclick="setMoonPhasePreset('full')">満月 (望 / 14.8)</button>
+                    <button class="btn" id="btn-phase-third" onclick="setMoonPhasePreset('third_quarter')">下弦の月 (22.1)</button>
+                </div>
+            </div>
+
+            <!-- 【追加】地球視点での見かけの大きさ（軌道位置）プリセット -->
+            <div class="control-group">
+                <label>地球視点・軌道位置（見かけの大きさ）</label>
+                <div class="btn-grid">
+                    <button class="btn" id="btn-orbit-perigee" onclick="setMoonOrbitPositionPreset('perigee')">近地点 (最接近・最大)</button>
+                    <button class="btn" id="btn-orbit-apogee" onclick="setMoonOrbitPositionPreset('apogee')">遠地点 (最遠・最小)</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="moon-date-slider">
+                    <span>日付（年間 / 月齢連動）:</span>
+                    <span id="moon-date-display" class="value-disp">6月21日</span>
+                </label>
+                <input type="range" id="moon-date-slider" min="1" max="365" value="172">
+            </div>
+
+            <div class="control-group">
+                <label for="moon-time-slider">
+                    <span>時刻 (JST):</span>
+                    <span id="moon-time-display" class="value-disp">12:00</span>
+                </label>
+                <input type="range" id="moon-time-slider" min="0" max="1439" value="720">
+            </div>
+
+            <div class="control-group">
+                <label for="moon-speed-slider">
+                    <span>時間経過速度:</span>
+                    <span id="moon-speed-val" class="value-disp">1.0</span>
+                </label>
+                <input type="range" id="moon-speed-slider" min="0.1" max="5.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="control-group">
+                <label>アニメーション連動</label>
+                <div class="btn-grid">
+                    <button class="btn" id="btn-toggle-moon-time" onclick="toggleMoonTimeAnimation()">自転再生 (時間)</button>
+                    <button class="btn" id="btn-toggle-moon-date" onclick="toggleMoonDateAnimation()">公転再生 (季節)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 解説・データ表示カード -->
+    <div class="info-card" id="info-card" tabindex="0">
+        <!-- 動的テキスト・データ挿入 -->
+    </div>
+
+    <script>
+        // --- 物理定数 & リアル比例比率データ ---
+        const SCALE_CONFIG = {
+            enhanced: {
+                earthRadius: 3.0,
+                moonRadius: 0.8,
+                sunRadius: 6.0,
+                moonDistance: 15.0,
+                sunDistance: 80.0
+            },
+            real: {
+                earthRadius: 1.0,
+                moonRadius: 0.272,
+                sunRadius: 109.1,
+                moonDistance: 60.3,
+                sunDistance: 800.0
+            }
+        };
+
+        let currentScaleMode = 'enhanced';
+
+        // パラメータ状態
+        let currentTab = 'tab1';
+        let currentTheory = 'gradient';
+        let currentUniversalMode = 'sunrise'; // カメラ視点管理
+
+        let params = {
+            speed: 1.0,
+            sunSpeed: 1.0, // 日の出日の入り & 月の満ち欠けモード用経過速度
+            distance: 15.0,
+            showSun: true,
+            showSunTide: false,
+            showTidal: true,
+            showMoonGrav: false,
+            showCenterGrav: false,
+            showOcean: true,
+            showTerminator: true,
+            rotateEarth: true,
+
+            showBarycenter: true,
+            showCentrifugal: false,
+            tab2ShowTidal: true
+        };
+
+        const MOON_ORBIT = {
+            eccentricity: 0.0549,  // 月軌道の離心率
+            inclination: 5.145,    // 軌道傾斜角 (deg)
+            argPeriapsis: 31.8,    // 近地点引数 (deg)
+            longNode: 125.0        // 昇交点黄経 (deg)
+        };
+
+        const EARTH_SUN_ORBIT = {
+            eccentricity: 0.01671, // 地球軌道の離心率
+            obliquity: 23.44       // 地軸傾斜角（deg）
+        };
+
+        // 主要都市の緯度・経度データ (JST基準)
+        const CITIES = [
+            { name: '札幌', lon: 141.35, lat: 43.06 },
+            { name: '東京', lon: 139.76, lat: 35.68 },
+            { name: '福岡', lon: 130.40, lat: 33.59 },
+            { name: '那覇', lon: 127.68, lat: 26.21 }
+        ];
+
+        // 時間管理変数
+        let tideTotalDays = 172.5;   // 潮汐通算経過日数
+        let tideDayOfYear = 172;     // 6月21日
+        let tideTimeMinutes = 720;   // 12:00 (JST)
+        let isTideAnimating = true;
+
+        let sunTotalDays = 172.5;    // 通算経過日数（日の出・月共用マスター時間）
+        let sunDayOfYear = 172;      // 6月21日
+        let sunTimeMinutes = 720;    // 12:00 (JST)
+        let isSunTimeAnimating = false;
+        let isSunDateAnimating = false;
+
+        // 太陽3Dモデルのロード状態管理変数
+        let isSunModelLoaded = false;
+        let pendingSelectedMode = null;
+
+        // ケプラー方程式求解
+        function solveKepler(M, e) {
+            let E = M;
+            for (let i = 0; i < 7; i++) {
+                E = E - (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+            }
+            return E;
+        }
+
+        function calculateKeplerPosition(a, e, incDeg, argPeriDeg, longNodeDeg, M) {
+            const inc = incDeg * (Math.PI / 180);
+            const argPeri = argPeriDeg * (Math.PI / 180);
+            const longNode = longNodeDeg * (Math.PI / 180);
+
+            const E = solveKepler(M, e);
+            const v = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
+            const r = a * (1 - e * Math.cos(E));
+
+            const x_orb = r * Math.cos(v + argPeri);
+            const z_orb = r * Math.sin(v + argPeri);
+
+            const pos = new THREE.Vector3(x_orb, 0, z_orb);
+            pos.applyAxisAngle(new THREE.Vector3(1, 0, 0), inc);
+            pos.applyAxisAngle(new THREE.Vector3(0, 1, 0), longNode);
+
+            return { pos, r, v };
+        }
+
+        // 天体精密計算関数群
+        function getDeclination(day) {
+            const angle = (day - 80) * 2 * Math.PI / 365.2422;
+            const sinDec = Math.sin(23.44 * Math.PI / 180) * Math.sin(angle);
+            return Math.asin(sinDec) * 180 / Math.PI;
+        }
+
+        function getSunAltitudeSin(lat, lon, day, minutes) {
+            const decRad = getDeclination(day) * Math.PI / 180;
+            const phiRad = lat * Math.PI / 180;
+            const timeDiffHours = (lon - 135) / 15;
+            const localHour = (minutes / 60) + timeDiffHours;
+            const hourAngleRad = (localHour - 12) * 15 * Math.PI / 180;
+
+            return Math.sin(phiRad) * Math.sin(decRad) + Math.cos(phiRad) * Math.cos(decRad) * Math.cos(hourAngleRad);
+        }
+
+        function calculateSunTimes(lat, lon, day) {
+            const decRad = getDeclination(day) * Math.PI / 180;
+            const phiRad = lat * Math.PI / 180;
+            const h0 = -0.833 * Math.PI / 180;
+
+            const cosH0 = (Math.sin(h0) - Math.sin(phiRad) * Math.sin(decRad)) / (Math.cos(phiRad) * Math.cos(decRad));
+
+            const timeDiff = (lon - 135) / 15;
+            const transit = 12 - timeDiff;
+
+            if (cosH0 > 1) return { polarNight: true, transit };
+            if (cosH0 < -1) return { midnightSun: true, transit };
+
+            const H0 = Math.acos(cosH0) * 180 / Math.PI;
+
+            const sunrise = transit - (H0 / 15);
+            const sunset = transit + (H0 / 15);
+            const dayLength = (2 * H0 / 15);
+
+            return { transit, sunrise, sunset, dayLength };
+        }
+
+        // 月の満ち欠け（月齢・月相・輝度% & 【精査】地球視点での距離・見かけの視直径）精密計算
+        function calculateMoonPhaseInfo(activeTotalDays) {
+            const synodicMonth = 29.530589;
+            const moonPos = moonMesh.position.clone();
+            const sunPos = sunMesh.position.clone().sub(earthGroup.position);
+
+            const moonDir = moonPos.clone().normalize();
+            const sunDir = sunPos.clone().normalize();
+
+            const moonToSun = sunPos.clone().sub(moonPos).normalize();
+            const earthToMoon = moonDir.clone();
+
+            const cosPhi = earthToMoon.dot(moonToSun);
+            const phaseAngle = Math.acos(Math.max(-1, Math.min(1, cosPhi)));
+
+            const illumination = ((1 + Math.cos(phaseAngle)) / 2) * 100;
+
+            const sunAngle = Math.atan2(sunDir.z, sunDir.x);
+            const moonAngle = Math.atan2(moonDir.z, moonDir.x);
+            let diffAngle = moonAngle - sunAngle;
+            while (diffAngle < 0) diffAngle += Math.PI * 2;
+            while (diffAngle >= Math.PI * 2) diffAngle -= Math.PI * 2;
+
+            const age = (diffAngle / (Math.PI * 2)) * synodicMonth;
+
+            // 地球-月間距離 & 地球視点での見かけの視直径（大きさ比率 %）計算
+            const currentDist = moonPos.length();
+            const meanDist = params.distance;
+            const distRatio = meanDist / currentDist; // 近地点（小距離）で >1.0（大きく見える）
+            const apparentSize = distRatio * 100;      // 平均を100%とした見かけの視直径比率
+            const distanceKm = Math.round((currentDist / meanDist) * 384400); // 実際の距離換算(km)
+
+            let orbitStatus = '平均距離付近';
+            if (distRatio > 1.03) orbitStatus = '近地点付近（地球視点で大きく見える）';
+            else if (distRatio < 0.97) orbitStatus = '遠地点付近（地球視点で小さく見える）';
+
+            let phaseName = '';
+            if (age < 1.0 || age >= 28.5) phaseName = '新月（朔）';
+            else if (age < 6.5) phaseName = '三日月';
+            else if (age < 8.5) phaseName = '上弦の月';
+            else if (age < 13.5) phaseName = '十三夜（満ちていく月）';
+            else if (age < 16.0) phaseName = '満月（望）';
+            else if (age < 17.5) phaseName = '十六夜（欠けていく月）';
+            else if (age < 21.0) phaseName = '居待月・立待月';
+            else if (age < 23.5) phaseName = '下弦の月';
+            else phaseName = '有明の月';
+
+            return { age, illumination, phaseName, phaseAngle, currentDist, apparentSize, distanceKm, orbitStatus, distRatio };
+        }
+
+        function calculateMoonTimes(lat, lon, day, activeTotalDays) {
+            const info = calculateMoonPhaseInfo(activeTotalDays);
+            const sunTimes = calculateSunTimes(lat, lon, day);
+
+            const moonDelay = (info.age / 29.530589) * 24.0;
+            let transit = (sunTimes.transit + moonDelay) % 24;
+
+            const halfDay = 6.2;
+            let rise = (transit - halfDay + 24) % 24;
+            let set = (transit + halfDay) % 24;
+
+            return { transit, rise, set, age: info.age, illumination: info.illumination, phaseName: info.phaseName };
+        }
+
+        function formatHoursToTimeString(hours) {
+            if (isNaN(hours)) return '--:--';
+            let h = Math.floor(hours);
+            let m = Math.round((hours - h) * 60);
+            if (m >= 60) { h += 1; m = 0; }
+            h = (h + 24) % 24;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function formatDateDisplay(day) {
+            const date = new Date(2026, 0, 1);
+            date.setDate(Math.floor(day));
+            return `${date.getMonth() + 1}月${date.getDate()}日`;
+        }
+
+        // --- HUD折りたたみ機能 ---
+        function toggleHudCollapse() {
+            const panel = document.getElementById('ui-panel');
+            const btn = document.getElementById('hud-toggle-btn');
+            panel.classList.toggle('collapsed');
+            
+            if (panel.classList.contains('collapsed')) {
+                btn.textContent = 'パネル展開';
+            } else {
+                btn.textContent = '下部に折りたたむ';
+            }
+        }
+
+        // --- 基本 Three.js セットアップ ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x060911, 0.0005);
+
+        // 近平面クリッピング(Near)を 0.01 に変更して、地表でのカメラめり込み・メッシュ削れを防止
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 5000);
+        camera.position.set(0, 15, 25);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // 手動操作時自動解除
+        controls.addEventListener('start', () => {
+            currentUniversalMode = 'free';
+            const buttons = ['btn-view-sunrise', 'btn-view-sunset', 'btn-view-earth', 'btn-view-moon-earth', 'btn-view-moon-focus', 'btn-view-moon-top'];
+            buttons.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
+        });
+
+        container.addEventListener('pointerdown', () => {
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+            }
+        });
+
+        // テクスチャローダー
+        const textureLoader = new THREE.TextureLoader();
+
+        // プロシージャル太陽テクスチャ
+        function createRealisticSunTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            const baseGrad = ctx.createLinearGradient(0, 0, 0, 512);
+            baseGrad.addColorStop(0.0, '#ffcc00');
+            baseGrad.addColorStop(0.5, '#ff7700');
+            baseGrad.addColorStop(1.0, '#ff2200');
+            ctx.fillStyle = baseGrad;
+            ctx.fillRect(0, 0, 1024, 512);
+
+            for (let i = 0; i < 12000; i++) {
+                const x = Math.random() * 1024;
+                const y = Math.random() * 512;
+                const radius = Math.random() * 3 + 1;
+                const opacity = Math.random() * 0.4;
+                
+                ctx.fillStyle = (Math.random() > 0.5) 
+                    ? `rgba(255, 230, 150, ${opacity})`
+                    : `rgba(180, 40, 0, ${opacity})`;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            const spotCount = 14;
+            for (let i = 0; i < spotCount; i++) {
+                const sx = Math.random() * 1024;
+                const sy = 100 + Math.random() * 312;
+                const r = Math.random() * 12 + 4;
+
+                const penumbraGrad = ctx.createRadialGradient(sx, sy, r * 0.2, sx, sy, r);
+                penumbraGrad.addColorStop(0, '#220500');
+                penumbraGrad.addColorStop(0.6, '#882200');
+                penumbraGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = penumbraGrad;
+                ctx.beginPath();
+                ctx.arc(sx, sy, r, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#0a0100';
+                ctx.beginPath();
+                ctx.arc(sx, sy, r * 0.45, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const REAL_SUN_TEXTURE_URL = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/sun.jpg';
+        const SUN_MODEL_URL = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Sphere/glTF-Binary/Sphere.glb';
+
+        let sunTexture = createRealisticSunTexture();
+        textureLoader.load(
+            REAL_SUN_TEXTURE_URL,
+            (tex) => {
+                sunTexture = tex;
+                if (defaultSunMat) defaultSunMat.map = tex;
+            },
+            undefined,
+            () => {}
+        );
+
+        const moonTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/moon_1024.jpg');
+        const earthTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_atmos_2048.jpg');
+
+        // ライティング
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.2);
+        scene.add(sunLight);
+
+        // 星空背景
+        const starsGeo = new THREE.BufferGeometry();
+        const starsCount = 3000;
+        const starPos = new Float32Array(starsCount * 3);
+        for(let i=0; i<starsCount*3; i++) {
+            starPos[i] = (Math.random() - 0.5) * 1600;
+        }
+        starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        const starsMat = new THREE.PointsMaterial({ color: 0x888888, size: 0.6 });
+        scene.add(new THREE.Points(starsGeo, starsMat));
+
+        // 太陽描画
+        let cfg = SCALE_CONFIG[currentScaleMode];
+        const sunMesh = new THREE.Group();
+        sunMesh.position.set(0, 0, 0);
+        scene.add(sunMesh);
+
+        const sunCoronaMat = new THREE.MeshBasicMaterial({
+            color: 0xffaa00,
+            transparent: true,
+            opacity: 0.45,
+            blending: THREE.AdditiveBlending,
+            side: THREE.BackSide
+        });
+        let sunCoronaMesh = new THREE.Mesh(new THREE.SphereGeometry(cfg.sunRadius * 1.12, 64, 64), sunCoronaMat);
+        sunMesh.add(sunCoronaMesh);
+
+        const sunGlowMat = new THREE.MeshBasicMaterial({ 
+            color: 0xff3300, 
+            transparent: true, 
+            opacity: 0.22,
+            blending: THREE.AdditiveBlending,
+            side: THREE.BackSide
+        });
+        let sunGlowMesh = new THREE.Mesh(new THREE.SphereGeometry(cfg.sunRadius * 1.35, 64, 64), sunGlowMat);
+        sunMesh.add(sunGlowMesh);
+
+        let defaultSunGeo = new THREE.SphereGeometry(cfg.sunRadius, 64, 64);
+        let defaultSunMat = new THREE.MeshBasicMaterial({ map: sunTexture });
+        let defaultSunMesh = new THREE.Mesh(defaultSunGeo, defaultSunMat);
+        sunMesh.add(defaultSunMesh);
+
+        const gltfLoader = new THREE.GLTFLoader();
+        let externalSunMesh = null;
+        let baseSunRadius = 1.0;
+
+        function updateLoadingProgress(percent, statusText) {
+            const fill = document.getElementById('progress-bar-fill');
+            const percentText = document.getElementById('loading-percent-text');
+            const statusLabel = document.getElementById('loading-status-text');
+
+            if (fill) fill.style.width = percent + '%';
+            if (percentText) percentText.innerText = Math.round(percent) + '%';
+            if (statusLabel && statusText) statusLabel.innerText = statusText;
+        }
+
+        gltfLoader.load(
+            SUN_MODEL_URL,
+            (gltf) => {
+                externalSunMesh = gltf.scene;
+
+                externalSunMesh.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = new THREE.MeshBasicMaterial({ map: sunTexture });
+                    }
+                });
+
+                const box = new THREE.Box3().setFromObject(externalSunMesh);
+                const sphere = new THREE.Sphere();
+                box.getBoundingSphere(sphere);
+                baseSunRadius = sphere.radius || 1.0;
+
+                const scaleFactor = cfg.sunRadius / baseSunRadius;
+                externalSunMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+                defaultSunMesh.visible = false;
+                sunMesh.add(externalSunMesh);
+
+                isSunModelLoaded = true;
+                updateLoadingProgress(100, 'リアル太陽3Dモデル 適用完了');
+
+                if (pendingSelectedMode) {
+                    setTimeout(() => {
+                        executeModeStart(pendingSelectedMode);
+                        pendingSelectedMode = null;
+                    }, 200);
+                }
+            },
+            (xhr) => {
+                if (xhr.lengthComputable) {
+                    const percent = (xhr.loaded / xhr.total) * 100;
+                    updateLoadingProgress(percent, 'リアル太陽3Dモデルを取り込み中...');
+                } else {
+                    updateLoadingProgress(50, 'リアル太陽3Dモデルを取り込み中...');
+                }
+            },
+            (error) => {
+                console.warn('WEBモデルの取得に失敗しました。高解像度太陽モデルを表示します。', error);
+                defaultSunMesh.visible = true;
+                isSunModelLoaded = true;
+                updateLoadingProgress(100, 'リアル太陽モデル（高画質）を適用しました');
+
+                if (pendingSelectedMode) {
+                    setTimeout(() => {
+                        executeModeStart(pendingSelectedMode);
+                        pendingSelectedMode = null;
+                    }, 200);
+                }
+            }
+        );
+
+        // 地球公転軌道線（月透過防止のため depthWrite: false を設定）
+        const earthSunOrbitGeo = new THREE.BufferGeometry();
+        const earthSunOrbitMat = new THREE.LineDashedMaterial({
+            color: 0xffaa00,
+            dashSize: 1.5,
+            gapSize: 0.8,
+            transparent: true,
+            opacity: 0.35,
+            depthWrite: false
+        });
+        const earthSunOrbitLine = new THREE.LineLoop(earthSunOrbitGeo, earthSunOrbitMat);
+        scene.add(earthSunOrbitLine);
+
+        // 地球グループ
+        const earthGroup = new THREE.Group();
+        scene.add(earthGroup);
+
+        let geoJsonGroup = new THREE.Group();
+        let earthGeo = new THREE.SphereGeometry(cfg.earthRadius, 64, 64);
+        
+        const earthMat = new THREE.MeshStandardMaterial({
+            map: earthTexture,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+        
+        const earthTiltGroup = new THREE.Group();
+        earthTiltGroup.rotation.x = THREE.MathUtils.degToRad(EARTH_SUN_ORBIT.obliquity);
+        earthTiltGroup.add(earthMesh);
+        earthGroup.add(earthTiltGroup);
+
+        // ターミネーター生成
+        function createTerminatorTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            const grad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            grad.addColorStop(0.0, 'rgba(255, 71, 87, 0.0)');
+            grad.addColorStop(0.15, 'rgba(255, 120, 50, 0.85)');
+            grad.addColorStop(0.35, 'rgba(254, 202, 87, 0.95)');
+            grad.addColorStop(0.65, 'rgba(56, 189, 248, 0.85)');
+            grad.addColorStop(0.85, 'rgba(112, 161, 255, 0.5)');
+            grad.addColorStop(1.0, 'rgba(255, 71, 87, 0.0)');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            for (let i = 0; i < 30; i++) {
+                const rx = Math.random() * canvas.width;
+                const rw = Math.random() * 15 + 4;
+                ctx.fillRect(rx, 0, rw, canvas.height);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
+            return texture;
+        }
+
+        let terminatorTexture = createTerminatorTexture();
+        let terminatorGeo = new THREE.TorusGeometry(cfg.earthRadius * 1.012, cfg.earthRadius * 0.045, 16, 128);
+        const terminatorMat = new THREE.MeshBasicMaterial({
+            map: terminatorTexture,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        const terminatorMesh = new THREE.Mesh(terminatorGeo, terminatorMat);
+        earthTiltGroup.add(terminatorMesh);
+
+        function latLonToVector3(lat, lon, radius) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+            const x = -(radius * Math.sin(phi) * Math.cos(theta));
+            const z = (radius * Math.sin(phi) * Math.sin(theta));
+            const y = (radius * Math.cos(phi));
+            return new THREE.Vector3(x, y, z);
+        }
+
+        // GeoJSON 読み込み
+        async function loadGeoJSON() {
+            const statusEl = document.getElementById('geojson-status');
+            const geoJsonUrl = 'https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_110m_land.geojson';
+            
+            try {
+                const response = await fetch(geoJsonUrl);
+                if (!response.ok) throw new Error('Network response failed');
+                const geoData = await response.json();
+
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 1.5 });
+                
+                geoData.features.forEach(feature => {
+                    const geom = feature.geometry;
+                    if (!geom) return;
+
+                    let coordinates = [];
+                    if (geom.type === 'Polygon') coordinates = geom.coordinates;
+                    else if (geom.type === 'MultiPolygon') coordinates = geom.coordinates.flat(1);
+
+                    coordinates.forEach(poly => {
+                        const points = [];
+                        poly.forEach(coord => {
+                            points.push(latLonToVector3(coord[1], coord[0], 1.002));
+                        });
+                        const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                        geoJsonGroup.add(new THREE.Line(lineGeo, lineMaterial));
+                    });
+                });
+
+                geoJsonGroup.scale.setScalar(cfg.earthRadius);
+                earthMesh.add(geoJsonGroup);
+                statusEl.innerHTML = '<span>外部テクスチャ・地図: 適用完了</span>';
+            } catch (err) {
+                console.warn('GeoJSON Fetch Error:', err);
+                statusEl.innerHTML = '<span style="color:#f59e0b;">GeoJSON取得失敗（標準テクスチャのみ表示）</span>';
+            }
+        }
+        loadGeoJSON();
+
+        // 海水層
+        let oceanGeo = new THREE.SphereGeometry(cfg.earthRadius * 1.015, 64, 64);
+        const oceanMat = new THREE.MeshPhysicalMaterial({
+            color: 0x00a8ff,
+            transparent: true,
+            opacity: 0.45,
+            roughness: 0.1,
+            transmission: 0.6,
+            thickness: 0.5
+        });
+        const oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+        earthTiltGroup.add(oceanMesh);
+
+        // 月
+        let moonGeo = new THREE.SphereGeometry(cfg.moonRadius, 32, 32);
+        const moonMat = new THREE.MeshStandardMaterial({
+            map: moonTexture,
+            roughness: 0.85,
+            metalness: 0.05
+        });
+        const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+        earthGroup.add(moonMesh);
+
+        // 月の軌道線（透過防止のため depthWrite: false を設定）
+        const orbitGeo = new THREE.BufferGeometry();
+        const orbitMat = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.35,
+            depthWrite: false
+        });
+        const orbitLine = new THREE.LineLoop(orbitGeo, orbitMat);
+        earthGroup.add(orbitLine);
+
+        // 共通重心（バリセンター）
+        const barycenterGroup = new THREE.Group();
+        const baryMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, depthTest: false, depthWrite: false });
+        const baryMesh = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), baryMat);
+        baryMesh.renderOrder = 1000;
+        barycenterGroup.add(baryMesh);
+
+        const ringGeo = new THREE.RingGeometry(0.45, 0.6, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, side: THREE.DoubleSide, depthTest: false, depthWrite: false });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.renderOrder = 1000;
+        ringMesh.rotation.x = Math.PI / 2;
+        barycenterGroup.add(ringMesh);
+
+        const earthOrbitGeo = new THREE.BufferGeometry();
+        const earthOrbitMat = new THREE.LineDashedMaterial({ color: 0xf1c40f, dashSize: 0.2, gapSize: 0.1, depthTest: false, depthWrite: false });
+        const earthOrbitLine = new THREE.LineLoop(earthOrbitGeo, earthOrbitMat);
+        earthOrbitLine.renderOrder = 1000;
+        barycenterGroup.add(earthOrbitLine);
+        earthGroup.add(barycenterGroup);
+
+        // ベクトル矢印グループ
+        const arrowGroup = new THREE.Group();
+        earthTiltGroup.add(arrowGroup);
+
+        let arrowHelpers = [];
+        function rebuildSampleArrows() {
+            arrowGroup.clear();
+            arrowHelpers = [];
+
+            const samplePoints = [];
+            const latCount = 8;
+            const lonCount = 16;
+            const R = cfg.earthRadius;
+
+            for (let i = 1; i < latCount; i++) {
+                const phi = (Math.PI / latCount) * i;
+                for (let j = 0; j < lonCount; j++) {
+                    const theta = ((2 * Math.PI) / lonCount) * j;
+                    const p = new THREE.Vector3(
+                        R * Math.sin(phi) * Math.cos(theta),
+                        R * Math.cos(phi),
+                        R * Math.sin(phi) * Math.sin(theta)
+                    );
+                    samplePoints.push(p);
+                }
+            }
+
+            const arrowHeadSize = (currentScaleMode === 'real') ? 0.15 : 0.2;
+
+            arrowHelpers = samplePoints.map(pt => {
+                const tidalArrow       = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), pt, 1, 0xff4757, arrowHeadSize, arrowHeadSize * 0.7);
+                const moonArrow        = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), pt, 1, 0xeccc68, arrowHeadSize, arrowHeadSize * 0.7);
+                const centerArrow      = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), pt, 1, 0x70a1ff, arrowHeadSize, arrowHeadSize * 0.7);
+                const centrifugalArrow = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), pt, 1, 0xa855f7, arrowHeadSize, arrowHeadSize * 0.7);
+                
+                arrowGroup.add(tidalArrow);
+                arrowGroup.add(moonArrow);
+                arrowGroup.add(centerArrow);
+                arrowGroup.add(centrifugalArrow);
+
+                return { pt, tidalArrow, moonArrow, centerArrow, centrifugalArrow };
+            });
+
+            if (currentTab === 'tab3' || currentTab === 'tab4') {
+                arrowGroup.visible = false;
+            }
+        }
+        rebuildSampleArrows();
+
+        function onScaleChange() {
+            currentScaleMode = document.getElementById('scale-select').value;
+            cfg = SCALE_CONFIG[currentScaleMode];
+
+            if (defaultSunMesh) {
+                defaultSunMesh.geometry.dispose();
+                defaultSunMesh.geometry = new THREE.SphereGeometry(cfg.sunRadius, 64, 64);
+            }
+            if (externalSunMesh) {
+                const scaleFactor = cfg.sunRadius / baseSunRadius;
+                externalSunMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            }
+
+            sunCoronaMesh.geometry.dispose();
+            sunCoronaMesh.geometry = new THREE.SphereGeometry(cfg.sunRadius * 1.12, 64, 64);
+            sunGlowMesh.geometry.dispose();
+            sunGlowMesh.geometry = new THREE.SphereGeometry(cfg.sunRadius * 1.35, 64, 64);
+
+            earthMesh.geometry.dispose();
+            earthMesh.geometry = new THREE.SphereGeometry(cfg.earthRadius, 64, 64);
+
+            if (geoJsonGroup) {
+                geoJsonGroup.scale.setScalar(cfg.earthRadius);
+            }
+
+            terminatorMesh.geometry.dispose();
+            terminatorMesh.geometry = new THREE.TorusGeometry(cfg.earthRadius * 1.012, cfg.earthRadius * 0.045, 16, 128);
+
+            oceanMesh.geometry.dispose();
+            oceanMesh.geometry = new THREE.SphereGeometry(cfg.earthRadius * 1.015, 64, 64);
+            oceanGeo = oceanMesh.geometry;
+
+            moonMesh.geometry.dispose();
+            moonMesh.geometry = new THREE.SphereGeometry(cfg.moonRadius, 32, 32);
+
+            params.distance = cfg.moonDistance;
+            document.getElementById('distance-slider').value = params.distance;
+            document.getElementById('distance-val').innerText = params.distance.toFixed(1);
+
+            const activeDay = (currentTab === 'tab3' || currentTab === 'tab4') ? sunDayOfYear : tideDayOfYear;
+            const sunMeanAnomaly = ((activeDay - 80) / 365.25) * Math.PI * 2;
+            const earthOrb = calculateKeplerPosition(
+                cfg.sunDistance,
+                EARTH_SUN_ORBIT.eccentricity,
+                0, 0, 0,
+                sunMeanAnomaly
+            );
+            earthGroup.position.copy(earthOrb.pos.clone().negate());
+
+            rebuildSampleArrows();
+            updateOrbitLines();
+
+            if (currentTab === 'tab3' || currentTab === 'tab4') {
+                setUniversalView(currentTab === 'tab3' ? 'sunrise' : 'moon_earth');
+            } else {
+                resetCamera();
+            }
+        }
+
+        // 物理計算更新
+        function updatePhysics() {
+            if (currentTab === 'tab3' || currentTab === 'tab4') {
+                arrowGroup.visible = false;
+                barycenterGroup.visible = false;
+                oceanMesh.visible = false;
+                return;
+            }
+
+            arrowGroup.visible = true;
+
+            const tiltRad = THREE.MathUtils.degToRad(EARTH_SUN_ORBIT.obliquity);
+            const moonPosTilt = moonMesh.position.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), -tiltRad);
+            const sunPosTilt = earthGroup.position.clone().negate().applyAxisAngle(new THREE.Vector3(1, 0, 0), -tiltRad);
+
+            const G_M = 1000;
+            const G_S = 460;
+
+            const r0_moon_mag = moonPosTilt.length();
+            const F0_moon = moonPosTilt.clone().normalize().multiplyScalar(G_M / (r0_moon_mag * r0_moon_mag));
+
+            const r0_sun_mag = sunPosTilt.length();
+            const F0_sun = sunPosTilt.clone().normalize().multiplyScalar(G_S / (r0_sun_mag * r0_sun_mag));
+
+            const baryDistance = params.distance * (1 / 15);
+            const baryPos = moonMesh.position.clone().normalize().multiplyScalar(baryDistance);
+            baryMesh.position.copy(baryPos);
+            ringMesh.position.copy(baryPos);
+
+            const eOrbitPts = [];
+            for(let i=0; i<=32; i++) {
+                const a = (i/32) * Math.PI * 2;
+                eOrbitPts.push(new THREE.Vector3(Math.cos(a)*baryDistance, 0, Math.sin(a)*baryDistance));
+            }
+            earthOrbitGeo.setFromPoints(eOrbitPts);
+            earthOrbitLine.computeLineDistances();
+
+            const oceanPositions = oceanGeo.attributes.position;
+            const originalPositions = earthMesh.geometry.attributes.position;
+            const moonDir = moonPosTilt.clone().normalize();
+            const sunDir = sunPosTilt.clone().normalize();
+
+            if (params.showOcean && currentTab === 'tab1') {
+                oceanMesh.visible = true;
+                const R = cfg.earthRadius;
+                const scaleMult = (currentScaleMode === 'real') ? 0.08 : 0.04;
+                const rRatio = (currentScaleMode === 'real') ? (60.3 / r0_moon_mag) : (15.0 / r0_moon_mag);
+
+                for (let i = 0; i < oceanPositions.count; i++) {
+                    const vx = originalPositions.getX(i);
+                    const vy = originalPositions.getY(i);
+                    const vz = originalPositions.getZ(i);
+                    const v = new THREE.Vector3(vx, vy, vz);
+                    
+                    v.applyAxisAngle(new THREE.Vector3(0, 1, 0), earthMesh.rotation.y);
+                    const vNorm = v.clone().normalize();
+
+                    const cosThetaMoon = vNorm.dot(moonDir);
+                    let bulge = R * scaleMult * (3 * cosThetaMoon * cosThetaMoon - 1) * Math.pow(rRatio, 2);
+
+                    if (params.showSunTide) {
+                        const cosThetaSun = vNorm.dot(sunDir);
+                        const sunRatio = (currentScaleMode === 'real') ? 1.0 : (80.0 / r0_sun_mag);
+                        const sunBulge = R * (scaleMult * 0.4) * (3 * cosThetaSun * cosThetaSun - 1) * Math.pow(sunRatio, 2);
+                        bulge += sunBulge;
+                    }
+                    
+                    const newR = R * 1.015 + bulge;
+                    vNorm.multiplyScalar(newR);
+
+                    oceanPositions.setXYZ(i, vNorm.x, vNorm.y, vNorm.z);
+                }
+                oceanPositions.needsUpdate = true;
+            } else {
+                oceanMesh.visible = false;
+            }
+
+            const isTab1 = (currentTab === 'tab1');
+            barycenterGroup.visible = (!isTab1 && params.showBarycenter);
+
+            const arrowScale = (currentScaleMode === 'real') ? 7.0 : 0.8;
+            const arrowGravScale = (currentScaleMode === 'real') ? 1.2 : 0.15;
+
+            arrowHelpers.forEach(item => {
+                const p = item.pt.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), earthMesh.rotation.y);
+
+                const r_vec_m = moonPosTilt.clone().sub(p);
+                const r_mag_m = r_vec_m.length();
+                const F_moon = r_vec_m.clone().normalize().multiplyScalar(G_M / (r_mag_m * r_mag_m));
+                let F_tidal = F_moon.clone().sub(F0_moon);
+
+                if (params.showSunTide && isTab1) {
+                    const r_vec_s = sunPosTilt.clone().sub(p);
+                    const r_mag_s = r_vec_s.length();
+                    const F_sun = r_vec_s.clone().normalize().multiplyScalar(G_S / (r_mag_s * r_mag_s));
+                    const F_tidal_sun = F_sun.clone().sub(F0_sun);
+                    F_tidal.add(F_tidal_sun);
+                }
+
+                const F_centrifugal = F0_moon.clone().negate();
+
+                if (isTab1) {
+                    toggleArrow(item.tidalArrow, params.showTidal, p, F_tidal, arrowScale);
+                    toggleArrow(item.moonArrow, params.showMoonGrav, p, F_moon, arrowGravScale);
+                    toggleArrow(item.centerArrow, params.showCenterGrav, p, F0_moon, arrowGravScale);
+                    item.centrifugalArrow.visible = false;
+                } else {
+                    item.moonArrow.visible = false;
+                    item.centerArrow.visible = false;
+
+                    toggleArrow(item.tidalArrow, params.tab2ShowTidal, p, F_tidal, arrowScale);
+                    toggleArrow(item.centrifugalArrow, params.showCentrifugal, p, F_centrifugal, arrowGravScale);
+                }
+            });
+        }
+
+        function toggleArrow(arrow, visible, pos, vec, scale) {
+            if (visible) {
+                arrow.visible = true;
+                arrow.position.copy(pos);
+                const len = vec.length() * scale;
+                arrow.setDirection(vec.clone().normalize());
+                arrow.setLength(Math.max(0.1, len), 0.15, 0.1);
+            } else {
+                arrow.visible = false;
+            }
+        }
+
+        function updateOrbitLines() {
+            const pointsMoon = [];
+            const segs = 128;
+            for(let i=0; i<=segs; i++) {
+                const M = (i / segs) * Math.PI * 2;
+                const orb = calculateKeplerPosition(
+                    params.distance,
+                    MOON_ORBIT.eccentricity,
+                    MOON_ORBIT.inclination,
+                    MOON_ORBIT.argPeriapsis,
+                    MOON_ORBIT.longNode,
+                    M
+                );
+                pointsMoon.push(orb.pos);
+            }
+            orbitGeo.setFromPoints(pointsMoon);
+
+            const pointsEarthSun = [];
+            for(let i=0; i<=segs; i++) {
+                const M = (i / segs) * Math.PI * 2;
+                const orb = calculateKeplerPosition(
+                    cfg.sunDistance,
+                    EARTH_SUN_ORBIT.eccentricity,
+                    0, 0, 0,
+                    M
+                );
+                pointsEarthSun.push(orb.pos);
+            }
+            earthSunOrbitGeo.setFromPoints(pointsEarthSun);
+            earthSunOrbitLine.computeLineDistances();
+        }
+
+        // UNIVERSAL風カメラ位置のリアルタイム動的更新ロジック
+        function updateUniversalCamera() {
+            if (!currentUniversalMode || currentUniversalMode === 'free') return;
+
+            const R = cfg.earthRadius;
+            const sunDir = earthGroup.position.clone().negate().normalize();
+            const up = new THREE.Vector3(0, 1, 0); 
+            const right = new THREE.Vector3().crossVectors(sunDir, up).normalize();
+
+            // ボタンアクティブ状態の制御
+            const btnSunrise = document.getElementById('btn-view-sunrise');
+            const btnSunset = document.getElementById('btn-view-sunset');
+            const btnEarth = document.getElementById('btn-view-earth');
+            const btnMoonEarth = document.getElementById('btn-view-moon-earth');
+            const btnMoonFocus = document.getElementById('btn-view-moon-focus');
+            const btnMoonTop = document.getElementById('btn-view-moon-top');
+
+            if (btnSunrise) btnSunrise.classList.toggle('active', currentUniversalMode === 'sunrise');
+            if (btnSunset) btnSunset.classList.toggle('active', currentUniversalMode === 'sunset');
+            if (btnEarth) btnEarth.classList.toggle('active', currentUniversalMode === 'earth');
+            if (btnMoonEarth) btnMoonEarth.classList.toggle('active', currentUniversalMode === 'moon_earth');
+            if (btnMoonFocus) btnMoonFocus.classList.toggle('active', currentUniversalMode === 'moon_focus');
+            if (btnMoonTop) btnMoonTop.classList.toggle('active', currentUniversalMode === 'moon_top');
+
+            let targetCamPos = new THREE.Vector3();
+            let targetLookAt = new THREE.Vector3();
+
+            if (currentUniversalMode === 'sunrise') {
+                camera.up.set(0, 1, 0);
+                targetCamPos = earthGroup.position.clone()
+                    .add(right.clone().multiplyScalar(R * 1.8))
+                    .add(sunDir.clone().multiplyScalar(-R * 1.2))
+                    .add(up.clone().multiplyScalar(R * 0.4));
+                targetLookAt = earthGroup.position.clone()
+                    .add(sunDir.clone().multiplyScalar(R * 2.0));
+            } else if (currentUniversalMode === 'sunset') {
+                camera.up.set(0, 1, 0);
+                targetCamPos = earthGroup.position.clone()
+                    .add(right.clone().multiplyScalar(-R * 1.8))
+                    .add(sunDir.clone().multiplyScalar(-R * 1.2))
+                    .add(up.clone().multiplyScalar(R * 0.4));
+                targetLookAt = earthGroup.position.clone()
+                    .add(sunDir.clone().multiplyScalar(R * 2.0));
+            } else if (currentUniversalMode === 'earth') {
+                camera.up.set(0, 1, 0);
+                targetCamPos = earthGroup.position.clone().add(new THREE.Vector3(0, cfg.earthRadius * 2.5, cfg.earthRadius * 4));
+                targetLookAt = earthGroup.position.clone();
+            } 
+            // 地上(日本)視点：自転・公転・距離変化にリアルタイムで追従
+            else if (currentUniversalMode === 'moon_earth') {
+                const japanLocal = latLonToVector3(35.68, 139.76, cfg.earthRadius * 1.05);
+                japanLocal.applyAxisAngle(new THREE.Vector3(0, 1, 0), earthMesh.rotation.y);
+                japanLocal.applyQuaternion(earthTiltGroup.quaternion);
+
+                const japanWorldPos = earthGroup.position.clone().add(japanLocal);
+                const moonWorldPos = earthGroup.position.clone().add(moonMesh.position);
+
+                targetCamPos = japanWorldPos;
+                targetLookAt = moonWorldPos;
+
+                let upVec = new THREE.Vector3(0, 1, 0);
+                const viewDir = targetLookAt.clone().sub(targetCamPos).normalize();
+                
+                if (Math.abs(viewDir.dot(upVec)) > 0.98) {
+                    upVec.set(0, 0, -1);
+                }
+                camera.up.copy(upVec);
+            } 
+            else if (currentUniversalMode === 'moon_focus') {
+                camera.up.set(0, 1, 0);
+                const moonWorldPos = earthGroup.position.clone().add(moonMesh.position);
+                const earthToMoonDir = moonMesh.position.clone().normalize();
+
+                targetCamPos = moonWorldPos.clone()
+                    .sub(earthToMoonDir.clone().multiplyScalar(cfg.moonRadius * 5.0))
+                    .add(new THREE.Vector3(0, cfg.moonRadius * 1.2, 0));
+                targetLookAt = moonWorldPos;
+            } 
+            else if (currentUniversalMode === 'moon_top') {
+                targetCamPos = earthGroup.position.clone().add(new THREE.Vector3(0, cfg.earthRadius * 18.0, 0.1));
+                targetLookAt = earthGroup.position.clone();
+                camera.up.set(0, 0, -1);
+            }
+
+            const isAnimating = isSunTimeAnimating || isSunDateAnimating;
+            const lerpFactor = (currentUniversalMode === 'moon_focus')
+                ? (isAnimating ? 0.8 : 0.2)
+                : (isAnimating ? Math.min(0.4, 0.12 * params.sunSpeed) : 0.08);
+
+            camera.position.lerp(targetCamPos, lerpFactor);
+            controls.target.lerp(targetLookAt, lerpFactor);
+
+            // 地上視点（moon_earth）の際、カメラが地球内部に入り込むのを防止
+            if (currentUniversalMode === 'moon_earth') {
+                const relCamPos = camera.position.clone().sub(earthGroup.position);
+                const minDist = cfg.earthRadius * 1.02;
+                if (relCamPos.length() < minDist) {
+                    relCamPos.normalize().multiplyScalar(minDist);
+                    camera.position.copy(earthGroup.position.clone().add(relCamPos));
+                }
+            }
+        }
+
+        // --- アニメーション＆時間・位置同期処理 ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (solarModeActive) {
+                // 太陽系リアル3D物理モード（独立iframe）表示中は、
+                // 背後のシミュレーターの描画・計算処理を一時停止してリソースを節約
+                return;
+            }
+
+            const rawDelta = clock.getDelta();
+            const delta = Math.min(rawDelta, 0.05);
+
+            let activeDay, activeTime, activeTotalDays;
+
+            if (currentTab === 'tab3' || currentTab === 'tab4') {
+                if (isSunTimeAnimating) {
+                    const minsPassed = 180 * delta * params.sunSpeed;
+                    sunTimeMinutes = (sunTimeMinutes + minsPassed) % 1440;
+                    sunTotalDays += minsPassed / 1440;
+                }
+                if (isSunDateAnimating) {
+                    const daysPassed = 15 * delta * params.sunSpeed;
+                    sunTotalDays += daysPassed;
+                }
+
+                sunDayOfYear = ((Math.floor(sunTotalDays) - 1) % 365 + 365) % 365 + 1;
+
+                document.getElementById('time-slider').value = Math.floor(sunTimeMinutes);
+                document.getElementById('date-slider').value = Math.floor(sunDayOfYear);
+                document.getElementById('moon-time-slider').value = Math.floor(sunTimeMinutes);
+                document.getElementById('moon-date-slider').value = Math.floor(sunDayOfYear);
+                
+                updateTimeDisplay();
+                updateDateDisplay();
+                updateMoonTimeDisplay();
+                updateMoonDateDisplay();
+
+                activeDay = sunDayOfYear;
+                activeTime = sunTimeMinutes;
+                activeTotalDays = sunTotalDays;
+            } else {
+                if (isTideAnimating) {
+                    const daysPassed = (180 / 1440) * delta * params.speed;
+                    tideTotalDays += daysPassed;
+
+                    tideDayOfYear = ((Math.floor(tideTotalDays) - 1) % 365 + 365) % 365 + 1;
+                    const frac = tideTotalDays - Math.floor(tideTotalDays);
+                    tideTimeMinutes = frac * 1440;
+
+                    document.getElementById('tide-time-slider').value = Math.floor(tideTimeMinutes);
+                    document.getElementById('tide-date-slider').value = Math.floor(tideDayOfYear);
+                    updateTideTimeDisplay();
+                    updateTideDateDisplay();
+                }
+                activeDay = tideDayOfYear;
+                activeTime = tideTimeMinutes;
+                activeTotalDays = tideTotalDays;
+            }
+
+            // 1. 地球の公転計算・位置更新
+            const sunMeanAnomaly = ((activeTotalDays - 80) / 365.25) * Math.PI * 2;
+            const earthOrb = calculateKeplerPosition(
+                cfg.sunDistance,
+                EARTH_SUN_ORBIT.eccentricity,
+                0, 0, 0,
+                sunMeanAnomaly
+            );
+
+            const currentEarthPos = earthOrb.pos.clone().negate();
+            const prevEarthPos = earthGroup.position.clone();
+            earthGroup.position.copy(currentEarthPos);
+            const deltaEarthPos = earthGroup.position.clone().sub(prevEarthPos);
+
+            // 公転による地球の移動分をカメラ・ターゲットに平行加算
+            camera.position.add(deltaEarthPos);
+            controls.target.add(deltaEarthPos);
+
+            // 月の自転・公転（潮汐ロック）位置を最新化
+            const moonMeanAnomaly = (activeTotalDays / 27.321661) * Math.PI * 2;
+            const moonOrb = calculateKeplerPosition(
+                params.distance,
+                MOON_ORBIT.eccentricity,
+                MOON_ORBIT.inclination,
+                MOON_ORBIT.argPeriapsis,
+                MOON_ORBIT.longNode,
+                moonMeanAnomaly
+            );
+            moonMesh.position.copy(moonOrb.pos);
+            moonMesh.lookAt(0, 0, 0);
+            moonMesh.rotateY(Math.PI);
+
+            // 最新の地球・月位置をもとにカメラ視点を更新
+            if ((currentTab === 'tab3' || currentTab === 'tab4') && currentUniversalMode && currentUniversalMode !== 'free') {
+                updateUniversalCamera();
+            }
+
+            const sunDirWorld = sunMesh.position.clone().sub(earthGroup.position).normalize();
+            const sunDirLocal = sunDirWorld.clone().applyQuaternion(earthTiltGroup.quaternion.clone().invert());
+
+            const phiSun = Math.atan2(sunDirLocal.z, sunDirLocal.x);
+            const timeAngle = ((activeTime - 720) / 1440) * Math.PI * 2;
+
+            if (params.rotateEarth || currentTab === 'tab3' || currentTab === 'tab4') {
+                earthMesh.rotation.y = -phiSun - Math.PI * 0.75 + timeAngle;
+            }
+
+            if (terminatorMesh) {
+                if (currentTab === 'tab4') {
+                    terminatorMesh.visible = false;
+                } else {
+                    terminatorMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), sunDirLocal);
+                    terminatorTexture.offset.x += delta * 0.15;
+                    terminatorMesh.visible = params.showTerminator;
+                }
+            }
+
+            sunMesh.rotation.y += delta * 0.05;
+            sunMesh.visible = params.showSun;
+            earthSunOrbitLine.visible = params.showSun;
+
+            sunLight.position.set(0, 0, 0);
+            sunLight.target = earthMesh;
+
+            updatePhysics();
+            controls.update();
+            renderer.render(scene, camera);
+
+            if (currentTab === 'tab3') {
+                updateCityTable();
+            } else if (currentTab === 'tab4') {
+                updateMoonTable();
+            }
+        }
+
+        // --- モード選択モーダル & モード切替 ---
+        // 太陽系リアル3D物理モード（独立埋め込みタブ）の状態管理
+        let solarModeActive = false;
+        let solarIframeLoaded = false;
+
+        function selectAppMode(mode) {
+            // 太陽系モードは完全に独立したアプリのため、
+            // 既存の太陽3Dモデル読込を待たずに即座に起動する
+            if (mode === 'solar') {
+                executeModeStart(mode);
+                return;
+            }
+
+            const loadingContainer = document.getElementById('loading-container');
+
+            if (isSunModelLoaded) {
+                executeModeStart(mode);
+            } else {
+                pendingSelectedMode = mode;
+                if (loadingContainer) loadingContainer.style.display = 'flex';
+            }
+        }
+
+        function executeModeStart(mode) {
+            document.getElementById('home-modal').classList.add('hidden');
+            const tab1Btn = document.getElementById('tab1-btn');
+            const tab2Btn = document.getElementById('tab2-btn');
+            const tab3Btn = document.getElementById('tab3-btn');
+            const tab4Btn = document.getElementById('tab4-btn');
+            const uiPanel = document.getElementById('ui-panel');
+            const infoCard = document.getElementById('info-card');
+            const solarContainer = document.getElementById('solar-frame-container');
+
+            if (mode === 'solar') {
+                solarModeActive = true;
+                if (uiPanel) uiPanel.style.display = 'none';
+                if (infoCard) infoCard.style.display = 'none';
+                if (solarContainer) {
+                    solarContainer.classList.add('active');
+                    const iframe = document.getElementById('solar-iframe');
+                    if (iframe && !solarIframeLoaded) {
+                        iframe.src = 'solar-system-3d.html';
+                        solarIframeLoaded = true;
+                    }
+                }
+                return;
+            }
+
+            // 他モードへ切り替える場合は、太陽系モードの表示を必ず解除する
+            solarModeActive = false;
+            if (uiPanel) uiPanel.style.display = '';
+            if (infoCard) infoCard.style.display = '';
+            if (solarContainer) solarContainer.classList.remove('active');
+
+            if (mode === 'tide') {
+                tab1Btn.style.display = 'block';
+                tab2Btn.style.display = 'block';
+                tab3Btn.style.display = 'none';
+                tab4Btn.style.display = 'none';
+                switchTab('tab1');
+            } else if (mode === 'sun') {
+                tab1Btn.style.display = 'none';
+                tab2Btn.style.display = 'none';
+                tab3Btn.style.display = 'block';
+                tab4Btn.style.display = 'none';
+                switchTab('tab3');
+            } else if (mode === 'moon') {
+                tab1Btn.style.display = 'none';
+                tab2Btn.style.display = 'none';
+                tab3Btn.style.display = 'none';
+                tab4Btn.style.display = 'block';
+                switchTab('tab4');
+            }
+        }
+
+        function openHomeModal() {
+            document.getElementById('home-modal').classList.remove('hidden');
+        }
+
+        function closeSolarMode() {
+            solarModeActive = false;
+            const solarContainer = document.getElementById('solar-frame-container');
+            const uiPanel = document.getElementById('ui-panel');
+            const infoCard = document.getElementById('info-card');
+            if (solarContainer) solarContainer.classList.remove('active');
+            if (uiPanel) uiPanel.style.display = '';
+            if (infoCard) infoCard.style.display = '';
+            openHomeModal();
+        }
+
+        function setUniversalView(mode) {
+            currentUniversalMode = mode;
+            updateUniversalCamera();
+        }
+
+        // --- UI & タブ操作 ---
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.getElementById('info-card').classList.remove('expanded');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            document.getElementById(`${tabId}-btn`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+
+            if (tabId === 'tab3') {
+                setUniversalView('sunrise');
+            } else if (tabId === 'tab4') {
+                setUniversalView('moon_earth');
+            } else {
+                resetCamera();
+            }
+
+            updateInfoCard();
+        }
+
+        function onTheoryChange() {
+            currentTheory = document.getElementById('theory-select').value;
+            const containerCentrifugal = document.getElementById('container-centrifugal');
+            
+            if (currentTheory === 'barycenter') {
+                containerCentrifugal.style.display = 'flex';
+                params.showCentrifugal = true;
+                document.getElementById('show-centrifugal').checked = true;
+            } else {
+                containerCentrifugal.style.display = 'none';
+                params.showCentrifugal = false;
+            }
+            updateInfoCard();
+        }
+
+        function updateInfoCard() {
+            const infoEl = document.getElementById('info-card');
+
+            if (currentTab === 'tab1') {
+                infoEl.innerHTML = `
+                    <h2>潮汐力（起潮力）モデル</h2>
+                    <p>太陽を中心とした<b>地球の公転軌道</b>と、月の<b>楕円軌道（離心率 0.0549）</b>の物理シミュレーションです。</p>
+                    <p>近地点での公転速度向上や大潮・小潮のダイナミクスを再現しています。</p>
+                    <div class="legend">
+                        <div class="legend-item"><span class="color-dot" style="background:var(--accent-red);"></span>赤：潮汐力（差分ベクトル）</div>
+                        <div class="legend-item"><span class="color-dot" style="background:var(--accent-yellow);"></span>黄：月の重力</div>
+                        <div class="legend-item"><span class="color-dot" style="background:#ffa500;"></span>橙：太陽・地球公転軌道線</div>
+                    </div>
+                `;
+            } else if (currentTab === 'tab2') {
+                if (currentTheory === 'gradient') {
+                    infoEl.innerHTML = `
+                        <span class="theory-tag">有力説 A</span>
+                        <h2>重力勾配（引力差分）モデル</h2>
+                        <p>地球全体は月からの引力を受けて<b>月に向かって自由落下</b>しています。</p>
+                        <p>地球中心の平均引力を基準とすると：</p>
+                        <ul style="margin-left: 16px; margin-top: 4px;">
+                            <li><b>月側</b>: 月の引力が強いため、月方向へ（表向き）。</li>
+                            <li><b>反対側</b>: 月の引力が弱いため、相対的に<b>外へ取り残される</b>（裏向き）。</li>
+                        </ul>
+                    `;
+                } else {
+                    infoEl.innerHTML = `
+                        <span class="theory-tag">有力説 B</span>
+                        <h2>共通重心と遠心力モデル</h2>
+                        <p>地球と月は<b>共通重心（バリセンター）</b>の周りを回転しています。</p>
+                        <p>この小円運動により地球全域に<b>一様な遠心力（紫矢印）</b>が働きます。</p>
+                        <ul style="margin-left: 16px; margin-top: 4px;">
+                            <li><b>月側</b>: 月の引力 ＞ 遠心力 → 月方向へ</li>
+                            <li><b>反対側</b>: 遠心力 ＞ 月の引力 → <b>月と反対方向へ</b></li>
+                        </ul>
+                    `;
+                }
+            } else if (currentTab === 'tab3') {
+                infoEl.innerHTML = `
+                    <h2>日本主要都市の日出・南中・日入データ</h2>
+                    <p style="margin-bottom:6px; color:var(--text-sub);">UNIVERSALオープニング風の視点から、昼夜の明暗境界（ターミネーター）上に昇る・沈む太陽をリアルタイムに体験できます。</p>
+                    <div id="city-table-container"></div>
+                `;
+                updateCityTable();
+            } else if (currentTab === 'tab4') {
+                const info = calculateMoonPhaseInfo(sunTotalDays);
+                infoEl.innerHTML = `
+                    <h2>月の満ち欠け（月齢・月相）データ</h2>
+                    <div style="background:rgba(56, 189, 248, 0.1); padding:8px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(56,189,248,0.2);">
+                        <div><b>現在の月齢:</b> <span class="value-disp" id="info-moon-age">${info.age.toFixed(1)}</span> / 29.5</div>
+                        <div><b>月相:</b> <span style="color:var(--accent-yellow); font-weight:bold;" id="info-moon-phase">${info.phaseName}</span></div>
+                        <div><b>輝く割合 (輝度):</b> <span class="value-disp" id="info-moon-illum">${info.illumination.toFixed(1)}%</span></div>
+                        <div style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.15);">
+                            <div><b>地球視点での距離:</b> <span class="value-disp" id="info-moon-dist">${info.distanceKm.toLocaleString()} km</span></div>
+                            <div><b>見かけの大きさ:</b> <span class="value-disp" id="info-moon-size">${info.apparentSize.toFixed(1)}%</span> <span style="font-size:0.68rem; color:var(--accent-primary);" id="info-moon-status">(${info.orbitStatus})</span></div>
+                        </div>
+                    </div>
+                    <p style="margin-bottom:6px; color:var(--text-sub);">地球・月・太陽の3D空間配置から生じる影の相関および、<b>楕円軌道（近地点・遠地点）による地球視点での見かけの大きさの変化</b>（近地点で約12%大きく観察可能）をシミュレートしています。</p>
+                    <div id="moon-table-container"></div>
+                `;
+                updateMoonTable();
+            }
+        }
+
+        function updateCityTable() {
+            const container = document.getElementById('city-table-container');
+            if (!container) return;
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>都市</th>
+                            <th>状況</th>
+                            <th>高度</th>
+                            <th>日の出</th>
+                            <th>南中</th>
+                            <th>日の入り</th>
+                            <th>昼長</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            CITIES.forEach(city => {
+                const sunTimes = calculateSunTimes(city.lat, city.lon, sunDayOfYear);
+                const sinH = getSunAltitudeSin(city.lat, city.lon, sunDayOfYear, sunTimeMinutes);
+                const altDeg = Math.asin(Math.max(-1, Math.min(1, sinH))) * 180 / Math.PI;
+
+                let statusText = '昼';
+                let color = '#f59e0b';
+                if (sinH < 0) { statusText = '夜'; color = '#60a5fa'; }
+                else if (sinH < 0.08) { statusText = '朝/夕'; color = '#f43f5e'; }
+
+                html += `
+                    <tr>
+                        <td style="font-weight:bold;">${city.name}</td>
+                        <td style="color:${color};font-weight:bold;">${statusText}</td>
+                        <td>${altDeg.toFixed(1)}°</td>
+                        <td>${formatHoursToTimeString(sunTimes.sunrise)}</td>
+                        <td>${formatHoursToTimeString(sunTimes.transit)}</td>
+                        <td>${formatHoursToTimeString(sunTimes.sunset)}</td>
+                        <td>${sunTimes.dayLength ? sunTimes.dayLength.toFixed(1) + 'h' : '--'}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function updateMoonTable() {
+            const container = document.getElementById('moon-table-container');
+            if (!container) return;
+
+            const info = calculateMoonPhaseInfo(sunTotalDays);
+            const ageEl = document.getElementById('info-moon-age');
+            const phaseEl = document.getElementById('info-moon-phase');
+            const illumEl = document.getElementById('info-moon-illum');
+            const distEl = document.getElementById('info-moon-dist');
+            const sizeEl = document.getElementById('info-moon-size');
+            const statusEl = document.getElementById('info-moon-status');
+
+            if (ageEl) ageEl.innerText = info.age.toFixed(1);
+            if (phaseEl) phaseEl.innerText = info.phaseName;
+            if (illumEl) illumEl.innerText = `${info.illumination.toFixed(1)}%`;
+            if (distEl) distEl.innerText = `${info.distanceKm.toLocaleString()} km`;
+            if (sizeEl) sizeEl.innerText = `${info.apparentSize.toFixed(1)}%`;
+            if (statusEl) statusEl.innerText = `(${info.orbitStatus})`;
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>都市</th>
+                            <th>月出</th>
+                            <th>月南中</th>
+                            <th>月没</th>
+                            <th>月齢</th>
+                            <th>視直径比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            CITIES.forEach(city => {
+                const moonData = calculateMoonTimes(city.lat, city.lon, sunDayOfYear, sunTotalDays);
+
+                html += `
+                    <tr>
+                        <td style="font-weight:bold;">${city.name}</td>
+                        <td>${formatHoursToTimeString(moonData.rise)}</td>
+                        <td>${formatHoursToTimeString(moonData.transit)}</td>
+                        <td>${formatHoursToTimeString(moonData.set)}</td>
+                        <td>${moonData.age.toFixed(1)}</td>
+                        <td style="color:var(--accent-primary); font-weight:bold;">${info.apparentSize.toFixed(0)}%</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function setMoonPhasePreset(phase) {
+            const currentInfo = calculateMoonPhaseInfo(sunTotalDays);
+            let targetAge = 0;
+            if (phase === 'new') targetAge = 0.0;
+            else if (phase === 'first_quarter') targetAge = 7.38;
+            else if (phase === 'full') targetAge = 14.76;
+            else if (phase === 'third_quarter') targetAge = 22.14;
+
+            let diffAge = targetAge - currentInfo.age;
+            sunTotalDays += diffAge;
+
+            sunDayOfYear = ((Math.floor(sunTotalDays) - 1) % 365 + 365) % 365 + 1;
+
+            document.getElementById('date-slider').value = Math.floor(sunDayOfYear);
+            document.getElementById('moon-date-slider').value = Math.floor(sunDayOfYear);
+            document.getElementById('time-slider').value = Math.floor(sunTimeMinutes);
+            document.getElementById('moon-time-slider').value = Math.floor(sunTimeMinutes);
+            
+            updateDateDisplay();
+            updateMoonDateDisplay();
+            updateTimeDisplay();
+            updateMoonTimeDisplay();
+            updateInfoCard();
+        }
+
+        // 【追加】地球視点で最も大きく見える位置(近地点) / 小さく見える位置(遠地点) プリセット処理
+        function setMoonOrbitPositionPreset(posType) {
+            const siderealMonth = 27.321661;
+            const currentAnomaly = ((sunTotalDays / siderealMonth) % 1) * Math.PI * 2;
+            let targetAnomaly = (posType === 'perigee') ? 0 : Math.PI; // 0: 近地点(最も大きく見える), Math.PI: 遠地点
+            
+            let diff = targetAnomaly - (currentAnomaly % (Math.PI * 2));
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+
+            const daysToAdd = (diff / (Math.PI * 2)) * siderealMonth;
+            sunTotalDays += daysToAdd;
+
+            sunDayOfYear = ((Math.floor(sunTotalDays) - 1) % 365 + 365) % 365 + 1;
+
+            document.getElementById('date-slider').value = Math.floor(sunDayOfYear);
+            document.getElementById('moon-date-slider').value = Math.floor(sunDayOfYear);
+            document.getElementById('time-slider').value = Math.floor(sunTimeMinutes);
+            document.getElementById('moon-time-slider').value = Math.floor(sunTimeMinutes);
+
+            updateDateDisplay();
+            updateMoonDateDisplay();
+            updateTimeDisplay();
+            updateMoonTimeDisplay();
+            updateInfoCard();
+
+            const btnPerigee = document.getElementById('btn-orbit-perigee');
+            const btnApogee = document.getElementById('btn-orbit-apogee');
+            if (btnPerigee) btnPerigee.classList.toggle('active', posType === 'perigee');
+            if (btnApogee) btnApogee.classList.toggle('active', posType === 'apogee');
+        }
+
+        function resetCamera() {
+            currentUniversalMode = 'free';
+            camera.up.set(0, 1, 0);
+            controls.target.copy(earthGroup.position);
+            camera.position.copy(earthGroup.position).add(new THREE.Vector3(0, cfg.earthRadius * 5, cfg.earthRadius * 8));
+        }
+
+        // --- 時刻・日付 表示更新関数 ---
+        function updateTideDateDisplay() {
+            document.getElementById('tide-date-display').innerText = formatDateDisplay(tideDayOfYear);
+        }
+
+        function updateTideTimeDisplay() {
+            const displayMins = Math.floor(tideTimeMinutes);
+            const hours = Math.floor(displayMins / 60);
+            const mins = displayMins % 60;
+            document.getElementById('tide-time-display').innerText = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        }
+
+        function toggleTideAnimation() {
+            isTideAnimating = !isTideAnimating;
+            const btn = document.getElementById('btn-toggle-tide-anim');
+            if (isTideAnimating) {
+                btn.textContent = '潮汐時間再生: ON';
+                btn.classList.add('active');
+            } else {
+                btn.textContent = '潮汐時間再生: OFF';
+                btn.classList.remove('active');
+            }
+        }
+
+        function updateDateDisplay() {
+            document.getElementById('date-display').innerText = formatDateDisplay(sunDayOfYear);
+            updateSeasonButtons();
+        }
+
+        function updateMoonDateDisplay() {
+            document.getElementById('moon-date-display').innerText = formatDateDisplay(sunDayOfYear);
+        }
+
+        function updateTimeDisplay() {
+            const displayMins = Math.floor(sunTimeMinutes);
+            const hours = Math.floor(displayMins / 60);
+            const mins = displayMins % 60;
+            document.getElementById('time-display').innerText = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        }
+
+        function updateMoonTimeDisplay() {
+            const displayMins = Math.floor(sunTimeMinutes);
+            const hours = Math.floor(displayMins / 60);
+            const mins = displayMins % 60;
+            document.getElementById('moon-time-display').innerText = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        }
+
+        function setSeason(day) {
+            sunDayOfYear = day;
+            const currentFraction = sunTotalDays - Math.floor(sunTotalDays);
+            const currentYearIndex = Math.floor((sunTotalDays - 1) / 365);
+            sunTotalDays = currentYearIndex * 365 + sunDayOfYear + currentFraction;
+            document.getElementById('date-slider').value = day;
+            document.getElementById('moon-date-slider').value = day;
+            updateDateDisplay();
+            updateMoonDateDisplay();
+        }
+
+        function updateSeasonButtons() {
+            document.getElementById('btn-spring').classList.toggle('active', Math.abs(sunDayOfYear - 80) < 5);
+            document.getElementById('btn-summer').classList.toggle('active', Math.abs(sunDayOfYear - 172) < 5);
+            document.getElementById('btn-autumn').classList.toggle('active', Math.abs(sunDayOfYear - 266) < 5);
+            document.getElementById('btn-winter').classList.toggle('active', Math.abs(sunDayOfYear - 356) < 5);
+        }
+
+        function toggleTimeAnimation() {
+            isSunTimeAnimating = !isSunTimeAnimating;
+            const btn = document.getElementById('btn-toggle-time');
+            const btnMoon = document.getElementById('btn-toggle-moon-time');
+            if (isSunTimeAnimating) {
+                if (btn) { btn.textContent = '停止'; btn.classList.add('active'); }
+                if (btnMoon) { btnMoon.textContent = '停止'; btnMoon.classList.add('active'); }
+            } else {
+                if (btn) { btn.textContent = '自転再生 (時間)'; btn.classList.remove('active'); }
+                if (btnMoon) { btnMoon.textContent = '自転再生 (時間)'; btnMoon.classList.remove('active'); }
+            }
+        }
+
+        function toggleDateAnimation() {
+            isSunDateAnimating = !isSunDateAnimating;
+            const btn = document.getElementById('btn-toggle-date');
+            const btnMoon = document.getElementById('btn-toggle-moon-date');
+            if (isSunDateAnimating) {
+                if (btn) { btn.textContent = '停止'; btn.classList.add('active'); }
+                if (btnMoon) { btnMoon.textContent = '停止'; btnMoon.classList.add('active'); }
+            } else {
+                if (btn) { btn.textContent = '公転再生 (季節)'; btn.classList.remove('active'); }
+                if (btnMoon) { btnMoon.textContent = '公転再生 (月齢)'; btnMoon.classList.remove('active'); }
+            }
+        }
+
+        function toggleMoonTimeAnimation() { toggleTimeAnimation(); }
+        function toggleMoonDateAnimation() { toggleDateAnimation(); }
+
+        // --- イベントリスナー ---
+        document.getElementById('speed-slider').addEventListener('input', (e) => {
+            params.speed = parseFloat(e.target.value);
+            document.getElementById('speed-val').innerText = params.speed.toFixed(1);
+        });
+
+        const syncSunSpeed = (val) => {
+            params.sunSpeed = parseFloat(val);
+            document.getElementById('sun-speed-slider').value = params.sunSpeed;
+            document.getElementById('moon-speed-slider').value = params.sunSpeed;
+            document.getElementById('sun-speed-val').innerText = params.sunSpeed.toFixed(1);
+            document.getElementById('moon-speed-val').innerText = params.sunSpeed.toFixed(1);
+        };
+        document.getElementById('sun-speed-slider').addEventListener('input', (e) => syncSunSpeed(e.target.value));
+        document.getElementById('moon-speed-slider').addEventListener('input', (e) => syncSunSpeed(e.target.value));
+
+        document.getElementById('distance-slider').addEventListener('input', (e) => {
+            params.distance = parseFloat(e.target.value);
+            document.getElementById('distance-val').innerText = params.distance.toFixed(1);
+            updateOrbitLines();
+        });
+
+        document.getElementById('tide-date-slider').addEventListener('input', (e) => {
+            tideDayOfYear = parseFloat(e.target.value);
+            const currentYearIndex = Math.floor((tideTotalDays - 1) / 365);
+            tideTotalDays = currentYearIndex * 365 + tideDayOfYear + (tideTimeMinutes / 1440);
+            updateTideDateDisplay();
+        });
+
+        document.getElementById('tide-time-slider').addEventListener('input', (e) => {
+            tideTimeMinutes = parseFloat(e.target.value);
+            const currentYearIndex = Math.floor((tideTotalDays - 1) / 365);
+            tideTotalDays = currentYearIndex * 365 + Math.floor(tideDayOfYear) + (tideTimeMinutes / 1440);
+            updateTideTimeDisplay();
+        });
+
+        // 日付・時刻操作時の完全連動処理
+        const syncSunDate = (val) => {
+            sunDayOfYear = parseFloat(val);
+            const currentFraction = sunTotalDays - Math.floor(sunTotalDays);
+            const currentYearIndex = Math.floor((sunTotalDays - 1) / 365);
+            sunTotalDays = currentYearIndex * 365 + sunDayOfYear + currentFraction;
+            document.getElementById('date-slider').value = val;
+            document.getElementById('moon-date-slider').value = val;
+            updateDateDisplay();
+            updateMoonDateDisplay();
+        };
+        document.getElementById('date-slider').addEventListener('input', (e) => syncSunDate(e.target.value));
+        document.getElementById('moon-date-slider').addEventListener('input', (e) => syncSunDate(e.target.value));
+
+        const syncSunTime = (val) => {
+            sunTimeMinutes = parseFloat(val);
+            const currentDay = Math.floor(sunTotalDays);
+            sunTotalDays = currentDay + (sunTimeMinutes / 1440);
+            document.getElementById('time-slider').value = val;
+            document.getElementById('moon-time-slider').value = val;
+            updateTimeDisplay();
+            updateMoonTimeDisplay();
+        };
+        document.getElementById('time-slider').addEventListener('input', (e) => syncSunTime(e.target.value));
+        document.getElementById('moon-time-slider').addEventListener('input', (e) => syncSunTime(e.target.value));
+
+        // 手動操作時拡大リスナー
+        const sunSliders = [
+            document.getElementById('date-slider'),
+            document.getElementById('time-slider'),
+            document.getElementById('sun-speed-slider'),
+            document.getElementById('moon-date-slider'),
+            document.getElementById('moon-time-slider'),
+            document.getElementById('moon-speed-slider')
+        ];
+        const infoCard = document.getElementById('info-card');
+
+        sunSliders.forEach(slider => {
+            if (!slider) return;
+            const handleStart = () => {
+                if (currentTab === 'tab3' || currentTab === 'tab4') {
+                    infoCard.classList.add('expanded');
+                }
+            };
+            const handleEnd = () => {
+                infoCard.classList.remove('expanded');
+            };
+
+            slider.addEventListener('pointerdown', handleStart);
+            slider.addEventListener('touchstart', handleStart, { passive: true });
+            
+            slider.addEventListener('pointerup', handleEnd);
+            slider.addEventListener('pointercancel', handleEnd);
+            slider.addEventListener('touchend', handleEnd);
+        });
+
+        document.getElementById('show-sun').addEventListener('change', (e) => params.showSun = e.target.checked);
+        document.getElementById('show-sun-tide').addEventListener('change', (e) => params.showSunTide = e.target.checked);
+        document.getElementById('show-tidal').addEventListener('change', (e) => params.showTidal = e.target.checked);
+        document.getElementById('show-moon-grav').addEventListener('change', (e) => params.showMoonGrav = e.target.checked);
+        document.getElementById('show-center-grav').addEventListener('change', (e) => params.showCenterGrav = e.target.checked);
+        document.getElementById('show-ocean').addEventListener('change', (e) => params.showOcean = e.target.checked);
+        document.getElementById('rotate-earth').addEventListener('change', (e) => params.rotateEarth = e.target.checked);
+
+        const syncTerminatorToggle = (val) => {
+            params.showTerminator = val;
+            document.getElementById('show-terminator-t1').checked = val;
+            document.getElementById('show-terminator-t3').checked = val;
+        };
+        document.getElementById('show-terminator-t1').addEventListener('change', (e) => syncTerminatorToggle(e.target.checked));
+        document.getElementById('show-terminator-t3').addEventListener('change', (e) => syncTerminatorToggle(e.target.checked));
+
+        document.getElementById('show-barycenter').addEventListener('change', (e) => params.showBarycenter = e.target.checked);
+        document.getElementById('show-centrifugal').addEventListener('change', (e) => params.showCentrifugal = e.target.checked);
+        document.getElementById('tab2-show-tidal').addEventListener('change', (e) => params.tab2ShowTidal = e.target.checked);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 初期化実行
+        updateOrbitLines();
+        updateInfoCard();
+        onTheoryChange();
+        resetCamera();
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>中3理科：斜面上の力の分解</title>
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; color: #333; margin: 20px; }
+    .container { max-width: 700px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    canvas { background: #ffffff; border: 1px solid #ddd; border-radius: 8px; width: 100%; max-width: 600px; height: auto; touch-action: manipulation; }
+    .controls { margin: 20px 0; font-size: 1.1rem; }
+    input[type=range] { width: 60%; cursor: pointer; }
+    .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; font-weight: bold; font-size: 0.95rem; margin-top: 10px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .box-gravity { color: #d90429; }
+    .box-parallel { color: #0077b6; }
+    .box-perp { color: #2a9d8f; }
+
+    @media (max-width: 600px) {
+      body { margin: 10px; }
+      .container { padding: 14px; }
+      input[type=range] { width: 90%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>斜面上の重力の分解</h2>
+  <p>スライダーを動かして、斜面の傾きと分力の変化を観察しよう！</p>
+
+  <div class="controls">
+    <label for="angleSlider">斜面の角度: <span id="angleVal">30</span>°</label><br>
+    <input type="range" id="angleSlider" min="0" max="75" value="30">
+  </div>
+
+  <canvas id="simCanvas" width="600" height="400"></canvas>
+
+  <div class="legend">
+    <div class="legend-item box-gravity">■ 重力（真下）</div>
+    <div class="legend-item box-parallel">■ 斜面に平行な分力</div>
+    <div class="legend-item box-perp">■ 斜面に垂直な分力</div>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+  const slider = document.getElementById('angleSlider');
+  const angleVal = document.getElementById('angleVal');
+
+  // 論理座標系は 600x400 のまま、高解像度画面では実解像度のみ上げる
+  const BASE_W = 600, BASE_H = 400;
+  function setupCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = BASE_W * dpr;
+    canvas.height = BASE_H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // 定数設定
+  const W = 160; // 重力の大きさ（ピクセル）
+
+  function drawArrow(fromX, fromY, toX, toY, color, width = 3) {
+    if (Math.hypot(toX - fromX, toY - fromY) < 2) return; // 長さがほぼゼロなら描画しない
+    const headlen = 12;
+    const angle = Math.atan2(toY - fromY, toX - fromX);
+    
+    ctx.beginPath();
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function render() {
+    const deg = parseFloat(slider.value);
+    angleVal.innerText = deg;
+    const rad = deg * Math.PI / 180;
+
+    ctx.clearRect(0, 0, BASE_W, BASE_H);
+
+    // 基準点（台車の中心位置）
+    const objX = 300;
+    const objY = 200;
+
+    // 斜面の描画
+    ctx.save();
+    ctx.beginPath();
+    ctx.fillStyle = '#e9ecef';
+    ctx.strokeStyle = '#adb5bd';
+    ctx.lineWidth = 2;
+    // 斜面の三角台を描く
+    const slopeLength = 400;
+    ctx.moveTo(objX - slopeLength/2 * Math.cos(rad), objY + slopeLength/2 * Math.sin(rad));
+    ctx.lineTo(objX + slopeLength/2 * Math.cos(rad), objY - slopeLength/2 * Math.sin(rad));
+    ctx.lineTo(objX + slopeLength/2 * Math.cos(rad), objY + slopeLength/2 * Math.sin(rad) + 120);
+    ctx.lineTo(objX - slopeLength/2 * Math.cos(rad), objY + slopeLength/2 * Math.sin(rad) + 120);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // 台車（物体）の描画
+    ctx.save();
+    ctx.translate(objX, objY);
+    ctx.rotate(-rad);
+    ctx.fillStyle = '#495057';
+    ctx.fillRect(-25, -20, 50, 20); // 物体本体
+    // 車輪
+    ctx.beginPath();
+    ctx.arc(-15, 0, 5, 0, Math.PI*2);
+    ctx.arc(15, 0, 5, 0, Math.PI*2);
+    ctx.fillStyle = '#212529';
+    ctx.fill();
+    ctx.restore();
+
+    // ベクトルの計算
+    // 重力（真下）
+    const gEnd = { x: objX, y: objY + W };
+
+    // 分力計算
+    // 斜面に平行（下向き）：大きさ W * sin(rad), 向き rad
+    const F_para_len = W * Math.sin(rad);
+    const paraEnd = {
+      x: objX - F_para_len * Math.cos(rad),
+      y: objY + F_para_len * Math.sin(rad)
+    };
+
+    // 斜面に垂直（押しつける向き）：大きさ W * cos(rad), 向き rad + 90deg
+    const F_perp_len = W * Math.cos(rad);
+    const perpEnd = {
+      x: objX + F_perp_len * Math.sin(rad),
+      y: objY + F_perp_len * Math.cos(rad)
+    };
+
+    // 平行四辺形（破線）の作図
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#6c757d';
+    // 平行分力の先から重力エンドへ
+    ctx.moveTo(paraEnd.x, paraEnd.y);
+    ctx.lineTo(gEnd.x, gEnd.y);
+    // 垂直分力の先から重力エンドへ
+    ctx.moveTo(perpEnd.x, perpEnd.y);
+    ctx.lineTo(gEnd.x, gEnd.y);
+    ctx.stroke();
+    ctx.setLineDash([]); // 実線に戻す
+
+    // 矢印の描画
+    // 1. 斜面に平行な分力 (青)
+    drawArrow(objX, objY, paraEnd.x, paraEnd.y, '#0077b6', 4);
+    // 2. 斜面に垂直な分力 (緑)
+    drawArrow(objX, objY, perpEnd.x, perpEnd.y, '#2a9d8f', 4);
+    // 3. 重力 (赤)
+    drawArrow(objX, objY, gEnd.x, gEnd.y, '#d90429', 4);
+
+    // 作用点
+    ctx.beginPath();
+    ctx.arc(objX, objY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.stroke();
+  }
+
+  slider.addEventListener('input', render);
+  setupCanvas();
+  render();
+  window.addEventListener('resize', function() { setupCanvas(); render(); });
+</script>
+
+</body>
+</html>

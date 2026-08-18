@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>薄明と天球 — 日本の四季モデル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@400;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#05070e;
+    --surface:rgba(17,24,40,.72);
+    --surface-2:#1a2338;
+    --ink:#f2f5fc;
+    --ink-2:#a9b3c9;
+    --muted:#707c98;
+    --hairline:rgba(255,255,255,.09);
+    --grid:#232c42;
+    --accent:#f5c542;
+    --grad:linear-gradient(120deg,#f7cf5a 0%,#ef8352 46%,#c06ad4 100%);
+    /* 年間チャートの空の明るさランプ(明→暗の逐次スケール) */
+    --band-day:#d9e8fb;
+    --band-civil:#79aae8;
+    --band-naut:#3a6ab8;
+    --band-astro:#1d3a70;
+    --band-night:#0b1224;
+    /* 折れ線(カテゴリ3色・検証済み) */
+    --line-civil:#3987e5;
+    --line-naut:#d95926;
+    --line-astro:#199e70;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothic ProN',system-ui,sans-serif;
+    line-height:1.8;
+    letter-spacing:.01em;
+    counter-reset:sec;
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+  ::selection{background:rgba(245,197,66,.28)}
+  /* 背景: 星 + 夕暮れのオーロラ */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.45) 50%, transparent 51%),
+      radial-gradient(1px 1px at 38% 6%,  rgba(255,255,255,.30) 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 63% 24%, rgba(255,255,255,.35) 50%, transparent 51%),
+      radial-gradient(1px 1px at 82% 12%, rgba(255,255,255,.40) 50%, transparent 51%),
+      radial-gradient(1px 1px at 92% 42%, rgba(255,255,255,.22) 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 24% 55%, rgba(255,255,255,.18) 50%, transparent 51%),
+      radial-gradient(1px 1px at 55% 72%, rgba(255,255,255,.20) 50%, transparent 51%),
+      radial-gradient(1px 1px at 74% 88%, rgba(255,255,255,.25) 50%, transparent 51%),
+      radial-gradient(1100px 560px at 88% -8%, rgba(192,106,212,.13) 0%, transparent 62%),
+      radial-gradient(1100px 540px at 4% -4%,  rgba(239,131,82,.11) 0%, transparent 60%),
+      radial-gradient(1300px 680px at 50% -12%, #101a33 0%, transparent 62%),
+      linear-gradient(180deg,#05070e 0%,#05070e 100%);
+  }
+  /* 背景: うっすらグリッド(上部のみ) */
+  body::after{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+    background-size:56px 56px;
+    -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,.8) 0%, transparent 42%);
+    mask-image:linear-gradient(180deg, rgba(0,0,0,.8) 0%, transparent 42%);
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:40px 20px 80px}
+
+  /* ヒーロー */
+  header.hero{padding:54px 0 20px}
+  .kicker{
+    display:flex;align-items:center;gap:16px;
+    font-family:'Outfit',sans-serif;letter-spacing:.42em;font-size:11px;
+    color:var(--accent);text-transform:uppercase;
+  }
+  .kicker::after{content:"";width:72px;height:1px;background:var(--grad)}
+  h1{
+    font-family:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;font-weight:400;
+    font-size:clamp(28px,5vw,50px);line-height:1.3;letter-spacing:.02em;
+    margin:16px 0 14px;
+  }
+  h1 .grad{
+    background:var(--grad);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .lede{
+    color:var(--ink-2);max-width:46em;font-size:15px;
+    padding-left:18px;
+    border-left:2px solid rgba(245,197,66,.55);
+  }
+
+  /* セクション見出し(自動ナンバリング) */
+  .sec{margin-top:58px}
+  h2{
+    counter-increment:sec;
+    font-family:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;font-weight:400;
+    font-size:20px;letter-spacing:.05em;
+    display:flex;align-items:baseline;gap:14px;margin:0 0 6px;
+  }
+  h2::before{
+    content:"0" counter(sec);
+    font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;letter-spacing:.18em;
+    color:var(--accent);
+  }
+  @supports ((-webkit-text-stroke:1px black)){
+    h2::before{color:transparent;-webkit-text-stroke:1px rgba(245,197,66,.95);font-size:17px}
+  }
+  h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--hairline),transparent);transform:translateY(-4px)}
+  .sec > p.note{color:var(--muted);font-size:13px;margin-top:4px}
+
+  /* カード(ガラス) */
+  .card{
+    background:var(--surface);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid var(--hairline);border-radius:18px;padding:18px 20px;
+    position:relative;
+  }
+  .card::before{
+    content:"";position:absolute;left:16px;right:16px;top:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);
+    pointer-events:none;
+  }
+
+  /* コントロール */
+  .controls{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}
+  @media(max-width:760px){.controls{grid-template-columns:1fr}}
+  .ctl label{font-size:13px;color:var(--ink-2);display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .ctl label b{font-family:'Outfit',sans-serif;font-size:18px;color:var(--ink);font-weight:600}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:30px;background:transparent;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:4px;border-radius:2px;
+    background:linear-gradient(90deg,rgba(245,197,66,.5),rgba(239,131,82,.35),rgba(255,255,255,.12));
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:18px;height:18px;border-radius:50%;margin-top:-7px;
+    background:var(--grad);border:3px solid #0a0f1c;
+    box-shadow:0 0 12px rgba(245,197,66,.5);
+  }
+  input[type=range]::-moz-range-track{
+    height:4px;border-radius:2px;
+    background:linear-gradient(90deg,rgba(245,197,66,.5),rgba(239,131,82,.35),rgba(255,255,255,.12));
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;
+    background:#f5c542;border:3px solid #0a0f1c;
+    box-shadow:0 0 12px rgba(245,197,66,.5);
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+  .chips button{
+    font-family:inherit;font-size:12px;color:var(--ink-2);letter-spacing:.02em;
+    background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:999px;
+    padding:4px 14px;cursor:pointer;transition:all .18s;touch-action:manipulation;
+  }
+  .chips button:hover{color:var(--ink);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.08)}
+  .chips button.on{
+    color:#0a0f1c;background:var(--grad);border-color:transparent;font-weight:700;
+    box-shadow:0 2px 14px rgba(239,131,82,.4);
+  }
+
+  /* 天球 + 情報パネル */
+  .stage{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,1fr);gap:14px}
+  @media(max-width:860px){.stage{grid-template-columns:1fr}}
+  .sphere-wrap{
+    position:relative;border-radius:18px;overflow:hidden;
+    border:1px solid var(--hairline);min-height:420px;
+    box-shadow:0 18px 50px rgba(0,0,0,.45);
+  }
+  #sphere{display:block;width:100%;height:100%;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+  #sphere:active{cursor:grabbing}
+  .sphere-hint{
+    position:absolute;left:14px;bottom:12px;font-size:11px;letter-spacing:.06em;
+    color:rgba(255,255,255,.6);pointer-events:none;
+    padding:2px 10px;border-radius:999px;background:rgba(5,7,14,.35);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  }
+  .timebar{position:absolute;left:14px;right:14px;top:12px;display:flex;gap:12px;align-items:center;pointer-events:none}
+  .timebar .clock{
+    font-family:'Outfit',sans-serif;font-size:24px;font-weight:600;letter-spacing:.04em;
+    color:#f2f5fc;
+    padding:1px 14px;border-radius:12px;
+    background:rgba(5,7,14,.48);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  }
+  .zone-chip{font-size:12px;font-weight:700;border-radius:999px;padding:2px 13px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+
+  .panel{display:flex;flex-direction:column;gap:12px}
+  .panel .card{padding:15px 17px}
+  .panel h3{
+    font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.22em;margin-bottom:9px;
+  }
+  table.times{width:100%;border-collapse:collapse;font-size:13px}
+  table.times td{padding:4.5px 2px;border-bottom:1px solid var(--hairline)}
+  table.times tr:last-child td{border-bottom:none}
+  table.times td.t{font-family:'Outfit',sans-serif;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+  table.times td.l{color:var(--ink-2)}
+  .swatch{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:1px}
+  .durs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+  .durs .d{
+    background:rgba(255,255,255,.04);border:1px solid var(--hairline);
+    border-radius:12px;padding:9px 4px;
+  }
+  .durs .d .v{
+    font-family:'Outfit',sans-serif;font-size:21px;font-weight:700;
+    background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .durs .d .k{font-size:11px;color:var(--muted);letter-spacing:.08em}
+  .statline{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2);gap:10px}
+  .statline b{font-family:'Outfit',sans-serif;color:var(--ink);font-weight:600}
+
+  /* 再生 */
+  .playrow{display:flex;gap:10px;align-items:center;margin-top:8px}
+  .playrow button{
+    font-family:inherit;background:var(--grad);color:#0a0f1c;border:none;border-radius:11px;
+    padding:6px 20px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.06em;
+    box-shadow:0 2px 14px rgba(239,131,82,.35);transition:transform .15s;touch-action:manipulation;
+  }
+  .playrow button:hover{transform:translateY(-1px)}
+  .playrow button.stop{background:rgba(255,255,255,.08);color:var(--ink);border:1px solid var(--hairline);box-shadow:none}
+  .playrow input[type=range]{flex:1}
+
+  /* 四季カード */
+  .seasons{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+  @media(max-width:860px){.seasons{grid-template-columns:repeat(2,1fr)}}
+  .season{
+    background:var(--surface);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid var(--hairline);border-radius:16px;
+    padding:15px 17px;cursor:pointer;touch-action:manipulation;
+    transition:border-color .18s, transform .18s, box-shadow .18s;
+  }
+  .season:hover{border-color:rgba(255,255,255,.3);transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,.4)}
+  .season.on{
+    border-color:rgba(245,197,66,.75);
+    box-shadow:0 0 0 1px rgba(245,197,66,.35), 0 12px 32px rgba(239,131,82,.12);
+  }
+  .season .sname{font-family:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;font-weight:400;font-size:15px;letter-spacing:.14em}
+  .season .sdate{font-size:11px;color:var(--muted);font-family:'Outfit',sans-serif;letter-spacing:.04em}
+  .season dl{margin-top:9px;font-size:12px}
+  .season dl div{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--hairline)}
+  .season dl div:last-child{border-bottom:none}
+  .season dt{color:var(--ink-2)}
+  .season dd{font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums}
+
+  /* チャート */
+  .chartwrap{
+    position:relative;margin-top:16px;
+    background:var(--surface);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid var(--hairline);border-radius:18px;padding:16px 14px 12px;
+  }
+  .chartwrap canvas{display:block;width:100%;touch-action:manipulation}
+  .tooltip{
+    position:absolute;pointer-events:none;z-index:5;display:none;
+    background:rgba(9,13,26,.92);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.16);border-radius:12px;
+    padding:9px 13px;font-size:12px;line-height:1.7;box-shadow:0 10px 34px rgba(0,0,0,.55);
+    white-space:nowrap;
+  }
+  .tooltip .tt-date{font-weight:700;font-family:'Outfit',sans-serif;margin-bottom:2px;letter-spacing:.04em}
+  .tooltip td{padding:0 2px}
+  .tooltip td.v{font-family:'Outfit',sans-serif;text-align:right;font-variant-numeric:tabular-nums}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--ink-2);margin:10px 6px 2px}
+  .legend .li{display:flex;align-items:center;gap:7px}
+  .legend .sw{width:14px;height:4px;border-radius:2px}
+  .legend .sq{width:11px;height:11px;border-radius:3px}
+
+  /* 解説 */
+  .prose{max-width:52em;color:var(--ink-2);font-size:14.5px}
+  .prose p{margin:11px 0}
+  .prose strong{color:var(--ink)}
+  .prose h3{
+    color:var(--ink);font-family:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;font-weight:400;
+    font-size:15px;margin:26px 0 6px;letter-spacing:.06em;
+    display:flex;align-items:center;gap:10px;
+  }
+  .prose h3::before{content:"";width:20px;height:2px;background:var(--grad);border-radius:1px}
+  .figure{
+    margin:18px 0;background:var(--surface);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid var(--hairline);border-radius:16px;padding:12px;
+  }
+  .figure svg{display:block;width:100%;height:auto}
+  .figcap{font-size:12px;color:var(--muted);text-align:center;padding:5px 8px 6px}
+  footer{
+    margin-top:64px;font-size:12px;color:var(--muted);text-align:center;
+    border-top:1px solid var(--hairline);padding-top:20px;letter-spacing:.06em;
+  }
+  footer::before{
+    content:"TWILIGHT & CELESTIAL SPHERE";
+    display:block;font-family:'Outfit',sans-serif;font-size:10px;letter-spacing:.42em;
+    color:rgba(245,197,66,.65);margin-bottom:6px;
+  }
+
+  /* モバイル: 余白の詰め */
+  @media(max-width:600px){
+    .wrap{padding:28px 14px 60px}
+    header.hero{padding:36px 0 16px}
+  }
+  /* タッチ端末: 操作ターゲットの拡大 */
+  @media(pointer:coarse){
+    .chips button{padding:10px 16px;min-height:44px}
+    .playrow button{min-height:44px;padding:10px 22px}
+    input[type=range]{height:44px}
+    input[type=range]::-webkit-slider-thumb{width:26px;height:26px;margin-top:-11px}
+    input[type=range]::-moz-range-thumb{width:22px;height:22px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Celestial Sphere &amp; Twilight</div>
+    <h1><span class="grad">薄明と天球</span><br>日本の四季モデル</h1>
+    <p class="lede">
+      日の出前・日の入り後の「薄明」は、太陽が地平線の下 6°・12°・18° の帯を通過する時間として決まります。
+      天球の上で太陽の日周運動の円がどう傾き、季節と緯度でどう動くかを操作しながら、
+      薄明時間が四季でどう変わるかを確かめられます。時刻はすべて太陽時(南中 = 12:00)です。
+    </p>
+  </header>
+
+  <!-- ============ 操作 & 天球 ============ -->
+  <section class="sec">
+    <h2>天球シミュレーター</h2>
+    <p class="note">ドラッグで天球を回転できます。太陽の日周運動の円は、通過する明るさの帯ごとに色分けされています。</p>
+
+    <div class="controls">
+      <div class="ctl card">
+        <label>緯度 φ <b id="latVal">35.7°N</b></label>
+        <input type="range" id="latSlider" min="0" max="90" step="0.1" value="35.7">
+        <div class="chips" id="cityChips"></div>
+      </div>
+      <div class="ctl card">
+        <label>日付 <b id="dateVal">6/21(赤緯 +23.4°)</b></label>
+        <input type="range" id="daySlider" min="1" max="365" step="1" value="172">
+        <div class="chips" id="seasonChips"></div>
+      </div>
+      <div class="ctl card" style="grid-column:1/-1">
+        <label>現象ジャンプ — 高緯度で起こること<span style="font-size:11px;color:var(--muted)">緯度・日付・時刻をまとめて切り替えます</span></label>
+        <div class="chips" id="phenoChips"></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="sphere-wrap">
+        <canvas id="sphere"></canvas>
+        <div class="timebar">
+          <span class="clock" id="clockVal">15:00</span>
+          <span class="zone-chip" id="zoneChip">昼</span>
+        </div>
+        <div class="sphere-hint">ドラッグ: 視点回転</div>
+      </div>
+
+      <div class="panel">
+        <div class="card">
+          <h3>時刻(太陽時)</h3>
+          <div class="playrow">
+            <button id="playBtn">再生</button>
+            <input type="range" id="timeSlider" min="0" max="24" step="0.02" value="15">
+          </div>
+          <div class="statline" style="margin-top:8px">
+            <span>太陽高度</span><b id="sunAlt">--</b>
+          </div>
+          <div class="statline">
+            <span>昼の長さ</span><b id="dayLen">--</b>
+          </div>
+          <div class="statline">
+            <span>沈み込み角 ψ(日の入り)</span><b id="sinkAngle">--</b>
+          </div>
+        </div>
+        <div class="card">
+          <h3>今日の薄明(朝 / 夕)</h3>
+          <table class="times" id="timesTable"></table>
+        </div>
+        <div class="card">
+          <h3>薄明の長さ(夕方・各段階)</h3>
+          <div class="durs">
+            <div class="d"><div class="v" id="durCivil">--</div><div class="k">市民薄明</div></div>
+            <div class="d"><div class="v" id="durNaut">--</div><div class="k">航海薄明</div></div>
+            <div class="d"><div class="v" id="durAstro">--</div><div class="k">天文薄明</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 四季の比較 ============ -->
+  <section class="sec">
+    <h2>四季の比較</h2>
+    <p class="note">現在の緯度 <span id="latEcho">35.7°N</span> での二分二至。カードをクリックすると日付が切り替わります。</p>
+    <div class="seasons" id="seasonCards"></div>
+  </section>
+
+  <!-- ============ 沈み込みの角度 ============ -->
+  <section class="sec">
+    <h2>沈み込みの角度 — 位置だけでなく角度も変わる</h2>
+    <p class="note">
+      西の空を見たときの、日の入り後の太陽の軌跡(縦横とも角度の等スケール、横軸は日の入り点からの地平線方向の角距離)。
+      地平線と交わる角度 ψ は季節で変わり、さらに深くなるほど軌跡は寝てきます。
+      点は −6°・−12°・−18° の通過点、数字は日の入りからの経過時間です。緯度スライダーに連動します。
+    </p>
+    <div class="chartwrap" id="angleWrap">
+      <canvas id="angleChart" height="360"></canvas>
+      <div class="legend" id="angleLegend"></div>
+    </div>
+  </section>
+
+  <!-- ============ 年間チャート ============ -->
+  <section class="sec">
+    <h2>一年の明るさマップ</h2>
+    <p class="note">横軸が日付、縦軸が時刻。空の明るさの段階を色の濃さで表しています。ホバーで詳細、クリックで日付を選択。</p>
+    <div class="chartwrap" id="yearWrap">
+      <canvas id="yearChart" height="340"></canvas>
+      <div class="legend" id="yearLegend"></div>
+      <div class="tooltip" id="yearTip"></div>
+    </div>
+  </section>
+
+  <!-- ============ 薄明時間の推移 ============ -->
+  <section class="sec">
+    <h2>薄明時間の年間推移</h2>
+    <p class="note">夕方の各段階(日の入り→−6°、−6°→−12°、−12°→−18°)の所要時間。夏至に最も長く、春分・秋分ごろに最も短くなります。</p>
+    <div class="chartwrap" id="durWrap">
+      <canvas id="durChart" height="300"></canvas>
+      <div class="legend">
+        <div class="li"><span class="sw" style="background:var(--line-civil)"></span>市民薄明(0→−6°)</div>
+        <div class="li"><span class="sw" style="background:var(--line-naut)"></span>航海薄明(−6→−12°)</div>
+        <div class="li"><span class="sw" style="background:var(--line-astro)"></span>天文薄明(−12→−18°)</div>
+      </div>
+      <div class="tooltip" id="durTip"></div>
+    </div>
+  </section>
+
+  <!-- ============ 解説 ============ -->
+  <section class="sec">
+    <h2>しくみの解説</h2>
+    <div class="prose">
+
+      <h3>天球というモデル</h3>
+      <p>
+        天球は、観測者を中心にかぶせた半径無限大の仮想の球です。星も太陽もこの球面に貼りついていると考えると、
+        天体の見かけの運動を幾何学だけで扱えます。地球の自転により、天球全体は<strong>天の北極</strong>を軸に
+        1日1回転して見えます(日周運動)。ここで大切な関係が一つ:
+        <strong>天の北極の高度は、観測地の緯度 φ にちょうど等しい</strong>。
+        那覇では北極星が低く、稚内では高く見えるのはこのためで、上のシミュレーターで緯度を動かすと軸ごと天球が傾きます。
+      </p>
+      <p>
+        太陽の日周運動の経路は、天の赤道に平行な円です。円の位置は太陽の<strong>赤緯 δ</strong>(天の赤道からの角距離)で決まり、
+        δ は季節によって −23.4°(冬至)から +23.4°(夏至)まで一年かけて往復します。
+        つまり「季節が変わる」とは、天球上でこの円が赤道をはさんで上下にスライドすることです。
+      </p>
+
+      <h3>薄明の3つの定義</h3>
+      <div class="figure">
+        <svg viewBox="0 0 720 300" role="img" aria-label="地平線下の高度帯と薄明の定義の断面図">
+          <defs>
+            <linearGradient id="skyg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#d9e8fb"/><stop offset="1" stop-color="#79aae8"/>
+            </linearGradient>
+          </defs>
+          <!-- 空 -->
+          <rect x="0" y="0" width="720" height="120" fill="url(#skyg)" opacity="0.25"/>
+          <!-- 帯: 中心(60,120) 右向き、下向き角度で扇形帯 -->
+          <g>
+            <path d="M 60 120 L 700 120 L 700 187.2 Z" fill="#79aae8" opacity="0.35"/>
+            <path d="M 60 120 L 700 187.2 L 700 256.1 Z" fill="#3a6ab8" opacity="0.35"/>
+            <path d="M 60 120 L 700 256.1 L 700 300 L 645 300 Z" fill="#1d3a70" opacity="0.45"/>
+            <path d="M 60 120 L 645 300 L 60 300 Z" fill="#0b1224" opacity="0.85"/>
+          </g>
+          <!-- 地平線 -->
+          <line x1="20" y1="120" x2="700" y2="120" stroke="#eef2fa" stroke-width="2"/>
+          <text x="24" y="112" fill="#eef2fa" font-size="13" font-weight="bold">地平線(高度 0°)</text>
+          <!-- 角度ラベル -->
+          <text x="705" y="160" fill="#aab4c8" font-size="12" text-anchor="end">−6°</text>
+          <text x="705" y="228" fill="#aab4c8" font-size="12" text-anchor="end">−12°</text>
+          <text x="640" y="292" fill="#aab4c8" font-size="12" text-anchor="end">−18°</text>
+          <!-- 帯の名前 -->
+          <text x="390" y="152" fill="#eef2fa" font-size="13" font-weight="bold">市民薄明</text>
+          <text x="380" y="150" fill="none"/>
+          <text x="390" y="168" fill="#c9d4e8" font-size="11">照明なしで屋外活動ができる明るさ</text>
+          <text x="330" y="216" fill="#eef2fa" font-size="13" font-weight="bold">航海薄明</text>
+          <text x="330" y="232" fill="#c9d4e8" font-size="11">水平線と明るい星が同時に見える</text>
+          <text x="250" y="272" fill="#eef2fa" font-size="13" font-weight="bold">天文薄明</text>
+          <text x="250" y="288" fill="#c9d4e8" font-size="11">これが終わると空は完全な夜</text>
+          <!-- 太陽 -->
+          <circle cx="150" cy="96" r="11" fill="#f5c542"/>
+          <text x="168" y="100" fill="#f5c542" font-size="12">昼の太陽</text>
+        </svg>
+        <div class="figcap">地平線の下に 6° きざみで3つの「帯」があると考える。太陽がどの帯にいるかで薄明の種類が決まる。</div>
+      </div>
+      <p>
+        <strong>市民薄明</strong>(太陽高度 0° 〜 −6°)は、人工照明なしで新聞が読めるほどの明るさ。
+        <strong>航海薄明</strong>(−6° 〜 −12°)は、水平線がまだ見え、明るい星も出そろうため、
+        天測航法で位置を測るのに使われた時間帯。
+        <strong>天文薄明</strong>(−12° 〜 −18°)が終わると太陽光の散乱が事実上なくなり、
+        天文観測に適した完全な夜空になります。
+      </p>
+
+      <h3>なぜ薄明の長さは季節で変わるのか</h3>
+      <p>
+        薄明時間とは、太陽が地平線下 0°〜18° の帯を<strong>斜めに横切るのにかかる時間</strong>です。
+        天球上での太陽の移動速度は毎時 15°(コップの中の水位のように一定)なので、
+        長さを決めるのは「帯をどれだけ斜めに、どれだけ長い道のりで通るか」だけです。
+      </p>
+      <p>
+        ここで大事なのは、季節によって変わるのが<strong>沈む位置だけではなく、沈む角度も</strong>だという点です。
+        天球上の日周円そのものは常に天の赤道と平行のまま上下にスライドするだけですが、
+        円が北や南にずれると地平線と交わる<strong>場所</strong>が変わり、球面の幾何学により、
+        その場所での<strong>交差角 ψ</strong> も変わります。この角度は cos ψ = sin φ ÷ cos δ で決まり、
+        春分・秋分には ψ = 90° − φ(東京で約 54°)と一年で最も立った角度になり、
+        夏至・冬至にはどちらも約 50° まで浅くなります(「沈み込みの角度」の図で確認できます)。
+      </p>
+      <p>
+        春分・秋分のころは、太陽が天の赤道上を最も立った角度でまっすぐ沈み込み、
+        帯を最短経路に近い形で突っ切るため、<strong>薄明は一年で最も短い</strong>。
+        夏至のころは北西寄りの浅い角度で沈み、しかも地平線下に入ってからは軌跡がさらに寝てくるため、
+        帯の中の道のりが長くなり、<strong>薄明は一年で最も長くなります</strong>。
+        冬至も沈む角度は夏至とほぼ同じだけ浅くなるので小さな極大になりますが、
+        深部での軌跡の寝かた(夜側の弧の長さ)の違いから、夏至ほどは伸びません。
+        上の「薄明時間の年間推移」のグラフで、この二こぶの形を確かめてください。
+      </p>
+
+      <h3>緯度による違い — 日本の南北で</h3>
+      <p>
+        緯度が高いほど天の北極が高くなり、日周運動の円は地平線に対して寝てきます。
+        円が寝るほど太陽は浅い角度で沈むので、<strong>同じ日付でも高緯度ほど薄明は長い</strong>。
+        このモデルで比べると、夏至の天文薄明(1段階分)は那覇で約 33 分、東京で約 42 分、札幌では約 57 分に伸びます。
+      </p>
+      <p>
+        さらに緯度を上げていくと(スライダーを日本の外まで動かしてみてください)、
+        緯度約 48.6° を超えたあたりから、夏至前後は太陽が −18° より下まで沈まなくなり、
+        <strong>天文薄明が一晩じゅう続いて「完全な夜」が来ない</strong>時期が現れます。
+        緯度 60° では航海薄明すら終わらない「白夜に近い夜」になります。
+        そして緯度 66.6°(北極圏・南極圏)を超えると、夏至には太陽が一日じゅう沈まない<strong>白夜</strong>、
+        冬至には一日じゅう昇らない<strong>極夜</strong>が現れます。
+        コントロールの「現象ジャンプ」ボタンで、それぞれの天球の様子に直接飛べます —
+        白夜では日周円がまるごと地平線の上に持ち上がり、北極点では地平線と平行にぐるぐる回るだけになります。
+        日本は最北端の稚内でも約 45.4° なので、一年を通じて必ず完全な夜が訪れます —
+        これは日本列島の緯度がもつ、意外と語られない特徴のひとつです。
+      </p>
+
+      <h3>このモデルの前提</h3>
+      <p>
+        時刻は太陽時(太陽が真南に来る瞬間を 12:00 とする)で表示しています。
+        実際の時計の時刻(日本標準時)とは、経度差(明石 135°E からのずれ)と均時差により
+        場所と季節に応じて最大 ±30 分ほどずれます。日の出・日の入りは太陽の上端が地平線に接する瞬間
+        (太陽中心高度 −0.833°、大気差と視半径を考慮)、薄明の境界は太陽中心の幾何学的高度で定義しています。
+        赤緯は近似式(Spencer 1971)によります。標高・気象条件による違いは含みません。
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    薄明と天球 — 日本の四季モデル / 時刻は太陽時。教材として自由に利用できます。
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ================= 天文計算 ================= */
+const D2R = Math.PI/180, R2D = 180/Math.PI;
+
+function declination(N){ // Spencer 1971 (rad)
+  const g = 2*Math.PI/365*(N-1);
+  return 0.006918 - 0.399912*Math.cos(g) + 0.070257*Math.sin(g)
+       - 0.006758*Math.cos(2*g) + 0.000907*Math.sin(2*g)
+       - 0.002697*Math.cos(3*g) + 0.00148*Math.sin(3*g);
+}
+// 高度 hDeg に達する時角(度)。null=届かない / Infinity=常にその高度より上
+function hourAngleDeg(latDeg, dec, hDeg){
+  const phi = latDeg*D2R, h = hDeg*D2R;
+  const c = (Math.sin(h) - Math.sin(phi)*Math.sin(dec)) / (Math.cos(phi)*Math.cos(dec));
+  if (c > 1) return null;
+  if (c < -1) return Infinity;
+  return Math.acos(c)*R2D;
+}
+function sunAltDeg(latDeg, dec, t){ // t: 太陽時
+  const phi = latDeg*D2R, H = (t-12)*15*D2R;
+  return Math.asin(Math.sin(phi)*Math.sin(dec) + Math.cos(phi)*Math.cos(dec)*Math.cos(H))*R2D;
+}
+function sunVec(latDeg, dec, t){ // 地平座標の単位ベクトル {e,n,u}
+  const phi = latDeg*D2R, H = (t-12)*15*D2R;
+  return {
+    e: -Math.cos(dec)*Math.sin(H),
+    n:  Math.cos(phi)*Math.sin(dec) - Math.sin(phi)*Math.cos(dec)*Math.cos(H),
+    u:  Math.sin(phi)*Math.sin(dec) + Math.cos(phi)*Math.cos(dec)*Math.cos(H)
+  };
+}
+const ZONES = [
+  {name:"昼",       band:"#d9e8fb", path:"#ffcf4d", chipInk:"#10141f"},
+  {name:"市民薄明", band:"#79aae8", path:"#8db9f0", chipInk:"#10141f"},
+  {name:"航海薄明", band:"#3a6ab8", path:"#4a7ed0", chipInk:"#eef2fa"},
+  {name:"天文薄明", band:"#1d3a70", path:"#2a4f97", chipInk:"#eef2fa"},
+  {name:"夜",       band:"#0b1224", path:"#4a5468", chipInk:"#eef2fa"}
+];
+function zoneOfAlt(h){
+  if (h >= -0.833) return 0;
+  if (h >= -6)  return 1;
+  if (h >= -12) return 2;
+  if (h >= -18) return 3;
+  return 4;
+}
+function fmtTime(t){
+  if (t == null || !isFinite(t)) return "--:--";
+  t = ((t % 24) + 24) % 24;
+  let h = Math.floor(t), m = Math.round((t-h)*60);
+  if (m === 60){ h = (h+1)%24; m = 0; }
+  return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
+}
+function fmtDur(min){
+  if (min == null || !isFinite(min)) return "--";
+  return Math.round(min) + "分";
+}
+const MONTH_START = [1,32,60,91,121,152,182,213,244,274,305,335];
+function dateOfN(N){
+  let m = 11;
+  while (m > 0 && MONTH_START[m] > N) m--;
+  return (m+1) + "/" + (N - MONTH_START[m] + 1);
+}
+// その日の各しきい値の時角
+function dayInfo(lat, N){
+  const dec = declination(N);
+  const H = {
+    rise:  hourAngleDeg(lat, dec, -0.833),
+    civil: hourAngleDeg(lat, dec, -6),
+    naut:  hourAngleDeg(lat, dec, -12),
+    astro: hourAngleDeg(lat, dec, -18)
+  };
+  const dur = (a,b) => (isFinite(a) && isFinite(b) && a!=null && b!=null) ? (a-b)/15*60 : null;
+  // 地平線との交差角(沈み込み角) cosψ = sinφ / cosδ
+  const cpsi = Math.sin(lat*D2R)/Math.cos(dec);
+  const psi = Math.abs(cpsi) <= 1 ? Math.acos(cpsi)*R2D : null;
+  return {
+    dec, H, psi,
+    dayLen: (H.rise==null) ? 0 : (!isFinite(H.rise) ? 24 : 2*H.rise/15),
+    durCivil: dur(H.civil, H.rise),
+    durNaut:  dur(H.naut,  H.civil),
+    durAstro: dur(H.astro, H.naut)
+  };
+}
+
+/* ================= 状態 ================= */
+const state = { lat: 35.7, N: 172, t: 15, playing: false, yaw: -0.55, pitch: 0.42 };
+
+const CITIES = [
+  ["那覇", 26.2], ["福岡", 33.6], ["東京", 35.7], ["仙台", 38.3], ["札幌", 43.1], ["稚内", 45.4]
+];
+const SEASONS = [
+  ["春分", 79], ["夏至", 172], ["秋分", 266], ["冬至", 356]
+];
+
+/* ================= コントロール ================= */
+const $ = id => document.getElementById(id);
+const latSlider = $("latSlider"), daySlider = $("daySlider"), timeSlider = $("timeSlider");
+
+const cityChips = $("cityChips");
+CITIES.forEach(([name, lat]) => {
+  const b = document.createElement("button");
+  b.textContent = name;
+  b.onclick = () => { state.lat = lat; latSlider.value = lat; refreshAll(); };
+  b.dataset.lat = lat;
+  cityChips.appendChild(b);
+});
+const seasonChips = $("seasonChips");
+SEASONS.forEach(([name, N]) => {
+  const b = document.createElement("button");
+  b.textContent = name;
+  b.onclick = () => { state.N = N; daySlider.value = N; refreshAll(); };
+  b.dataset.n = N;
+  seasonChips.appendChild(b);
+});
+const PHENOMENA = [
+  { name:"白夜 — 北極圏 70°N・夏至の真夜中", lat:70, N:172, t:0 },
+  { name:"極夜 — 北極圏 70°N・冬至の正午",   lat:70, N:356, t:12 },
+  { name:"薄明が終わらない夜 — 50°N・夏至",   lat:50, N:172, t:0 },
+  { name:"北極点 90°N — 沈まない太陽",        lat:90, N:172, t:12 }
+];
+const phenoChips = $("phenoChips");
+PHENOMENA.forEach(p => {
+  const b = document.createElement("button");
+  b.textContent = p.name;
+  b.dataset.lat = p.lat; b.dataset.n = p.N;
+  b.onclick = () => {
+    state.lat = p.lat; state.N = p.N; state.t = p.t;
+    latSlider.value = p.lat; daySlider.value = p.N; timeSlider.value = p.t;
+    refreshAll();
+  };
+  phenoChips.appendChild(b);
+});
+latSlider.oninput = () => { state.lat = +latSlider.value; refreshAll(); };
+daySlider.oninput = () => { state.N = +daySlider.value; refreshAll(); };
+timeSlider.oninput = () => { state.t = +timeSlider.value; refreshTime(); };
+
+const playBtn = $("playBtn");
+let lastTs = null;
+playBtn.onclick = () => {
+  state.playing = !state.playing;
+  playBtn.textContent = state.playing ? "停止" : "再生";
+  playBtn.classList.toggle("stop", state.playing);
+  if (state.playing){ lastTs = null; requestAnimationFrame(tick); }
+};
+function tick(ts){
+  if (!state.playing) return;
+  if (lastTs != null){
+    state.t = (state.t + (ts-lastTs)/1000 * 1.6) % 24;
+    timeSlider.value = state.t;
+    refreshTime();
+  }
+  lastTs = ts;
+  requestAnimationFrame(tick);
+}
+
+/* ================= 天球描画 ================= */
+const sphereCanvas = $("sphere");
+const sctx = sphereCanvas.getContext("2d");
+
+function project(p, cx, cy, R){
+  const cyaw = Math.cos(state.yaw), syaw = Math.sin(state.yaw);
+  const e1 = p.e*cyaw - p.n*syaw;
+  const n1 = p.e*syaw + p.n*cyaw;
+  const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+  const depth = n1*cp - p.u*sp;   // 負 = 手前
+  const v     = n1*sp + p.u*cp;   // 画面上向き
+  return { x: cx + R*e1, y: cy - R*v, front: depth < 0 };
+}
+// 3D折れ線を front/back に分けて描く
+function strokePath3D(pts, cx, cy, R, style){
+  const proj = pts.map(p => project(p, cx, cy, R));
+  for (const pass of ["back","front"]){
+    sctx.save();
+    sctx.strokeStyle = style.color;
+    sctx.lineWidth = style.width || 1.5;
+    sctx.globalAlpha = pass === "front" ? (style.alpha ?? 1) : (style.alpha ?? 1) * 0.28;
+    if (style.dash) sctx.setLineDash(style.dash);
+    sctx.beginPath();
+    let pen = false;
+    for (let i = 0; i < proj.length; i++){
+      const q = proj[i];
+      const ok = (pass === "front") === q.front;
+      if (ok){
+        if (!pen){ sctx.moveTo(q.x, q.y); pen = true; }
+        else sctx.lineTo(q.x, q.y);
+      } else pen = false;
+    }
+    sctx.stroke();
+    sctx.restore();
+  }
+}
+function circleAtAltitude(hDeg, samples = 144){
+  const r = Math.cos(hDeg*D2R), u = Math.sin(hDeg*D2R), pts = [];
+  for (let i = 0; i <= samples; i++){
+    const a = i/samples * 2*Math.PI;
+    pts.push({ e: r*Math.cos(a), n: r*Math.sin(a), u });
+  }
+  return pts;
+}
+function drawSphere(){
+  const wrap = sphereCanvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth, h = Math.max(420, wrap.clientHeight);
+  sphereCanvas.width = w*dpr; sphereCanvas.height = h*dpr;
+  sctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const dec = declination(state.N);
+  const alt = sunAltDeg(state.lat, dec, state.t);
+  const zone = zoneOfAlt(alt);
+
+  // 空の明るさに応じた描画色(昼・市民薄明 = 明るい空 → 濃色+明るい縁取り)
+  const bright = zone <= 1;
+  const C = bright ? {
+    cardinal:"#14213d", zenith:"#2b3a58", pole:"#6e3d85", axis:"#8a4da0",
+    equator:"#0c6e5d", alm:"#33517e", horizon:"rgba(12,20,38,.92)",
+    limb:"rgba(12,20,38,.28)", psi:"#7c5200", halo:"rgba(236,243,252,.88)"
+  } : {
+    cardinal:"#eef2fa", zenith:"#c9d4e8", pole:"#e8b7f0", axis:"#e8b7f0",
+    equator:"#8ecfc0", alm:"#9fb4d8", horizon:"#eef2fa",
+    limb:"rgba(255,255,255,.25)", psi:"#f5c542", halo:"rgba(5,9,20,.82)"
+  };
+
+  // 空のグラデーション(太陽高度に応じて)
+  const skyStops = [
+    ["#8fbdf3","#d9e8fb"], ["#5b84c8","#e9b98a"], ["#2c4a86","#7a5f83"],
+    ["#16274f","#2c3a63"], ["#080d1c","#101728"]
+  ][zone];
+  const g = sctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0, skyStops[0]); g.addColorStop(1, skyStops[1]);
+  sctx.fillStyle = g; sctx.fillRect(0,0,w,h);
+
+  const R = Math.min(w,h)*0.40, cx = w/2, cy = h*0.52;
+  const phi = state.lat*D2R;
+
+  // 天球の輪郭
+  sctx.strokeStyle = C.limb;
+  sctx.lineWidth = 1;
+  sctx.beginPath(); sctx.arc(cx,cy,R,0,2*Math.PI); sctx.stroke();
+
+  // --- back要素→地面→front要素 の順は strokePath3D 内で処理されるが、
+  //     地面(地平面の円盤)は個別に描く ---
+  // 薄明の帯(地平線下のアルムカンタル)
+  for (const hh of [-6,-12,-18]){
+    strokePath3D(circleAtAltitude(hh), cx, cy, R,
+      { color:C.alm, width:1, dash:[4,5], alpha:.7 });
+  }
+  // 天の赤道
+  const eqPts = [];
+  for (let i = 0; i <= 144; i++){
+    const H = i/144*2*Math.PI;
+    eqPts.push({ e: -Math.sin(H), n: -Math.sin(phi)*Math.cos(H), u: Math.cos(phi)*Math.cos(H) });
+  }
+  strokePath3D(eqPts, cx, cy, R, { color:C.equator, width:1.4, dash:[8,6], alpha:.85 });
+
+  // 地軸(天の北極-南極)
+  const pole = { e:0, n:Math.cos(phi), u:Math.sin(phi) };
+  strokePath3D([{e:0,n:-pole.n,u:-pole.u},{e:0,n:0,u:0},pole], cx, cy, R,
+    { color:C.axis, width:1.4, dash:[2,4], alpha:.9 });
+
+  // 地平面(半透明の円盤)
+  const horizonProj = circleAtAltitude(0).map(p => project(p,cx,cy,R));
+  sctx.save();
+  sctx.beginPath();
+  horizonProj.forEach((q,i) => i ? sctx.lineTo(q.x,q.y) : sctx.moveTo(q.x,q.y));
+  sctx.closePath();
+  sctx.fillStyle = "rgba(10,16,30,.42)";
+  sctx.fill();
+  sctx.restore();
+
+  // 太陽の日周円(帯ごとに色分け)
+  const step = 2;
+  for (let a = 0; a < 360; a += step){
+    const t1 = 12 + a/15, t2 = 12 + (a+step)/15;
+    const p1 = sunVec(state.lat, dec, t1), p2 = sunVec(state.lat, dec, t2);
+    const zmid = zoneOfAlt(sunAltDeg(state.lat, dec, (t1+t2)/2));
+    strokePath3D([p1,p2], cx, cy, R, { color: ZONES[zmid].path, width:3, alpha:.95 });
+  }
+
+  // 地平線(手前を最後に強く)
+  strokePath3D(circleAtAltitude(0), cx, cy, R, { color:C.horizon, width:2, alpha:.95 });
+
+  // ラベル類
+  sctx.textAlign = "center"; sctx.textBaseline = "middle";
+  const label = (p, text, color, dy=0, size=12, weight="") => {
+    const q = project(p, cx, cy, R);
+    sctx.save();
+    sctx.globalAlpha = q.front ? 1 : .5;
+    sctx.font = `${weight} ${size}px 'Zen Kaku Gothic New', sans-serif`;
+    sctx.lineJoin = "round";
+    sctx.lineWidth = 3.5;
+    sctx.strokeStyle = C.halo;
+    sctx.strokeText(text, q.x, q.y + dy);
+    sctx.fillStyle = color;
+    sctx.fillText(text, q.x, q.y + dy);
+    sctx.restore();
+  };
+  label({e:0,n:1.08,u:0},"北",C.cardinal,0,13,"bold");
+  label({e:0,n:-1.08,u:0},"南",C.cardinal,0,13,"bold");
+  label({e:1.09,n:0,u:0},"東",C.cardinal,0,13,"bold");
+  label({e:-1.09,n:0,u:0},"西",C.cardinal,0,13,"bold");
+  label({e:0,n:0,u:1.07},"天頂",C.zenith,0,11);
+  label({e:pole.e,n:pole.n*1.13,u:pole.u*1.13},"天の北極",C.pole,0,11);
+  // 天の赤道ラベル: 赤道が子午線と交わる南側の点
+  label({e:0, n:-Math.sin(phi)*1.06, u:Math.cos(phi)*1.06},"天の赤道",C.equator,0,11);
+  // 薄明帯ラベル(南側)
+  label({e:0,n:-Math.cos(-6*D2R)*1.1,u:Math.sin(-6*D2R)},"−6°",C.alm,0,10);
+  label({e:0,n:-Math.cos(-12*D2R)*1.12,u:Math.sin(-12*D2R)},"−12°",C.alm,0,10);
+  label({e:0,n:-Math.cos(-18*D2R)*1.14,u:Math.sin(-18*D2R)},"−18°",C.alm,0,10);
+
+  // 沈み込み角 ψ の表示(日の入り点: 経路の接線と地平線の接線のなす角)
+  const H0g = hourAngleDeg(state.lat, dec, 0);
+  if (H0g != null && isFinite(H0g)){
+    const Hs = H0g*D2R, cd = Math.cos(dec);
+    const S = sunVec(state.lat, dec, 12 + H0g/15); // 幾何学的日没点(h=0)
+    const norm = v => { const m = Math.hypot(v.e, v.n, v.u) || 1; return { e:v.e/m, n:v.n/m, u:v.u/m }; };
+    // 日周経路の接線(時間が進む向き)
+    const Tp = norm({
+      e: -cd*Math.cos(Hs),
+      n:  Math.sin(phi)*cd*Math.sin(Hs),
+      u: -Math.cos(phi)*cd*Math.sin(Hs)
+    });
+    // その水平成分 = 地平線に沿った接線
+    const Th = norm({ e: Tp.e, n: Tp.n, u: 0 });
+    const psiR = Math.acos(Math.max(-1, Math.min(1, Tp.e*Th.e + Tp.n*Th.n)));
+    if (psiR > 0.02){
+      const seg = (T, len) => [S, { e:S.e+T.e*len, n:S.n+T.n*len, u:S.u+T.u*len }];
+      strokePath3D(seg(Th, .30), cx, cy, R, { color:C.psi, width:1.6, alpha:.95 });
+      strokePath3D(seg(Tp, .30), cx, cy, R, { color:C.psi, width:1.6, alpha:.95 });
+      const arc = [], sn = Math.sin(psiR);
+      for (let k = 0; k <= 20; k++){
+        const t = k/20;
+        const w1 = Math.sin((1-t)*psiR)/sn, w2 = Math.sin(t*psiR)/sn;
+        const d = norm({ e: Th.e*w1+Tp.e*w2, n: Th.n*w1+Tp.n*w2, u: Th.u*w1+Tp.u*w2 });
+        arc.push({ e: S.e+d.e*.18, n: S.n+d.n*.18, u: S.u+d.u*.18 });
+      }
+      strokePath3D(arc, cx, cy, R, { color:C.psi, width:1.4, alpha:.95 });
+      const mid = arc[10];
+      label({ e: S.e+(mid.e-S.e)*2.4, n: S.n+(mid.n-S.n)*2.4, u: S.u+(mid.u-S.u)*2.4 },
+        "ψ " + (psiR*R2D).toFixed(1) + "°", C.psi, 0, 11, "bold");
+    }
+  }
+
+  // 太陽
+  const sp2 = sunVec(state.lat, dec, state.t);
+  const sq = project(sp2, cx, cy, R);
+  sctx.save();
+  sctx.globalAlpha = sq.front ? 1 : .5;
+  const gg = sctx.createRadialGradient(sq.x,sq.y,1,sq.x,sq.y,16);
+  gg.addColorStop(0,"rgba(255,220,110,.95)");
+  gg.addColorStop(1,"rgba(255,220,110,0)");
+  sctx.fillStyle = gg;
+  sctx.beginPath(); sctx.arc(sq.x,sq.y,16,0,2*Math.PI); sctx.fill();
+  sctx.fillStyle = "#ffd95e";
+  sctx.beginPath(); sctx.arc(sq.x,sq.y,6.5,0,2*Math.PI); sctx.fill();
+  sctx.strokeStyle = "rgba(10,14,24,.8)"; sctx.lineWidth = 1.5;
+  sctx.stroke();
+  sctx.restore();
+}
+
+// ドラッグで視点回転
+let dragging = false, dragId = null, lastX = 0, lastY = 0;
+sphereCanvas.addEventListener("pointerdown", e => {
+  if (dragging) return; // 2本目以降の指は無視
+  dragging = true; dragId = e.pointerId; lastX = e.clientX; lastY = e.clientY;
+  sphereCanvas.setPointerCapture(e.pointerId);
+});
+sphereCanvas.addEventListener("pointermove", e => {
+  if (!dragging || e.pointerId !== dragId) return;
+  state.yaw += (e.clientX - lastX)*0.006;
+  state.pitch = Math.min(1.35, Math.max(0.06, state.pitch + (e.clientY - lastY)*0.005));
+  lastX = e.clientX; lastY = e.clientY;
+  drawSphere();
+});
+function endSphereDrag(e){
+  if (e.pointerId !== dragId) return;
+  dragging = false; dragId = null;
+}
+sphereCanvas.addEventListener("pointerup", endSphereDrag);
+sphereCanvas.addEventListener("pointercancel", endSphereDrag);
+
+/* ================= 情報パネル ================= */
+function refreshPanel(){
+  const info = dayInfo(state.lat, state.N);
+  const H = info.H;
+  const t = (Hv, sign) => (Hv==null || !isFinite(Hv)) ? null : 12 + sign*Hv/15;
+  const rows = [
+    ["天文薄明 はじまり", t(H.astro,-1), "おわり", t(H.astro,1), ZONES[3].band],
+    ["航海薄明 はじまり", t(H.naut,-1),  "おわり", t(H.naut,1),  ZONES[2].band],
+    ["市民薄明 はじまり", t(H.civil,-1), "おわり", t(H.civil,1), ZONES[1].band],
+    ["日の出",            t(H.rise,-1),  "日の入り", t(H.rise,1), ZONES[0].band]
+  ];
+  $("timesTable").innerHTML = rows.map(r =>
+    `<tr><td class="l"><span class="swatch" style="background:${r[4]}"></span>${r[0]}</td>` +
+    `<td class="t">${fmtTime(r[1])}</td>` +
+    `<td class="l" style="text-align:right">${r[2]}</td>` +
+    `<td class="t">${fmtTime(r[3])}</td></tr>`
+  ).join("");
+  $("sinkAngle").textContent = info.psi == null ? "--" : info.psi.toFixed(1) + "°";
+  $("durCivil").textContent = fmtDur(info.durCivil);
+  $("durNaut").textContent  = fmtDur(info.durNaut);
+  $("durAstro").textContent = fmtDur(info.durAstro);
+  const dl = info.dayLen;
+  $("dayLen").textContent = dl <= 0 ? "太陽が昇らない" :
+    dl >= 24 ? "太陽が沈まない(白夜)" :
+    `${Math.floor(dl)}時間${String(Math.round((dl%1)*60)).padStart(2,"0")}分`;
+}
+function refreshTime(){
+  const dec = declination(state.N);
+  const alt = sunAltDeg(state.lat, dec, state.t);
+  const zone = zoneOfAlt(alt);
+  $("clockVal").textContent = fmtTime(state.t);
+  $("sunAlt").textContent = (alt >= 0 ? "+" : "−") + Math.abs(alt).toFixed(1) + "°";
+  const chip = $("zoneChip");
+  chip.textContent = ZONES[zone].name;
+  chip.style.background = ZONES[zone].band;
+  chip.style.color = ZONES[zone].chipInk;
+  if (zone === 4){ chip.style.border = "1px solid rgba(255,255,255,.25)"; } else chip.style.border = "none";
+  drawSphere();
+}
+
+/* ================= 四季カード ================= */
+function refreshSeasons(){
+  const wrap = $("seasonCards");
+  wrap.innerHTML = "";
+  SEASONS.forEach(([name, N]) => {
+    const info = dayInfo(state.lat, N);
+    const H = info.H;
+    const rise = isFinite(H.rise) && H.rise != null ? 12 - H.rise/15 : null;
+    const set  = isFinite(H.rise) && H.rise != null ? 12 + H.rise/15 : null;
+    const dl = info.dayLen;
+    const total = [info.durCivil, info.durNaut, info.durAstro].every(x => x != null)
+      ? info.durCivil + info.durNaut + info.durAstro : null;
+    const el = document.createElement("div");
+    el.className = "season" + (state.N === N ? " on" : "");
+    el.innerHTML =
+      `<div class="sname">${name}</div><div class="sdate">${dateOfN(N)} / δ ${(info.dec*R2D).toFixed(1)}°</div>` +
+      `<dl>` +
+      `<div><dt>昼の長さ</dt><dd>${dl<=0?"0h":dl>=24?"24h":Math.floor(dl)+"h"+String(Math.round((dl%1)*60)).padStart(2,"0")+"m"}</dd></div>` +
+      `<div><dt>日の出 / 日の入</dt><dd>${fmtTime(rise)} / ${fmtTime(set)}</dd></div>` +
+      `<div><dt>沈む角度 ψ</dt><dd>${info.psi==null?"--":info.psi.toFixed(1)+"°"}</dd></div>` +
+      `<div><dt>市民薄明</dt><dd>${fmtDur(info.durCivil)}</dd></div>` +
+      `<div><dt>薄明ぜんぶ</dt><dd>${fmtDur(total)}</dd></div>` +
+      `</dl>`;
+    el.onclick = () => { state.N = N; daySlider.value = N; refreshAll(); };
+    wrap.appendChild(el);
+  });
+  $("latEcho").textContent = state.lat.toFixed(1) + "°N";
+}
+
+/* ================= 沈み込み角チャート ================= */
+const angleCanvas = $("angleChart"), actx = angleCanvas.getContext("2d");
+const ANGLE_SEASONS = [
+  { name:"夏至",       N:172, color:"#d95926" },
+  { name:"春分・秋分", N:79,  color:"#3987e5" },
+  { name:"冬至",       N:356, color:"#199e70" }
+];
+$("angleLegend").innerHTML = ANGLE_SEASONS.map(s =>
+  `<div class="li"><span class="sw" style="background:${s.color}"></span>${s.name}</div>`).join("");
+
+function sinkCurves(){
+  const out = [];
+  for (const s of ANGLE_SEASONS){
+    const dec = declination(s.N);
+    const H0 = hourAngleDeg(state.lat, dec, -0.833);
+    const cpsi = Math.sin(state.lat*D2R)/Math.cos(dec);
+    const psi = Math.abs(cpsi) <= 1 ? Math.acos(cpsi)*R2D : null;
+    if (H0 == null || !isFinite(H0)){ out.push({ ...s, none:true, psi }); continue; }
+    const pts = [], crossings = [];
+    let prevAz = null, x = 0, prevAlt = -0.833;
+    for (let dH = 0; dH <= 110; dH += 0.25){
+      const H = H0 + dH;
+      if (H > 180.001) break; // 真夜中(最深点)まで
+      const v = sunVec(state.lat, dec, 12 + H/15);
+      const alt = Math.asin(Math.max(-1, Math.min(1, v.u)))*R2D;
+      let az = Math.atan2(v.e, v.n)*R2D;
+      if (prevAz != null){
+        let d = az - prevAz;
+        if (d > 180) d -= 360; else if (d < -180) d += 360;
+        x += Math.abs(d);
+      }
+      prevAz = az;
+      for (const th of [-6,-12,-18]){
+        if (prevAlt > th && alt <= th) crossings.push({ x, alt: th, min: dH*4 });
+      }
+      prevAlt = alt;
+      pts.push({ x, alt });
+      if (alt < -19.5) break;
+    }
+    out.push({ ...s, psi, pts, crossings });
+  }
+  return out;
+}
+function drawAngleChart(){
+  const wrap = $("angleWrap");
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth - 28, hpx = 360;
+  angleCanvas.width = w*dpr; angleCanvas.height = hpx*dpr;
+  angleCanvas.style.height = hpx + "px";
+  actx.setTransform(dpr,0,0,dpr,0,0);
+  actx.clearRect(0,0,w,hpx);
+  const narrow = w < 520; // スマホ幅ではラベル余白を詰めて描画域を確保
+  const PAD = { l: 24, r: narrow ? 130 : 170, t: 46, b: 18 };
+  const pw = w - PAD.l - PAD.r, ph = hpx - PAD.t - PAD.b;
+  const curves = sinkCurves();
+  let xMax = 25;
+  for (const c of curves) if (c.pts && c.pts.length) xMax = Math.max(xMax, c.pts[c.pts.length-1].x);
+  xMax = Math.min(xMax + 3, 85);
+  const scl = Math.min(pw/xMax, ph/20); // 等スケール px/deg
+  const X = xd => PAD.l + xd*scl, Y = alt => PAD.t + (-alt)*scl;
+  const bandRight = w - 8;
+
+  // 薄明の帯
+  const bands = [[0,-6,"#79aae8",.20],[-6,-12,"#3a6ab8",.24],[-12,-18,"#1d3a70",.34],[-18,-20,"#0b1224",.60]];
+  for (const [a,b,col,al] of bands){
+    actx.fillStyle = col; actx.globalAlpha = al;
+    actx.fillRect(PAD.l - 12, Y(a), bandRight - PAD.l + 12, Y(b) - Y(a));
+  }
+  actx.globalAlpha = 1;
+  // 空
+  actx.fillStyle = "rgba(217,232,251,.10)";
+  actx.fillRect(PAD.l - 12, Y(0) - 30, bandRight - PAD.l + 12, 30);
+  // 地平線
+  actx.strokeStyle = "#eef2fa"; actx.lineWidth = 2;
+  actx.beginPath(); actx.moveTo(PAD.l - 12, Y(0)); actx.lineTo(bandRight, Y(0)); actx.stroke();
+  actx.font = "bold 12px 'Zen Kaku Gothic New', sans-serif";
+  actx.fillStyle = "#eef2fa"; actx.textAlign = "left"; actx.textBaseline = "bottom";
+  actx.fillText("地平線(西の空)", PAD.l - 4, Y(0) - 8);
+  // 深さラベル
+  actx.font = "11px 'Outfit', sans-serif";
+  actx.fillStyle = "#aab4c8"; actx.textAlign = "right"; actx.textBaseline = "middle";
+  for (const d of [-6,-12,-18]) actx.fillText(d + "°", bandRight - 4, Y(d));
+
+  // 曲線
+  curves.forEach((c, i) => {
+    if (c.none || !c.pts || c.pts.length < 2) return;
+    // ψ の角度アーク(原点)
+    if (c.psi != null){
+      actx.strokeStyle = c.color; actx.globalAlpha = .75; actx.lineWidth = 1.5;
+      actx.beginPath(); actx.arc(X(0), Y(0), 24 + i*13, 0, c.psi*D2R); actx.stroke();
+      actx.globalAlpha = 1;
+    }
+    actx.strokeStyle = c.color; actx.lineWidth = 2.5;
+    actx.lineJoin = actx.lineCap = "round";
+    actx.beginPath();
+    c.pts.forEach((p, j) => j ? actx.lineTo(X(p.x), Y(p.alt)) : actx.moveTo(X(p.x), Y(p.alt)));
+    actx.stroke();
+    // 通過点と経過時間(−6°のみ数字を添える。曲線ごとに高さをずらして衝突回避)
+    c.crossings.forEach(cr => {
+      actx.fillStyle = c.color;
+      actx.strokeStyle = "#131a2a"; actx.lineWidth = 2;
+      actx.beginPath(); actx.arc(X(cr.x), Y(cr.alt), 4, 0, 2*Math.PI); actx.fill(); actx.stroke();
+      if (cr.alt === -6){
+        const tx = X(cr.x) + 8, ty = Y(cr.alt) - 8 - i*13;
+        actx.fillStyle = c.color;
+        actx.fillRect(tx, ty - 3, 6, 6);
+        actx.fillStyle = "#c9d4e8"; actx.font = "10px 'Outfit', sans-serif";
+        actx.textAlign = "left"; actx.textBaseline = "middle";
+        actx.fillText(Math.round(cr.min) + "分", tx + 9, ty);
+      }
+    });
+  });
+  // 終端ラベル(名前 + ψ + 合計時間): 位置を先に計算し、重なりを解消してから描く
+  const labels = [];
+  curves.forEach((c, i) => {
+    if (c.none || !c.pts || c.pts.length < 2) return;
+    const end = c.pts[c.pts.length - 1];
+    const last18 = c.crossings.find(cr => cr.alt === -18);
+    labels.push({ c, end, last18, ly: Y(end.alt) - 6 });
+  });
+  labels.sort((a, b) => a.ly - b.ly);
+  const GAP = 40, lyMin = PAD.t + 26, lyMax = hpx - 34;
+  labels.forEach((L, i) => { if (i > 0) L.ly = Math.max(L.ly, labels[i-1].ly + GAP); });
+  const over = labels.length ? Math.max(0, labels[labels.length-1].ly - lyMax) : 0;
+  labels.forEach(L => { L.ly = Math.max(lyMin, L.ly - over); });
+  for (let i = 1; i < labels.length; i++)
+    labels[i].ly = Math.max(labels[i].ly, labels[i-1].ly + GAP);
+  labels.forEach(L => {
+    const { c, end, last18 } = L;
+    const lx = Math.min(X(end.x) + 14, w - (narrow ? 126 : 158));
+    actx.strokeStyle = c.color; actx.globalAlpha = .6; actx.lineWidth = 1;
+    actx.beginPath(); actx.moveTo(X(end.x), Y(end.alt)); actx.lineTo(lx - 4, L.ly + 6); actx.stroke();
+    actx.globalAlpha = 1;
+    actx.fillStyle = c.color;
+    actx.fillRect(lx, L.ly - 5, 9, 9);
+    actx.fillStyle = "#eef2fa";
+    actx.font = "bold 12px 'Zen Kaku Gothic New', sans-serif";
+    actx.textAlign = "left"; actx.textBaseline = "middle";
+    actx.fillText(`${c.name}  ψ ${c.psi != null ? c.psi.toFixed(1) : "--"}°`, lx + 14, L.ly);
+    actx.font = "11px 'Zen Kaku Gothic New', sans-serif";
+    actx.fillStyle = "#aab4c8";
+    actx.fillText(last18 ? `−18°まで ${Math.round(last18.min)}分` : "薄明が終わらない", lx + 14, L.ly + 15);
+  });
+  // ψ 記号
+  actx.fillStyle = "#c9d4e8"; actx.font = "italic 13px serif";
+  actx.textAlign = "left"; actx.textBaseline = "middle";
+  const psiOuter = curves.reduce((m,c) => c.psi != null ? Math.max(m, c.psi) : m, 0);
+  if (psiOuter > 0){
+    const a = psiOuter*D2R*0.55, r = 24 + 2*13 + 12;
+    actx.fillText("ψ", X(0) + r*Math.cos(a), Y(0) + r*Math.sin(a));
+  }
+  // 太陽(日の入り点)
+  actx.fillStyle = "#ffd95e";
+  actx.beginPath(); actx.arc(X(0), Y(0), 5.5, 0, 2*Math.PI); actx.fill();
+  actx.strokeStyle = "rgba(10,14,24,.8)"; actx.lineWidth = 1.5; actx.stroke();
+}
+
+/* ================= 年間チャート ================= */
+const yearCanvas = $("yearChart"), yctx = yearCanvas.getContext("2d");
+const yearTip = $("yearTip");
+const YPAD = { l: 44, r: 14, t: 10, b: 26 };
+let yearGeom = null;
+
+function drawYearChart(){
+  const wrap = $("yearWrap");
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth - 28, hpx = 340;
+  yearCanvas.width = w*dpr; yearCanvas.height = hpx*dpr;
+  yearCanvas.style.height = hpx + "px";
+  yctx.setTransform(dpr,0,0,dpr,0,0);
+  yctx.clearRect(0,0,w,hpx);
+
+  const pw = w - YPAD.l - YPAD.r, ph = hpx - YPAD.t - YPAD.b;
+  yearGeom = { w, hpx, pw, ph };
+
+  // 日ごとに縦ストリップ
+  const colW = pw/365;
+  for (let N = 1; N <= 365; N++){
+    const dec = declination(N);
+    const x = YPAD.l + (N-1)*colW;
+    // 10分刻みでゾーンのランを検出
+    let runStart = 0, runZone = zoneOfAlt(sunAltDeg(state.lat, dec, 0));
+    for (let i = 1; i <= 144; i++){
+      const t = i/6;
+      const z = (i === 144) ? -1 : zoneOfAlt(sunAltDeg(state.lat, dec, t));
+      if (z !== runZone){
+        const y1 = YPAD.t + runStart/24*ph, y2 = YPAD.t + t/24*ph;
+        yctx.fillStyle = ZONES[runZone].band;
+        yctx.fillRect(x, y1, colW+0.6, y2-y1);
+        runStart = t; runZone = z;
+      }
+    }
+  }
+  // グリッド: 時刻(3時間ごと)
+  yctx.font = "11px 'Outfit', sans-serif";
+  yctx.fillStyle = "#7a86a0";
+  yctx.strokeStyle = "rgba(255,255,255,.12)";
+  yctx.lineWidth = 1;
+  yctx.textAlign = "right"; yctx.textBaseline = "middle";
+  for (let hh = 0; hh <= 24; hh += 3){
+    const y = YPAD.t + hh/24*ph;
+    yctx.beginPath(); yctx.moveTo(YPAD.l, y); yctx.lineTo(YPAD.l+pw, y); yctx.stroke();
+    yctx.fillText(String(hh) + "時", YPAD.l - 6, y);
+  }
+  // 月ラベル
+  yctx.textAlign = "center"; yctx.textBaseline = "top";
+  for (let m = 0; m < 12; m++){
+    const x = YPAD.l + (MONTH_START[m]-1+15)/365*pw;
+    yctx.fillText((m+1) + "月", x, YPAD.t + ph + 6);
+    const xs = YPAD.l + (MONTH_START[m]-1)/365*pw;
+    yctx.strokeStyle = "rgba(255,255,255,.07)";
+    yctx.beginPath(); yctx.moveTo(xs, YPAD.t); yctx.lineTo(xs, YPAD.t+ph); yctx.stroke();
+  }
+  // 選択日マーカー
+  const sx = YPAD.l + (state.N-1+0.5)/365*pw;
+  yctx.strokeStyle = "#f5c542"; yctx.lineWidth = 1.5;
+  yctx.beginPath(); yctx.moveTo(sx, YPAD.t-3); yctx.lineTo(sx, YPAD.t+ph+3); yctx.stroke();
+}
+// 凡例
+$("yearLegend").innerHTML = ZONES.map(z =>
+  `<div class="li"><span class="sq" style="background:${z.band};border:1px solid rgba(255,255,255,.15)"></span>${z.name}</div>`
+).join("");
+
+function yearPointer(e){
+  if (!yearGeom) return;
+  const rect = yearCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const N = Math.round((x - YPAD.l)/yearGeom.pw*364) + 1;
+  if (N < 1 || N > 365){ yearTip.style.display = "none"; return; }
+  const info = dayInfo(state.lat, N);
+  const H = info.H;
+  const t = (Hv,s) => (Hv==null||!isFinite(Hv)) ? null : 12 + s*Hv/15;
+  yearTip.style.display = "block";
+  yearTip.innerHTML =
+    `<div class="tt-date">${dateOfN(N)}(φ ${state.lat.toFixed(1)}°N)</div>` +
+    `<table>` +
+    `<tr><td>薄明はじまり(天文)</td><td class="v">${fmtTime(t(H.astro,-1))}</td></tr>` +
+    `<tr><td>日の出</td><td class="v">${fmtTime(t(H.rise,-1))}</td></tr>` +
+    `<tr><td>日の入り</td><td class="v">${fmtTime(t(H.rise,1))}</td></tr>` +
+    `<tr><td>薄明おわり(天文)</td><td class="v">${fmtTime(t(H.astro,1))}</td></tr>` +
+    `</table>`;
+  const wrapRect = $("yearWrap").getBoundingClientRect();
+  let tx = e.clientX - wrapRect.left + 16;
+  if (tx > wrapRect.width - 210) tx -= 230;
+  tx = Math.max(4, tx);
+  yearTip.style.left = tx + "px";
+  yearTip.style.top = (e.clientY - wrapRect.top + 10) + "px";
+}
+// マウス: ホバーで表示・離れたら消す / タッチ: タップで表示、外をタップで消す
+yearCanvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse") yearPointer(e); });
+yearCanvas.addEventListener("pointerdown", yearPointer);
+yearCanvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") yearTip.style.display = "none"; });
+yearCanvas.addEventListener("pointercancel", () => yearTip.style.display = "none");
+yearCanvas.addEventListener("click", e => {
+  const rect = yearCanvas.getBoundingClientRect();
+  const N = Math.round((e.clientX - rect.left - YPAD.l)/yearGeom.pw*364) + 1;
+  if (N >= 1 && N <= 365){ state.N = N; daySlider.value = N; refreshAll(); }
+});
+
+/* ================= 薄明時間チャート ================= */
+const durCanvas = $("durChart"), dctx = durCanvas.getContext("2d");
+const durTip = $("durTip");
+const DPAD = { l: 46, r: 14, t: 12, b: 26 };
+let durGeom = null, durSeries = null;
+
+function computeDurSeries(){
+  const civil = [], naut = [], astro = [];
+  for (let N = 1; N <= 365; N++){
+    const info = dayInfo(state.lat, N);
+    civil.push(info.durCivil); naut.push(info.durNaut); astro.push(info.durAstro);
+  }
+  durSeries = { civil, naut, astro };
+}
+function drawDurChart(){
+  computeDurSeries();
+  const wrap = $("durWrap");
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth - 28, hpx = 300;
+  durCanvas.width = w*dpr; durCanvas.height = hpx*dpr;
+  durCanvas.style.height = hpx + "px";
+  dctx.setTransform(dpr,0,0,dpr,0,0);
+  dctx.clearRect(0,0,w,hpx);
+  const pw = w - DPAD.l - DPAD.r, ph = hpx - DPAD.t - DPAD.b;
+
+  const all = [...durSeries.civil, ...durSeries.naut, ...durSeries.astro].filter(v => v != null);
+  const maxV = Math.max(40, Math.ceil(Math.max(...all)/10)*10);
+  durGeom = { w, hpx, pw, ph, maxV };
+
+  // グリッド
+  dctx.font = "11px 'Outfit', sans-serif";
+  dctx.fillStyle = "#7a86a0";
+  dctx.lineWidth = 1;
+  dctx.textAlign = "right"; dctx.textBaseline = "middle";
+  const stepV = maxV <= 60 ? 10 : maxV <= 120 ? 20 : 30;
+  for (let v = 0; v <= maxV; v += stepV){
+    const y = DPAD.t + ph - v/maxV*ph;
+    dctx.strokeStyle = "rgba(255,255,255,.10)";
+    dctx.beginPath(); dctx.moveTo(DPAD.l, y); dctx.lineTo(DPAD.l+pw, y); dctx.stroke();
+    dctx.fillText(v + "分", DPAD.l - 6, y);
+  }
+  dctx.textAlign = "center"; dctx.textBaseline = "top";
+  for (let m = 0; m < 12; m++){
+    const x = DPAD.l + (MONTH_START[m]-1+15)/365*pw;
+    dctx.fillText((m+1) + "月", x, DPAD.t + ph + 6);
+  }
+  // 折れ線
+  const colors = {
+    civil: getComputedStyle(document.documentElement).getPropertyValue("--line-civil").trim(),
+    naut:  getComputedStyle(document.documentElement).getPropertyValue("--line-naut").trim(),
+    astro: getComputedStyle(document.documentElement).getPropertyValue("--line-astro").trim()
+  };
+  for (const key of ["astro","naut","civil"]){
+    dctx.strokeStyle = colors[key];
+    dctx.lineWidth = 2; dctx.lineJoin = "round"; dctx.lineCap = "round";
+    dctx.beginPath();
+    let pen = false;
+    for (let N = 1; N <= 365; N++){
+      const v = durSeries[key][N-1];
+      if (v == null){ pen = false; continue; }
+      const x = DPAD.l + (N-1)/364*pw;
+      const y = DPAD.t + ph - Math.min(v,maxV)/maxV*ph;
+      if (!pen){ dctx.moveTo(x,y); pen = true; } else dctx.lineTo(x,y);
+    }
+    dctx.stroke();
+  }
+  // 夏至・冬至の縦の目印
+  for (const [name,N] of [["夏至",172],["冬至",356]]){
+    const x = DPAD.l + (N-1)/364*pw;
+    dctx.strokeStyle = "rgba(245,197,66,.35)";
+    dctx.setLineDash([3,4]);
+    dctx.beginPath(); dctx.moveTo(x, DPAD.t); dctx.lineTo(x, DPAD.t+ph); dctx.stroke();
+    dctx.setLineDash([]);
+    dctx.fillStyle = "rgba(245,197,66,.8)";
+    dctx.textBaseline = "bottom";
+    dctx.fillText(name, x, DPAD.t + 12);
+  }
+}
+function durPointer(e){
+  if (!durGeom || !durSeries) return;
+  const rect = durCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const N = Math.round((x - DPAD.l)/durGeom.pw*364) + 1;
+  if (N < 1 || N > 365){ durTip.style.display = "none"; return; }
+  const v = k => durSeries[k][N-1];
+  const f = k => v(k) == null ? "終わらない" : Math.round(v(k)) + "分";
+  durTip.style.display = "block";
+  durTip.innerHTML =
+    `<div class="tt-date">${dateOfN(N)}</div>` +
+    `<table>` +
+    `<tr><td><span class="swatch" style="background:var(--line-civil)"></span>市民</td><td class="v">${f("civil")}</td></tr>` +
+    `<tr><td><span class="swatch" style="background:var(--line-naut)"></span>航海</td><td class="v">${f("naut")}</td></tr>` +
+    `<tr><td><span class="swatch" style="background:var(--line-astro)"></span>天文</td><td class="v">${f("astro")}</td></tr>` +
+    `</table>`;
+  const wrapRect = $("durWrap").getBoundingClientRect();
+  let tx = e.clientX - wrapRect.left + 16;
+  if (tx > wrapRect.width - 170) tx -= 190;
+  tx = Math.max(4, tx);
+  durTip.style.left = tx + "px";
+  durTip.style.top = (e.clientY - wrapRect.top + 10) + "px";
+}
+// マウス: ホバーで表示・離れたら消す / タッチ: タップで表示、外をタップで消す
+durCanvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse") durPointer(e); });
+durCanvas.addEventListener("pointerdown", durPointer);
+durCanvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") durTip.style.display = "none"; });
+durCanvas.addEventListener("pointercancel", () => durTip.style.display = "none");
+// タッチでチャート外をタップしたらツールチップを閉じる(表示が固まらないように)
+document.addEventListener("pointerdown", e => {
+  if (e.target !== yearCanvas) yearTip.style.display = "none";
+  if (e.target !== durCanvas) durTip.style.display = "none";
+});
+
+/* ================= 一括更新 ================= */
+function refreshChipStates(){
+  cityChips.querySelectorAll("button").forEach(b =>
+    b.classList.toggle("on", Math.abs(+b.dataset.lat - state.lat) < 0.05));
+  seasonChips.querySelectorAll("button").forEach(b =>
+    b.classList.toggle("on", +b.dataset.n === state.N));
+  phenoChips.querySelectorAll("button").forEach(b =>
+    b.classList.toggle("on", Math.abs(+b.dataset.lat - state.lat) < 0.05 && +b.dataset.n === state.N));
+}
+function refreshAll(){
+  $("latVal").textContent = state.lat.toFixed(1) + "°N";
+  const dec = declination(state.N);
+  $("dateVal").textContent = `${dateOfN(state.N)}(赤緯 ${dec>=0?"+":"−"}${Math.abs(dec*R2D).toFixed(1)}°)`;
+  refreshChipStates();
+  refreshPanel();
+  refreshSeasons();
+  drawAngleChart();
+  drawYearChart();
+  drawDurChart();
+  refreshTime(); // 天球再描画を含む
+}
+window.addEventListener("resize", () => { drawSphere(); drawAngleChart(); drawYearChart(); drawDurChart(); });
+refreshAll();
+</script>
+</body>
+</html>

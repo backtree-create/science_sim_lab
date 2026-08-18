@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>大気圧と水圧の違い ― 圧力シミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  :root{--accent:var(--water);}
+  /* 901px以上のみ2カラム比率を上書き（styles.cssの900px以下1カラム化を壊さないため） */
+  @media (min-width:901px){
+    .layout{grid-template-columns:1.3fr 1fr;}
+  }
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+  .charts .box{background:var(--bg-panel-2);border:1px solid var(--border);border-radius:10px;padding:12px;}
+  .charts .box h3{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase;}
+  canvas.chart{width:100%;height:220px;display:block;touch-action:manipulation;}
+  #stage3d{width:100%;height:300px;}
+  /* 3Dはドラッグ回転操作エリア：タッチでのページスクロールを無効化 */
+  #stage3d canvas{touch-action:none;user-select:none;-webkit-user-select:none;}
+  .hint3d{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-top:8px;text-align:center;}
+  body{-webkit-tap-highlight-color:transparent;}
+  @media (max-width:600px){
+    .charts{grid-template-columns:1fr;}
+    #stage3d{height:240px;}
+  }
+  @media (pointer: coarse){
+    input[type=range]::-webkit-slider-thumb{width:26px;height:26px;}
+    input[type=range]::-moz-range-thumb{width:26px;height:26px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">02 ／ 圧力</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Atmospheric &amp; Water Pressure</span>
+  <h1>大気圧と水圧、何が違うのか</h1>
+  <p>どちらも「上にある流体の重さが押しつける力」という点では同じ仕組み。しかし高度を10km上げても気圧は半分ほどしか下がらないのに、水深はわずか10mで気圧1つ分（約101kPa）も水圧が増える。この違いを、流体の密度という視点から確かめる。</p>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h2><span class="dot"></span>圧力のグラフ</h2>
+    <div class="charts">
+      <div class="box">
+        <h3>大気圧 vs 高度</h3>
+        <canvas class="chart" id="chartAir"></canvas>
+      </div>
+      <div class="box">
+        <h3>水圧 vs 深さ</h3>
+        <canvas class="chart" id="chartWater"></canvas>
+      </div>
+    </div>
+    <h2><span class="dot"></span>圧力は全方向にはたらく（3D）</h2>
+    <div class="stage"><div id="stage3d"></div></div>
+    <div class="hint3d">ドラッグで回転 ― 立方体のすべての面に、面と垂直に圧力（水色の矢印）が押しつけている</div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>パラメータ</h2>
+    <div class="controls">
+      <div class="control">
+        <label>高度（大気中） <span class="val"><span id="altVal">0</span> m</span></label>
+        <input type="range" id="alt" min="0" max="12000" value="0" step="100">
+      </div>
+      <div class="control">
+        <label>深さ（水中） <span class="val"><span id="depthVal">0</span> m</span></label>
+        <input type="range" id="depth" min="0" max="30" value="0" step="0.5">
+      </div>
+    </div>
+
+    <h2 style="margin-top:22px;"><span class="dot"></span>読み取り値</h2>
+    <div class="readout">
+      <div class="item"><div class="k">大気圧（この高度）</div><div class="v" id="rPair">101.3 kPa</div></div>
+      <div class="item"><div class="k">空気の密度</div><div class="v" id="rRhoAir">1.20 kg/m³</div></div>
+      <div class="item"><div class="k">水圧（絶対圧）</div><div class="v velocity" id="rPwater">101.3 kPa</div></div>
+      <div class="item"><div class="k">水の密度</div><div class="v">1000 kg/m³</div></div>
+    </div>
+
+    <div class="explain" id="explainText">
+      密度が大きいほど、同じ深さ・高度あたりの圧力変化は急になります。水は空気のおよそ800倍密度が大きいため、水深10mで大気1気圧分もの圧力が加わります。
+      <div class="note">大気圧が高度とともに<strong>ゆるやかに</strong>減るのは、空気が圧縮性の流体で、上空に行くほど空気自体が薄くなる（密度が下がる）ためです。一方、水はほとんど圧縮されないため、密度はどの深さでもほぼ一定。だから水圧は深さに<strong>比例して直線的に</strong>増え続けます。</div>
+    </div>
+  </div>
+</div>
+
+<footer class="source">
+  <h3>Reference</h3>
+  水圧 P=ρgh（水の密度1000 kg/m³、重力加速度9.8 m/s²）は流体静力学の基本式。大気圧の高度変化は等温大気を仮定した気圧の高度分布（P=P0 exp(-h/H)、スケールハイトH≈8000m、海面気圧P0=101325 Pa）による近似で、国際標準大気（ISA）モデルの簡略版に相当する。パスカルの原理（静止流体中の圧力はあらゆる方向に同じ大きさで垂直に働く）は流体力学の基本原理。
+</footer>
+
+<script>
+const altEl=document.getElementById('alt'), depthEl=document.getElementById('depth');
+const altVal=document.getElementById('altVal'), depthVal=document.getElementById('depthVal');
+altEl.addEventListener('input',()=>altVal.textContent=altEl.value);
+depthEl.addEventListener('input',()=>depthVal.textContent=depthEl.value);
+
+const P0=101.325; // kPa
+const H=8000; // m scale height
+const rhoAir0=1.225; // kg/m3 sea level
+const rhoWater=1000;
+const g=9.8;
+
+function airPressure(h){return P0*Math.exp(-h/H);}
+function airDensity(h){return rhoAir0*Math.exp(-h/H);}
+function waterPressure(depth){return P0 + (rhoWater*g*depth)/1000;} // kPa
+
+function drawChart(canvas,{yMax,curveFn,marker,color,invert,xMax,xLabel,yLabel}){
+  const dpr=devicePixelRatio||1;
+  const rect=canvas.getBoundingClientRect();
+  canvas.width=rect.width*dpr; canvas.height=rect.height*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const w=rect.width,h=rect.height;
+  ctx.clearRect(0,0,w,h);
+  const padL=40,padB=26,padT=10,padR=14;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  // axes
+  ctx.strokeStyle='#c9c9d3'; ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(padL,padT);ctx.lineTo(padL,padT+plotH);ctx.lineTo(padL+plotW,padT+plotH);ctx.stroke();
+  ctx.fillStyle='#5a6376'; ctx.font='10px "JetBrains Mono",monospace';
+  ctx.fillText(xLabel,padL+plotW-60,padT+plotH+18);
+  ctx.save();ctx.translate(10,padT+14);ctx.rotate(-Math.PI/2);ctx.fillText(yLabel,0,0);ctx.restore();
+
+  // curve
+  ctx.strokeStyle=color; ctx.lineWidth=2.2; ctx.beginPath();
+  const N=60;
+  for(let i=0;i<=N;i++){
+    const yv=(i/N)*yMax;
+    const xv=curveFn(yv);
+    const px=padL+(xv/xMax)*plotW;
+    const py= invert? padT+(yv/yMax)*plotH : padT+plotH-(yv/yMax)*plotH;
+    if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+
+  // marker
+  const mx=padL+(curveFn(marker)/xMax)*plotW;
+  const my= invert? padT+(marker/yMax)*plotH : padT+plotH-(marker/yMax)*plotH;
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--highlight').trim();
+  ctx.beginPath();ctx.arc(mx,my,5,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,200,87,.3)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(padL,my);ctx.lineTo(mx,my);ctx.stroke();
+}
+
+function updateCharts(){
+  const alt=parseFloat(altEl.value), depth=parseFloat(depthEl.value);
+  drawChart(document.getElementById('chartAir'),{
+    yMax:12000, curveFn:airPressure, marker:alt, color:getComputedStyle(document.documentElement).getPropertyValue('--force').trim(),
+    invert:false, xMax:110, xLabel:'kPa', yLabel:'高度 m'
+  });
+  drawChart(document.getElementById('chartWater'),{
+    yMax:30, curveFn:waterPressure, marker:depth, color:getComputedStyle(document.documentElement).getPropertyValue('--water').trim(),
+    invert:true, xMax:400, xLabel:'kPa', yLabel:'深さ m'
+  });
+  document.getElementById('rPair').textContent=airPressure(alt).toFixed(1)+' kPa';
+  document.getElementById('rRhoAir').textContent=airDensity(alt).toFixed(3)+' kg/m³';
+  document.getElementById('rPwater').textContent=waterPressure(depth).toFixed(1)+' kPa';
+}
+altEl.addEventListener('input',updateCharts);
+depthEl.addEventListener('input',updateCharts);
+window.addEventListener('resize',updateCharts);
+updateCharts();
+
+// ---- 3D scene ----
+const mount=document.getElementById('stage3d');
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45, mount.clientWidth/mount.clientHeight, 0.1, 100);
+camera.position.set(4.5,3.2,5.2);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setSize(mount.clientWidth,mount.clientHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+mount.appendChild(renderer.domElement);
+
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true; controls.dampingFactor=0.08; controls.autoRotate=true; controls.autoRotateSpeed=1.1;
+controls.enableZoom=false;
+
+scene.add(new THREE.AmbientLight(0xffffff,0.7));
+const dl=new THREE.DirectionalLight(0xffffff,0.8); dl.position.set(3,5,4); scene.add(dl);
+
+const cubeGeo=new THREE.BoxGeometry(2,2,2);
+const cubeMat=new THREE.MeshStandardMaterial({color:0x1a212e,metalness:0.2,roughness:0.6});
+const cube=new THREE.Mesh(cubeGeo,cubeMat);
+scene.add(cube);
+const edges=new THREE.LineSegments(new THREE.EdgesGeometry(cubeGeo),new THREE.LineBasicMaterial({color:0x3fa9f5}));
+cube.add(edges);
+
+const dirs=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+const arrowGroup=new THREE.Group();
+dirs.forEach(d=>{
+  const dir=new THREE.Vector3(d[0],d[1],d[2]);
+  const origin=dir.clone().multiplyScalar(2.0);
+  const arrow=new THREE.ArrowHelper(dir.clone().negate(), origin, 0.9, 0x3fa9f5, 0.28, 0.16);
+  arrowGroup.add(arrow);
+});
+scene.add(arrowGroup);
+
+function animate3d(){
+  requestAnimationFrame(animate3d);
+  controls.update();
+  renderer.render(scene,camera);
+}
+animate3d();
+window.addEventListener('resize',()=>{
+  camera.aspect=mount.clientWidth/mount.clientHeight; camera.updateProjectionMatrix();
+  renderer.setSize(mount.clientWidth,mount.clientHeight);
+});
+</script>
+</body>
+</html>

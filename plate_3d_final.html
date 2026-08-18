@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>3D プレート境界地震＆地震波シミュレーター</title>
+  <style>
+    :root {
+      --bg-color: #f1f5f9;
+      --card-bg: #ffffff;
+      --border-color: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent-p: #0284c7;
+      --accent-s: #e11d48;
+      --accent-green: #16a34a;
+      --accent-orange: #ea580c;
+    }
+
+    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; text-align: center; -webkit-tap-highlight-color: transparent; }
+    
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    header { margin-bottom: 16px; }
+    h1 { margin: 0; font-size: 1.75rem; font-weight: 800; color: #1e293b; }
+    p.subtitle { margin: 6px 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+    /* 3Dキャンバス領域 */
+    #canvas-container {
+      width: 100%; height: 500px;
+      background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+      border-radius: 16px; position: relative; overflow: hidden;
+      border: 2px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #canvas-container:active { cursor: grabbing; }
+
+    .overlay-guide {
+      position: absolute; top: 12px; left: 12px;
+      background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(4px);
+      padding: 8px 14px; border-radius: 8px; font-size: 0.8rem;
+      color: var(--text-main); text-align: left; border: 1px solid var(--border-color);
+      pointer-events: none; font-weight: 600;
+    }
+
+    /* アクションバー */
+    .action-bar { display: flex; justify-content: center; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+    .btn {
+      padding: 12px 24px; font-size: 0.95rem; font-weight: 700; border: none; border-radius: 30px;
+      cursor: pointer; transition: all 0.2s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      touch-action: manipulation;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
+    .btn:active { transform: translateY(0); }
+    
+    .btn-strain { background: #dc2626; color: #fff; }
+    .btn-earthquake { background: #d97706; color: #fff; }
+    .btn-earthquake:disabled { background: #94a3b8; opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-reset { background: #475569; color: #fff; }
+
+    /* 設定パネル */
+    .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    
+    .panel-card {
+      background: var(--card-bg); border-radius: 12px; padding: 16px; text-align: left;
+      border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .panel-title { font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+    .control-group { margin-bottom: 12px; }
+    .control-group:last-child { margin-bottom: 0; }
+    .control-label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+    .control-value { color: var(--text-main); font-weight: 700; }
+    
+    input[type=range] {
+      width: 100%; height: 8px; border-radius: 4px; background: #e2e8f0;
+      outline: none; -webkit-appearance: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: #2563eb; cursor: pointer; transition: transform 0.1s;
+    }
+
+    /* モニターカード */
+    .monitor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .monitor-card {
+      background: var(--card-bg); border-radius: 12px; padding: 16px; text-align: left;
+      border: 2px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      position: relative;
+    }
+    .card-a { border-top: 6px solid var(--accent-p); }
+    .card-b { border-top: 6px solid var(--accent-s); }
+
+    .station-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    .station-name { font-weight: 800; font-size: 1.1rem; }
+    .card-a .station-name { color: var(--accent-p); }
+    .card-b .station-name { color: var(--accent-s); }
+    .station-dist { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+
+    .status-badge { font-size: 0.85rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; background: #f1f5f9; display: inline-block; margin-bottom: 10px; color: #334155; }
+
+    .progress-bar-bg { background: #e2e8f0; border-radius: 6px; height: 10px; width: 100%; overflow: hidden; position: relative; margin-bottom: 12px; }
+    .progress-p { background: var(--accent-p); height: 100%; width: 0%; position: absolute; transition: width 0.05s linear; }
+    .progress-s { background: var(--accent-s); height: 100%; width: 0%; position: absolute; transition: width 0.05s linear; }
+
+    .metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric-box { background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
+    .metric-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; }
+    .metric-val { font-size: 1.25rem; font-weight: 800; color: #0f172a; }
+    .shindo-tag { font-size: 1.3rem; font-weight: 900; color: #d97706; }
+
+    .hint-panel {
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px;
+      padding: 16px; text-align: left; font-size: 0.88rem; line-height: 1.6; color: #1e3a8a;
+    }
+
+    @media (max-width: 900px) {
+      #canvas-container { height: 420px; }
+    }
+    @media (max-width: 600px) {
+      body { padding: 12px; }
+      #canvas-container { height: 320px; }
+      h1 { font-size: 1.25rem; }
+      .config-grid, .monitor-grid { grid-template-columns: 1fr; }
+    }
+    @media (pointer: coarse) {
+      .btn { min-height: 44px; }
+      input[type=range] { height: 12px; }
+      input[type=range]::-webkit-slider-thumb { width: 26px; height: 26px; }
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>3D プレート境界地震＆地震波シミュレーター</h1>
+    <p class="subtitle">【広域・高照度モデル】視点回転・震度設定・観測点移動対応</p>
+  </header>
+
+  <div id="canvas-container">
+    <div class="overlay-guide">
+      🖱️ マウスドラッグ: 視点移動 | 🔍 ホイール: ズーム | 右ドラッグ: 平行移動
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-strain" onclick="startStrain()">① プレート沈み込み（ひずみ蓄積）</button>
+    <button class="btn btn-earthquake" id="eqBtn" onclick="triggerEarthquake()" disabled>② プレート跳ね上がり（地震発生）</button>
+    <button class="btn btn-reset" onclick="resetSim()">🔄 シミュレーションリセット</button>
+  </div>
+
+  <div class="config-grid">
+    <div class="panel-card">
+      <div class="panel-title">⚡ 地震規模＆揺れの強さ設定</div>
+      <div class="control-group">
+        <div class="control-label">
+          <span>マグニチュード (M)</span>
+          <span class="control-value" id="magVal">M 8.0</span>
+        </div>
+        <input type="range" id="magSlider" min="6.5" max="9.0" step="0.5" value="8.0" oninput="updateConfig()">
+      </div>
+      <div class="control-group">
+        <div class="control-label">
+          <span>地盤のゆれやすさ（基本震度）</span>
+          <span class="control-value" id="shindoVal">普通地盤</span>
+        </div>
+        <input type="range" id="shindoSlider" min="1" max="3" step="1" value="2" oninput="updateConfig()">
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title" style="color: var(--accent-p);">📍 観測点 A（沿岸・震源近距離）</div>
+      <div class="control-group">
+        <div class="control-label">
+          <span>東西位置 (離隔距離)</span>
+          <span class="control-value" id="posA_X_val">-40 km</span>
+        </div>
+        <input type="range" id="posA_X" min="-15" max="10" step="1" value="-4" oninput="updateStations()">
+      </div>
+      <div class="control-group">
+        <div class="control-label">
+          <span>南北位置</span>
+          <span class="control-value" id="posA_Z_val">+60 km</span>
+        </div>
+        <input type="range" id="posA_Z" min="-18" max="18" step="1" value="6" oninput="updateStations()">
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title" style="color: var(--accent-s);">📍 観測点 B（内陸・震源遠距離）</div>
+      <div class="control-group">
+        <div class="control-label">
+          <span>東西位置 (離隔距離)</span>
+          <span class="control-value" id="posB_X_val">-220 km</span>
+        </div>
+        <input type="range" id="posB_X" min="-35" max="-16" step="1" value="-22" oninput="updateStations()">
+      </div>
+      <div class="control-group">
+        <div class="control-label">
+          <span>南北位置</span>
+          <span class="control-value" id="posB_Z_val">-80 km</span>
+        </div>
+        <input type="range" id="posB_Z" min="-18" max="18" step="1" value="-8" oninput="updateStations()">
+      </div>
+    </div>
+  </div>
+
+  <div class="monitor-grid">
+    <div class="monitor-card card-a">
+      <div class="station-head">
+        <div class="station-name">観測点 A</div>
+        <div class="station-dist" id="distA">震源距離: -- km</div>
+      </div>
+      <div class="status-badge" id="statusA">待機中</div>
+      <div class="progress-bar-bg">
+        <div class="progress-p" id="barPA"></div>
+        <div class="progress-s" id="barSA"></div>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-box">
+          <div class="metric-label">初期微動継続時間</div>
+          <div class="metric-val" id="psValA">-- 秒</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">到達時の推定震度</div>
+          <div class="metric-val shindo-tag" id="shindoA">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="monitor-card card-b">
+      <div class="station-head">
+        <div class="station-name">観測点 B</div>
+        <div class="station-dist" id="distB">震源距離: -- km</div>
+      </div>
+      <div class="status-badge" id="statusB">待機中</div>
+      <div class="progress-bar-bg">
+        <div class="progress-p" id="barPB"></div>
+        <div class="progress-s" id="barSB"></div>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-box">
+          <div class="metric-label">初期微動継続時間</div>
+          <div class="metric-val" id="psValB">-- 秒</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">到達時の推定震度</div>
+          <div class="metric-val shindo-tag" id="shindoB">--</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint-panel">
+    <strong>💡 観察と学習のヒント：</strong><br>
+    ・<strong>黒っぽい茶色のプレート：</strong> 密度が大きく重い海洋プレート（玄武岩質）が陸のプレート（緑色の上面＋茶色の地層）の下に斜めに沈み込んでいます。<br>
+    ・<strong>距離と震度の関係：</strong> マグニチュード（地震の全体のエネルギー）が一定でも、震源距離が遠くなるほど波が衰減するため震度（各地の揺れの強さ）は小さくなります。<br>
+    ・<strong>初期微動継続時間（PS時間）：</strong> 観測点を遠くに移動させるほど初期微動継続時間（P波到着〜S波到着の時間差）が伸びることを確かめてみましょう。
+  </div>
+</div>
+
+<script>
+  let scene, camera, renderer, controls;
+  let landMesh, oceanPlateMesh, epicenterMesh, pWaveMesh, sWaveMesh;
+  let stationAMesh, stationBMesh;
+
+  let strain = 0;
+  let isAccumulating = false;
+  let isRebounding = false;
+  let isWaveSpreading = false;
+
+  let waveRadiusP = 0;
+  let waveRadiusS = 0;
+  const speedP = 0.45;
+  const speedS = 0.24;
+
+  const hypocenter = new THREE.Vector3(12, -4, 0);
+
+  let posA = new THREE.Vector3(-4, 2.5, 6);
+  let posB = new THREE.Vector3(-22, 2.5, -8);
+
+  let distA = 0, distB = 0;
+  let waveTimer = 0;
+
+  let originalLandPositions = null;
+
+  function init3D() {
+    const container = document.getElementById('canvas-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xdbeafe);
+
+    camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+    camera.position.set(5, 45, 80);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(-5, 0, 0);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(40, 80, 50);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    const landGeo = new THREE.PlaneGeometry(65, 40, 48, 32);
+    landGeo.rotateX(-Math.PI / 2);
+    const landMat = new THREE.MeshStandardMaterial({
+      color: 0x38a169,
+      roughness: 0.7,
+      metalness: 0.1,
+      flatShading: true
+    });
+    landMesh = new THREE.Mesh(landGeo, landMat);
+    landMesh.position.set(-18, 2, 0);
+    landMesh.receiveShadow = true;
+    scene.add(landMesh);
+
+    originalLandPositions = landMesh.geometry.attributes.position.clone();
+
+    const baseGeo = new THREE.BoxGeometry(65, 12, 40);
+    const earthBaseMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
+    const baseMesh = new THREE.Mesh(baseGeo, earthBaseMat);
+    baseMesh.position.set(-18, -4, 0);
+    scene.add(baseMesh);
+
+    const oceanGeo = new THREE.BoxGeometry(50, 2.2, 44);
+    const oceanMat = new THREE.MeshStandardMaterial({ color: 0x2a2421, roughness: 0.6, metalness: 0.2 });
+    oceanPlateMesh = new THREE.Mesh(oceanGeo, oceanMat);
+    oceanPlateMesh.position.set(24, -2, 0);
+    oceanPlateMesh.rotation.z = Math.PI / 9;
+    scene.add(oceanPlateMesh);
+
+    const seaGeo = new THREE.PlaneGeometry(90, 44);
+    seaGeo.rotateX(-Math.PI / 2);
+    const seaMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.35 });
+    const seaMesh = new THREE.Mesh(seaGeo, seaMat);
+    seaMesh.position.set(5, 2.1, 0);
+    scene.add(seaMesh);
+
+    const epiGeo = new THREE.SphereGeometry(1, 24, 24);
+    const epiMat = new THREE.MeshStandardMaterial({ color: 0xd97706, emissive: 0xb45309, roughness: 0.3 });
+    epicenterMesh = new THREE.Mesh(epiGeo, epiMat);
+    epicenterMesh.position.copy(hypocenter);
+    scene.add(epicenterMesh);
+
+    const pWaveGeo = new THREE.SphereGeometry(1, 32, 32);
+    const pWaveMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, wireframe: true, transparent: true, opacity: 0.6 });
+    pWaveMesh = new THREE.Mesh(pWaveGeo, pWaveMat);
+    pWaveMesh.position.copy(hypocenter);
+    pWaveMesh.visible = false;
+    scene.add(pWaveMesh);
+
+    const sWaveGeo = new THREE.SphereGeometry(1, 32, 32);
+    const sWaveMat = new THREE.MeshBasicMaterial({ color: 0xe11d48, wireframe: true, transparent: true, opacity: 0.7 });
+    sWaveMesh = new THREE.Mesh(sWaveGeo, sWaveMat);
+    sWaveMesh.position.copy(hypocenter);
+    sWaveMesh.visible = false;
+    scene.add(sWaveMesh);
+
+    stationAMesh = createStationPin(0x0284c7);
+    stationBMesh = createStationPin(0xe11d48);
+
+    updateConfig();
+    updateStations();
+    window.addEventListener('resize', onWindowResize);
+    animate();
+  }
+
+  function createStationPin(color) {
+    const group = new THREE.Group();
+    const pinGeo = new THREE.ConeGeometry(0.9, 2.5, 12);
+    pinGeo.rotateX(Math.PI);
+    const pinMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3 });
+    const pin = new THREE.Mesh(pinGeo, pinMat);
+    pin.position.set(0, 1.25, 0);
+    group.add(pin);
+    scene.add(group);
+    return group;
+  }
+
+  function updateStations() {
+    const xA = parseFloat(document.getElementById('posA_X').value);
+    const zA = parseFloat(document.getElementById('posA_Z').value);
+    posA.set(xA, 2.5, zA);
+    stationAMesh.position.copy(posA);
+
+    const xB = parseFloat(document.getElementById('posB_X').value);
+    const zB = parseFloat(document.getElementById('posB_Z').value);
+    posB.set(xB, 2.5, zB);
+    stationBMesh.position.copy(posB);
+
+    document.getElementById('posA_X_val').innerText = `${Math.round(xA * 10)} km`;
+    document.getElementById('posA_Z_val').innerText = `${zA > 0 ? '+' : ''}${Math.round(zA * 10)} km`;
+    document.getElementById('posB_X_val').innerText = `${Math.round(xB * 10)} km`;
+    document.getElementById('posB_Z_val').innerText = `${zB > 0 ? '+' : ''}${Math.round(zB * 10)} km`;
+
+    distA = Math.round(hypocenter.distanceTo(posA) * 10);
+    distB = Math.round(hypocenter.distanceTo(posB) * 10);
+
+    document.getElementById('distA').innerText = `震源距離: ${distA} km`;
+    document.getElementById('distB').innerText = `震源距離: ${distB} km`;
+
+    // 観測点スライダー変更時に前回の結果をクリア
+    if (!isWaveSpreading) {
+      resetStationUI('A');
+      resetStationUI('B');
+    }
+  }
+
+  function updateConfig() {
+    const mag = parseFloat(document.getElementById('magSlider').value);
+    document.getElementById('magVal').innerText = `M ${mag.toFixed(1)}`;
+
+    const shindoLvl = parseInt(document.getElementById('shindoSlider').value);
+    const shindoLabels = ["やわらかい地盤（揺れ大）", "普通地盤", "かたい岩盤（揺れ小）"];
+    document.getElementById('shindoVal').innerText = shindoLabels[shindoLvl - 1];
+
+    const epiScale = 0.8 + (mag - 6.5) * 1.1;
+    if (epicenterMesh) epicenterMesh.scale.set(epiScale, epiScale, epiScale);
+  }
+
+  function updateLandDeformation() {
+    const pos = landMesh.geometry.attributes.position;
+    const mag = parseFloat(document.getElementById('magSlider').value);
+    const maxDepress = 2.0 + (mag - 6.5) * 1.2;
+
+    for (let i = 0; i < pos.count; i++) {
+      const x = originalLandPositions.getX(i);
+      const origY = originalLandPositions.getY(i);
+      let y = origY;
+
+      if (x > -10) {
+        const factor = Math.max(0, (x + 10) / 25) ** 2;
+        y -= strain * maxDepress * factor;
+      }
+
+      if (isWaveSpreading && waveRadiusS > 0) {
+        const worldX = landMesh.position.x + x;
+        const worldZ = landMesh.position.z + originalLandPositions.getZ(i);
+        const distToPoint = hypocenter.distanceTo(new THREE.Vector3(worldX, 0, worldZ));
+
+        if (waveRadiusS >= distToPoint && waveRadiusS <= distToPoint + 10) {
+          const shakeAmp = (mag - 5.5) * 0.15;
+          y += (Math.sin(waveTimer * 15 + x) * shakeAmp);
+        }
+      }
+
+      pos.setY(i, y);
+    }
+    pos.needsUpdate = true;
+  }
+
+  function startStrain() {
+    if (isRebounding || isWaveSpreading) return;
+    isAccumulating = true;
+  }
+
+  function triggerEarthquake() {
+    if (strain < 0.2 || isWaveSpreading) return;
+    isAccumulating = false;
+    isRebounding = true;
+  }
+
+  function resetSim() {
+    isAccumulating = false;
+    isRebounding = false;
+    isWaveSpreading = false;
+    strain = 0;
+    waveRadiusP = 0;
+    waveRadiusS = 0;
+    waveTimer = 0;
+
+    updateLandDeformation();
+
+    pWaveMesh.visible = false;
+    sWaveMesh.visible = false;
+    document.getElementById('eqBtn').disabled = true;
+
+    resetStationUI('A');
+    resetStationUI('B');
+  }
+
+  function resetStationUI(st) {
+    window[`arrivedP_${st}`] = false;
+    window[`arrivedS_${st}`] = false;
+    window[`timeP_${st}`] = 0;
+    window[`timeS_${st}`] = 0;
+    document.getElementById(`status${st}`).innerText = "待機中";
+    document.getElementById(`status${st}`).style.background = "#f1f5f9";
+    document.getElementById(`status${st}`).style.color = "#334155";
+    document.getElementById(`barP${st}`).style.width = "0%";
+    document.getElementById(`barS${st}`).style.width = "0%";
+    document.getElementById(`psVal${st}`).innerText = "-- 秒";
+    document.getElementById(`shindo${st}`).innerText = "--";
+  }
+
+  function calculateShindo(dist, mag) {
+    const groundType = parseInt(document.getElementById('shindoSlider').value);
+    const amp = groundType === 1 ? 0.6 : (groundType === 3 ? -0.4 : 0);
+    const rawVal = 0.6 * mag - 1.25 * Math.log10(dist + 10) + 2.8 + amp;
+
+    if (rawVal >= 6.5) return "7";
+    if (rawVal >= 6.0) return "6強";
+    if (rawVal >= 5.5) return "6弱";
+    if (rawVal >= 5.0) return "5強";
+    if (rawVal >= 4.5) return "5弱";
+    if (rawVal >= 3.5) return "4";
+    if (rawVal >= 2.5) return "3";
+    if (rawVal >= 1.5) return "2";
+    if (rawVal >= 0.5) return "1";
+    return "0";
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    if (isAccumulating) {
+      if (strain < 1.0) {
+        strain += 0.006;
+        updateLandDeformation();
+        oceanPlateMesh.position.x -= 0.005;
+      } else {
+        document.getElementById('eqBtn').disabled = false;
+      }
+    }
+
+    if (isRebounding) {
+      strain -= 0.18;
+      if (strain <= 0) {
+        strain = 0;
+        isRebounding = false;
+        isWaveSpreading = true;
+        pWaveMesh.visible = true;
+        sWaveMesh.visible = true;
+        waveRadiusP = 0.1;
+        waveRadiusS = 0.1;
+        waveTimer = 0;
+        
+        // 地震発生時に両観測点のUIを確実に初期化
+        resetStationUI('A');
+        resetStationUI('B');
+      }
+      updateLandDeformation();
+    }
+
+    if (isWaveSpreading) {
+      waveTimer += 0.05;
+      waveRadiusP += speedP;
+      waveRadiusS += speedS;
+
+      const mag = parseFloat(document.getElementById('magSlider').value);
+      const maxLimitRadius = 20 + (mag - 6.5) * 18;
+
+      pWaveMesh.scale.set(waveRadiusP, waveRadiusP, waveRadiusP);
+      sWaveMesh.scale.set(waveRadiusS, waveRadiusS, waveRadiusS);
+
+      sWaveMesh.material.opacity = Math.max(0, 0.85 * (1 - waveRadiusS / maxLimitRadius));
+      pWaveMesh.material.opacity = Math.max(0, 0.7 * (1 - waveRadiusP / maxLimitRadius));
+
+      updateLandDeformation();
+
+      checkWaveArrival('A', posA, distA);
+      checkWaveArrival('B', posB, distB);
+
+      if (waveRadiusS > maxLimitRadius) {
+        isWaveSpreading = false;
+        updateLandDeformation();
+      }
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  // P波・S波のUI到達判定・初期微動継続時間の計算（地点ごとの距離連動版）
+  function checkWaveArrival(st, pos, dist) {
+    const distToHypo = hypocenter.distanceTo(pos);
+
+    const barP = document.getElementById(`barP${st}`);
+    const barS = document.getElementById(`barS${st}`);
+    const status = document.getElementById(`status${st}`);
+    const psVal = document.getElementById(`psVal${st}`);
+    const shindoVal = document.getElementById(`shindo${st}`);
+
+    const mag = parseFloat(document.getElementById('magSlider').value);
+
+    // P波の判定
+    if (waveRadiusP >= distToHypo) {
+      if (!window[`arrivedP_${st}`]) {
+        window[`arrivedP_${st}`] = true;
+        window[`timeP_${st}`] = waveTimer;
+      }
+      barP.style.width = "100%";
+    } else {
+      barP.style.width = `${Math.min(100, (waveRadiusP / distToHypo) * 100)}%`;
+    }
+
+    // S波の判定
+    if (waveRadiusS >= distToHypo) {
+      if (!window[`arrivedS_${st}`]) {
+        window[`arrivedS_${st}`] = true;
+        window[`timeS_${st}`] = waveTimer;
+      }
+      barS.style.width = "100%";
+    } else {
+      barS.style.width = `${Math.min(100, (waveRadiusS / distToHypo) * 100)}%`;
+    }
+
+    // UIテキストと初期微動継続時間・震度の表示
+    if (window[`arrivedS_${st}`]) {
+      status.innerText = "主要動 (S波) 到達！強い揺れ";
+      status.style.background = "#ffe4e6";
+      status.style.color = "#e11d48";
+      
+      // 実時間スケールに換算し、観測点ごとの震源距離に応じた正確な初期微動継続時間を算出
+      const psTime = ((window[`timeS_${st}`] - window[`timeP_${st}`]) * 10).toFixed(1);
+      psVal.innerText = `${psTime} 秒`;
+      
+      const calcS = calculateShindo(dist, mag);
+      shindoVal.innerText = `震度 ${calcS}`;
+    } else if (window[`arrivedP_${st}`]) {
+      status.innerText = "初期微動 (P波) 検知中";
+      status.style.background = "#e0f2fe";
+      status.style.color = "#0284c7";
+
+      const currentPs = ((waveTimer - window[`timeP_${st}`]) * 10).toFixed(1);
+      psVal.innerText = `${currentPs} 秒`;
+    }
+  }
+
+  function onWindowResize() {
+    const container = document.getElementById('canvas-container');
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  }
+
+  window.onload = () => {
+    init3D();
+  };
+</script>
+
+</body>
+</html>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PALEOGLOBE 3D - リアル世界地図・大陸移動シミュレーター</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #030712;
+      --panel-bg: rgba(15, 23, 42, 0.85);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --accent-cyan: #38bdf8;
+      --accent-emerald: #10b981;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      height: 100dvh;
+      width: 100vw;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #webgl-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    header {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .brand-badge {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+
+    .chronometer-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 10;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border);
+      padding: 12px 20px;
+      border-radius: 12px;
+      text-align: right;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .chrono-label {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      letter-spacing: 2px;
+    }
+
+    .chrono-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+    }
+
+    .bottom-dock {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      width: calc(100% - 40px);
+      max-width: 900px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 16px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+
+    .timeline-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-play {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      touch-action: manipulation;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      border: none;
+      color: #030712;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .btn-play:hover {
+      transform: scale(1.08);
+      background: #7dd3fc;
+    }
+
+    .slider-track {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #1e293b;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    }
+
+    .epoch-tags {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .epoch-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      touch-action: manipulation;
+    }
+
+    .epoch-chip:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    .epoch-chip.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .info-overlay {
+      position: absolute;
+      left: 20px;
+      bottom: 150px;
+      z-index: 10;
+      width: 310px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .info-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 4px;
+    }
+
+    .info-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .controls-hint {
+      position: absolute;
+      left: 20px;
+      top: 65px;
+      z-index: 10;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: rgba(0,0,0,0.5);
+      padding: 4px 10px;
+      border-radius: 20px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 900px) {
+      .info-overlay {
+        width: min(310px, calc(100vw - 40px));
+      }
+    }
+    @media (max-width: 600px) {
+      header { top: 12px; left: 12px; gap: 8px; }
+      h1 { font-size: 0.95rem; }
+      .controls-hint { left: 12px; top: 58px; }
+      .chronometer-panel { top: 12px; right: 12px; padding: 8px 12px; }
+      .chrono-value { font-size: 1.2rem; }
+      .bottom-dock {
+        bottom: 12px;
+        width: calc(100% - 24px);
+        padding: 12px 14px;
+        gap: 10px;
+      }
+      .info-overlay {
+        left: 12px;
+        bottom: 170px;
+        width: min(310px, calc(100vw - 24px));
+        padding: 10px 14px;
+      }
+    }
+    @media (pointer: coarse) {
+      .btn-play { width: 44px; height: 44px; }
+      .epoch-chip { min-height: 44px; display: flex; align-items: center; }
+      input[type="range"] { height: 10px; }
+      input[type="range"]::-webkit-slider-thumb { width: 26px; height: 26px; }
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <div id="webgl-container"></div>
+
+  <header>
+    <div class="brand-badge">GEO-DYNAMICS 3D</div>
+    <h1>リアル地球儀・プレート移動シミュレーター</h1>
+  </header>
+
+  <div class="controls-hint">🖱️ マウスドラッグ: 地球を回転 | 🔍 ホイール: ズーム</div>
+
+  <div class="chronometer-panel">
+    <div class="chrono-label">TIME AXIS</div>
+    <div class="chrono-value" id="chronoValue">0 MYA</div>
+  </div>
+
+  <div class="info-overlay">
+    <div class="info-title" id="infoTitle">現在 (0 MYA)</div>
+    <div class="info-desc" id="infoDesc">現代の精密な7大陸配置。インド亜大陸がユーラシアに激突しヒマラヤ山脈を形成。大西洋は拡大中。</div>
+  </div>
+
+  <div class="bottom-dock">
+    <div class="timeline-container">
+      <button class="btn-play" id="playBtn" onclick="togglePlay()">▶</button>
+      <div class="slider-track">
+        <input type="range" id="timeSlider" min="-250" max="250" value="0" step="1" oninput="onSliderChange(this.value)">
+      </div>
+    </div>
+
+    <div class="epoch-tags">
+      <div class="epoch-chip" onclick="setTime(-250)">-2.5億年 (超大陸パンゲア)</div>
+      <div class="epoch-chip" onclick="setTime(-150)">-1.5億年 (テチス海誕生)</div>
+      <div class="epoch-chip" onclick="setTime(-65)">-6500万年 (恐竜絶滅)</div>
+      <div class="epoch-chip active" onclick="setTime(0)">現在 (0 MYA)</div>
+      <div class="epoch-chip" onclick="setTime(100)">+1.0億年 (豪州北上)</div>
+      <div class="epoch-chip" onclick="setTime(250)">+2.5億年 (パンゲア・ウルトラ)</div>
+    </div>
+  </div>
+
+<script>
+  let scene, camera, renderer, controls;
+  let globeMesh;
+  let continentMeshes = {};
+  let isPlaying = false;
+  let currentTime = 0;
+
+  const GLOBE_RADIUS = 10;
+
+  // 地質時代ごとの詳細テキスト
+  const epochDetails = [
+    { time: -250, title: "約2億5000万年前【超大陸パンゲア】", desc: "地球上の全陸地が集結した巨大超大陸。周りには唯一の巨大洋「パンサラッサ」が広がります。" },
+    { time: -150, title: "約1億5000万年前【南北への分裂】", desc: "パンゲアが南北に分裂を開始。「ローラシア」と「ゴンドワナ」に分かれ、中央にテチス海が誕生。" },
+    { time: -65, title: "約6500万年前【白亜紀末期】", desc: "大西洋が開き南北アメリカが独立。南半球にあったインド亜大陸がユーラシアへ向け超高速で北上開始。" },
+    { time: 0, title: "現在 (0 MYA)【現代の大陸配置】", desc: "インドがユーラシアに衝突しヒマラヤ山脈が完成。実データによる精密な世界地図の輪郭です。" },
+    { time: 100, title: "約1億年後【地中海の消失と豪州北上】", desc: "オーストラリア大陸が東南アジアと合体。アフリカが北上してヨーロッパと激突し、地中海が消失。" },
+    { time: 250, title: "約2.5億年後【未来の超大陸パンゲア・ウルトラ】", desc: "太平洋が完全に閉じ、すべての陸地が再び1つに集結。地球上に新たな超大陸が完成します。" }
+  ];
+
+  // キーフレームデータ（緯度lat, 経度lng, 自転rot）
+  const keyframes = {
+    "-250": {
+      eurasia:      { lat: 25, lng: 10, rot: 15 },
+      africa:       { lat: 0, lng: 5, rot: 0 },
+      northAmerica: { lat: 20, lng: -20, rot: 10 },
+      southAmerica: { lat: -15, lng: -15, rot: -10 },
+      australia:    { lat: -45, lng: 25, rot: -20 },
+      antarctica:   { lat: -60, lng: 15, rot: 0 },
+      india:        { lat: -30, lng: 20, rot: 35 }
+    },
+    "-150": {
+      eurasia:      { lat: 35, lng: 25, rot: 10 },
+      africa:       { lat: -5, lng: 10, rot: 0 },
+      northAmerica: { lat: 30, lng: -45, rot: 5 },
+      southAmerica: { lat: -20, lng: -35, rot: -5 },
+      australia:    { lat: -50, lng: 50, rot: -10 },
+      antarctica:   { lat: -70, lng: 30, rot: 0 },
+      india:        { lat: -35, lng: 35, rot: 25 }
+    },
+    "-65": {
+      eurasia:      { lat: 45, lng: 50, rot: 0 },
+      africa:       { lat: 0, lng: 15, rot: 0 },
+      northAmerica: { lat: 40, lng: -85, rot: 0 },
+      southAmerica: { lat: -18, lng: -55, rot: 0 },
+      australia:    { lat: -38, lng: 110, rot: 0 },
+      antarctica:   { lat: -80, lng: 0, rot: 0 },
+      india:        { lat: 0, lng: 60, rot: 15 }
+    },
+    "0": {
+      eurasia:      { lat: 0, lng: 0, rot: 0 },
+      africa:       { lat: 0, lng: 0, rot: 0 },
+      northAmerica: { lat: 0, lng: 0, rot: 0 },
+      southAmerica: { lat: 0, lng: 0, rot: 0 },
+      australia:    { lat: 0, lng: 0, rot: 0 },
+      antarctica:   { lat: 0, lng: 0, rot: 0 },
+      india:        { lat: 0, lng: 0, rot: 0 }
+    },
+    "100": {
+      eurasia:      { lat: -8, lng: 10, rot: -10 },
+      africa:       { lat: 12, lng: 5, rot: 15 },
+      northAmerica: { lat: -12, lng: -30, rot: -15 },
+      southAmerica: { lat: 5, lng: -25, rot: 10 },
+      australia:    { lat: 30, lng: -10, rot: 25 },
+      antarctica:   { lat: 12, lng: 60, rot: 20 },
+      india:        { lat: 10, lng: 10, rot: -5 }
+    },
+    "250": {
+      eurasia:      { lat: -33, lng: -140, rot: -30 },
+      africa:       { lat: 10, lng: -160, rot: 10 },
+      northAmerica: { lat: -37, lng: -75, rot: -20 },
+      southAmerica: { lat: 5, lng: 140, rot: 20 },
+      australia:    { lat: 45, lng: -165, rot: 35 },
+      antarctica:   { lat: 47, lng: -150, rot: 25 },
+      india:        { lat: 10, lng: -150, rot: -10 }
+    }
+  };
+
+  // 高精度 GeoJSON 由来の実在緯度経度ポリゴン座標（[lng, lat]の配列）
+  const realContinentCoordinates = {
+    eurasia: [
+      // ヨーロッパ、北欧、ロシア、東アジア、東南アジア、中東（インドを除くリアルな輪郭）
+      [-10, 36], [-9, 43], [-2, 48], [3, 47], [5, 53], [10, 55], [20, 55], [25, 60], [15, 68], [28, 70], 
+      [60, 70], [100, 78], [140, 72], [170, 66], [160, 55], [140, 50], [130, 40], [120, 30], [110, 20], 
+      [108, 12], [105, 1], [100, 6], [95, 18], [92, 22], [88, 22], [80, 28], [68, 24], [62, 25], [55, 25],
+      [50, 30], [43, 12], [38, 20], [35, 32], [26, 38], [10, 37], [0, 36]
+    ],
+    africa: [
+      // アフリカ大陸
+      [-17, 31], [-13, 27], [-17, 15], [-8, 5], [10, 0], [10, -12], [15, -23], [20, -35], [28, -32], 
+      [33, -27], [40, -10], [51, 11], [43, 12], [32, 31], [25, 32], [10, 37], [0, 36], [-5, 36]
+    ],
+    northAmerica: [
+      // 北アメリカ（アラスカ〜メキシコ）
+      [-168, 65], [-150, 60], [-130, 54], [-124, 48], [-120, 34], [-105, 20], [-90, 16], [-92, 14], 
+      [-88, 21], [-97, 26], [-81, 25], [-80, 31], [-75, 35], [-65, 44], [-60, 46], [-64, 50], [-70, 60], 
+      [-80, 68], [-100, 70], [-120, 75], [-160, 70]
+    ],
+    southAmerica: [
+      // 南アメリカ
+      [-80, 8], [-77, 0], [-80, -10], [-72, -30], [-75, -45], [-68, -55], [-65, -50], [-58, -35], 
+      [-42, -23], [-35, -5], [-50, 2], [-60, 8], [-73, 11]
+    ],
+    australia: [
+      // オーストラリア
+      [114, -22], [115, -34], [138, -35], [150, -37], [153, -28], [142, -10], [130, -12], [125, -15]
+    ],
+    antarctica: [
+      // 南極
+      [-180, -70], [-120, -73], [-70, -65], [0, -70], [60, -68], [120, -66], [160, -70], [180, -70],
+      [180, -89], [-180, -89]
+    ],
+    india: [
+      // インド亜大陸（プレート移動を強調するため分離）
+      [68, 24], [72, 20], [77, 8], [80, 13], [88, 22], [80, 28]
+    ]
+  };
+
+  // 緯度経度データから全画面（2048x1024）正矩円筒図法テクスチャを生成
+  function createEquirectangularTexture(type) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2048;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const points = realContinentCoordinates[type];
+    if (!points || points.length === 0) return null;
+
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.85)'; // 重厚なエメラルドグリーン
+    ctx.strokeStyle = '#34d399'; // ネオンシアンのアウトライン
+    ctx.lineWidth = 4;
+
+    ctx.beginPath();
+    points.forEach((pt, i) => {
+      // 経度lng[-180,180] -> x[0,2048], 緯度lat[-90,90] -> y[1024,0]
+      const x = ((pt[0] + 180) / 360) * canvas.width;
+      const y = ((90 - pt[1]) / 180) * canvas.height;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  function init() {
+    const container = document.getElementById('webgl-container');
+    
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 10, 30);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    container.appendChild(renderer.domElement);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.4;
+
+    // 照明
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+    dirLight.position.set(30, 20, 30);
+    scene.add(dirLight);
+
+    createSpaceBackground();
+
+    // 青い海洋球体（地球本体）
+    const globeGeo = new THREE.SphereGeometry(GLOBE_RADIUS, 64, 64);
+    const globeMat = new THREE.MeshStandardMaterial({
+      color: 0x090d16, // 深みのあるサイバーダークネイビー
+      roughness: 0.3,
+      metalness: 0.2
+    });
+    globeMesh = new THREE.Mesh(globeGeo, globeMat);
+    scene.add(globeMesh);
+
+    // 緯度経度ガイドライン
+    const gridGeo = new THREE.WireframeGeometry(new THREE.SphereGeometry(GLOBE_RADIUS + 0.01, 36, 18));
+    const gridMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.08 });
+    scene.add(new THREE.LineSegments(gridGeo, gridMat));
+
+    // 全大陸の正確な球状レイヤー（UV密着方式）の構築
+    createSphereContinents();
+
+    updatePositions(0);
+    updateUI(0);
+
+    window.addEventListener('resize', onWindowResize);
+    animate();
+  }
+
+  // 四角い板ではなく、地球儀にピタリとハマる球面レイヤーを生成
+  function createSphereContinents() {
+    const keys = Object.keys(realContinentCoordinates);
+
+    keys.forEach((key, index) => {
+      const texture = createEquirectangularTexture(key);
+
+      // 地球より極わずかに大きい球面（Zファイティングチラつき防止のため層を0.02ずつずらす）
+      const sphereGeo = new THREE.SphereGeometry(GLOBE_RADIUS + 0.03 + index * 0.005, 64, 64);
+      const sphereMat = new THREE.MeshStandardMaterial({
+        map: texture,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        roughness: 0.4
+      });
+
+      const mesh = new THREE.Mesh(sphereGeo, sphereMat);
+      
+      const group = new THREE.Group();
+      group.add(mesh);
+      scene.add(group);
+
+      continentMeshes[key] = group;
+    });
+  }
+
+  // クォータニオン回転演算（球面上を完全密着スライドさせる）
+  function setTransform(group, lat, lng, rot) {
+    const euler = new THREE.Euler(
+      lat * (Math.PI / 180),
+      lng * (Math.PI / 180),
+      rot * (Math.PI / 180),
+      'YXZ'
+    );
+    group.quaternion.setFromEuler(euler);
+  }
+
+  function updatePositions(time) {
+    const sortedTimes = [-250, -150, -65, 0, 100, 250];
+
+    let t1 = sortedTimes[0], t2 = sortedTimes[sortedTimes.length - 1];
+    for (let i = 0; i < sortedTimes.length - 1; i++) {
+      if (time >= sortedTimes[i] && time <= sortedTimes[i+1]) {
+        t1 = sortedTimes[i];
+        t2 = sortedTimes[i+1];
+        break;
+      }
+    }
+
+    const factor = (time === t1) ? 0 : (time - t1) / (t2 - t1);
+    const k1 = keyframes[t1.toString()];
+    const k2 = keyframes[t2.toString()];
+
+    Object.keys(continentMeshes).forEach(id => {
+      const p1 = k1[id];
+      const p2 = k2[id];
+
+      const lat = p1.lat + (p2.lat - p1.lat) * factor;
+      const lng = p1.lng + (p2.lng - p1.lng) * factor;
+      const rot = p1.rot + (p2.rot - p1.rot) * factor;
+
+      setTransform(continentMeshes[id], lat, lng, rot);
+    });
+  }
+
+  function createSpaceBackground() {
+    const geo = new THREE.BufferGeometry();
+    const count = 1200;
+    const pos = new Float32Array(count * 3);
+    for(let i=0; i<count*3; i++) {
+      pos[i] = (Math.random() - 0.5) * 350;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: 0x475569, size: 0.7 });
+    scene.add(new THREE.Points(geo, mat));
+  }
+
+  function onSliderChange(val) {
+    currentTime = parseFloat(val);
+    updatePositions(currentTime);
+    updateUI(currentTime);
+  }
+
+  function setTime(val) {
+    currentTime = val;
+    document.getElementById('timeSlider').value = val;
+    updatePositions(currentTime);
+    updateUI(currentTime);
+  }
+
+  function togglePlay() {
+    isPlaying = !isPlaying;
+    const btn = document.getElementById('playBtn');
+    btn.innerText = isPlaying ? '⏸' : '▶';
+  }
+
+  function updateUI(time) {
+    const chrono = document.getElementById('chronoValue');
+    if (time < 0) {
+      chrono.innerText = `${Math.abs(Math.round(time))}00万年前`;
+    } else if (time === 0) {
+      chrono.innerText = `現在 (0 MYA)`;
+    } else {
+      chrono.innerText = `${Math.round(time)}00万年後`;
+    }
+
+    const chips = document.querySelectorAll('.epoch-chip');
+    const times = [-250, -150, -65, 0, 100, 250];
+    chips.forEach((chip, i) => {
+      chip.classList.toggle('active', Math.abs(time - times[i]) < 30);
+    });
+
+    let currentDetail = epochDetails[0];
+    for (let detail of epochDetails) {
+      if (time >= detail.time - 30) currentDetail = detail;
+    }
+    document.getElementById('infoTitle').innerText = currentDetail.title;
+    document.getElementById('infoDesc').innerText = currentDetail.desc;
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    if (isPlaying) {
+      currentTime += 0.5;
+      if (currentTime > 250) currentTime = -250;
+      document.getElementById('timeSlider').value = currentTime;
+      updatePositions(currentTime);
+      updateUI(currentTime);
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  window.onload = init;
+</script>
+</body>
+</html>

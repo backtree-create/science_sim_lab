@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>中1理科：光の反射と屈折シミュレーター</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+    body { background: #f0f4f8; margin: 0; padding: 20px; text-align: center; color: #2b2d42; -webkit-tap-highlight-color: transparent; }
+    .card { max-width: 700px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; color: #1d3557; }
+    
+    .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 8px; }
+    .control-group { display: flex; align-items: center; gap: 6px; font-size: 0.95rem; }
+    select, input[type=range] { padding: 4px 8px; font-size: 0.95rem; cursor: pointer; touch-action: manipulation; }
+
+    canvas { background: #ffffff; border: 2px solid #e0e0e0; border-radius: 12px; width: 100%; max-width: 600px; height: auto; touch-action: manipulation; }
+
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      .card { padding: 14px 12px; }
+    }
+    @media (pointer: coarse) {
+      select { min-height: 44px; }
+      input[type=range] {
+        -webkit-appearance: none; appearance: none;
+        height: 44px; padding: 0; background: transparent;
+      }
+      input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: #c9d6e4; }
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none; appearance: none;
+        width: 26px; height: 26px; border-radius: 50%; margin-top: -10px;
+        background: #457b9d; border: 2px solid #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      }
+      input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: #c9d6e4; }
+      input[type=range]::-moz-range-thumb {
+        width: 24px; height: 24px; border-radius: 50%;
+        background: #457b9d; border: 2px solid #ffffff;
+      }
+    }
+    
+    .status-box { margin-top: 10px; font-size: 1.1rem; font-weight: bold; height: 30px; color: #e63946; }
+    
+    .hint { background: #f1faee; border-left: 4px solid #457b9d; padding: 10px 15px; text-align: left; margin-top: 15px; border-radius: 0 8px 8px 0; font-size: 0.9rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>光の反射と屈折（全反射）</h2>
+
+  <div class="controls">
+    <div class="control-group">
+      <label for="mediumSelect">上の物質 ➔ 下の物質:</label>
+      <select id="mediumSelect" onchange="render()">
+        <option value="air-water">空気 ➔ 水</option>
+        <option value="air-glass">空気 ➔ ガラス</option>
+        <option value="water-air">水 ➔ 空気（全反射の観察）</option>
+        <option value="glass-air">ガラス ➔ 空気（全反射の観察）</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="angleSlider">入射角: <span id="angleVal">45</span>°</label>
+      <input type="range" id="angleSlider" min="0" max="85" value="45" oninput="render()">
+    </div>
+  </div>
+
+  <canvas id="simCanvas" width="600" height="400"></canvas>
+
+  <div class="status-box" id="statusText"></div>
+
+  <div class="hint">
+    <strong>【学習の重要ポイント】</strong><br>
+    ・<strong>角度の測り方：</strong> 入射角・反射角・屈折角はすべて「境界線」ではなく<strong>「法線（点線）」との間の角度</strong>です。<br>
+    ・<strong>反射の法則：</strong> 入射角と反射角は常に等しくなります（入射角 ＝ 反射角）。<br>
+    ・<strong>全反射：</strong> 水やガラスから空気中へ光が進むとき、入射角を大きくしていくと屈折光がなくなり、すべて反射する現象が起きます。
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // 論理座標(描画コードは常に 600x400 で行い、実解像度は端末に合わせる)
+  const LOGICAL_W = 600, LOGICAL_H = 400;
+
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.getBoundingClientRect().width || LOGICAL_W;
+    canvas.width  = Math.max(1, Math.round(cssW * dpr));
+    canvas.height = Math.max(1, Math.round(cssW * (LOGICAL_H / LOGICAL_W) * dpr));
+  }
+
+  // 屈折率データ
+  const indices = {
+    'air': 1.0,
+    'water': 1.33,
+    'glass': 1.5
+  };
+
+  function render() {
+    const mediumPair = document.getElementById('mediumSelect').value.split('-');
+    const m1 = mediumPair[0];
+    const m2 = mediumPair[1];
+    
+    const n1 = indices[m1];
+    const n2 = indices[m2];
+
+    const iDeg = parseFloat(document.getElementById('angleSlider').value);
+    document.getElementById('angleVal').innerText = iDeg;
+
+    const iRad = iDeg * Math.PI / 180;
+
+    // 屈折角の計算 (スネルの法則: n1 * sin(i) = n2 * sin(r))
+    const sinR = (n1 / n2) * Math.sin(iRad);
+    const isTIR = sinR > 1.0; // 全反射 (Total Internal Reflection)
+    const rRad = isTIR ? 0 : Math.asin(sinR);
+    const rDeg = isTIR ? 0 : (rRad * 180 / Math.PI);
+
+    // 画面クリア(論理座標 600x400 に変換してから描画)
+    const scale = canvas.width / LOGICAL_W;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
+
+    const W = LOGICAL_W;
+    const H = LOGICAL_H;
+    const midY = H / 2;
+    const originX = W / 2;
+
+    // 1. 物質の背景色塗り分け
+    // 上の物質
+    ctx.fillStyle = m1 === 'air' ? '#ffffff' : (m1 === 'water' ? '#e0f7fa' : '#e8eaf6');
+    ctx.fillRect(0, 0, W, midY);
+    
+    // 下の物質
+    ctx.fillStyle = m2 === 'air' ? '#ffffff' : (m2 === 'water' ? '#e0f7fa' : '#e8eaf6');
+    ctx.fillRect(0, midY, W, midY);
+
+    // 物質名ラベル
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillStyle = '#555';
+    ctx.fillText(getMediumName(m1), 20, 30);
+    ctx.fillText(getMediumName(m2), 20, midY + 30);
+
+    // 境界面（横線）
+    ctx.beginPath();
+    ctx.moveTo(0, midY); ctx.lineTo(W, midY);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#333';
+    ctx.stroke();
+
+    // 法線（垂直な点線）
+    ctx.beginPath();
+    ctx.setLineDash([5, 5]);
+    ctx.moveTo(originX, 20); ctx.lineTo(originX, H - 20);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#777';
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillText('法線', originX + 8, 35);
+
+    // 2. 光線の描画
+    const rayLength = 180;
+
+    // ① 入射光（赤）
+    const inX = originX - rayLength * Math.sin(iRad);
+    const inY = midY - rayLength * Math.cos(iRad);
+    drawRay(inX, inY, originX, midY, '#d90429', 3);
+
+    // ② 反射光（オレンジ）
+    const refX = originX + rayLength * Math.sin(iRad);
+    const refY = midY - rayLength * Math.cos(iRad);
+    drawRay(originX, midY, refX, refY, isTIR ? '#d90429' : '#f77f00', isTIR ? 4 : 2.5);
+
+    // ③ 屈折光（青）
+    if (!isTIR) {
+      const refrX = originX + rayLength * Math.sin(rRad);
+      const refrY = midY + rayLength * Math.cos(rRad);
+      drawRay(originX, midY, refrX, refrY, '#0077b6', 3);
+    }
+
+    // 3. 角度の扇形（アーク）と数値表示
+    drawArc(originX, midY, 40, -Math.PI/2 - iRad, -Math.PI/2, '#d90429');
+    ctx.fillStyle = '#d90429';
+    ctx.fillText(`入射角: ${iDeg}°`, originX - 90, midY - 50);
+
+    drawArc(originX, midY, 35, -Math.PI/2, -Math.PI/2 + iRad, '#f77f00');
+    ctx.fillStyle = '#f77f00';
+    ctx.fillText(`反射角: ${iDeg}°`, originX + 35, midY - 50);
+
+    const statusEl = document.getElementById('statusText');
+    if (isTIR) {
+      statusEl.innerText = '⚡ 全反射が発生中！（屈折光はなく、すべて反射）';
+    } else {
+      statusEl.innerText = '';
+      if (iDeg > 0) {
+        drawArc(originX, midY, 40, Math.PI/2 - rRad, Math.PI/2, '#0077b6');
+        ctx.fillStyle = '#0077b6';
+        ctx.fillText(`屈折角: ${rDeg.toFixed(1)}°`, originX + 20, midY + 50);
+      }
+    }
+  }
+
+  function getMediumName(code) {
+    if (code === 'air') return '空気';
+    if (code === 'water') return '水';
+    if (code === 'glass') return 'ガラス';
+    return '';
+  }
+
+  function drawRay(fromX, fromY, toX, toY, color, width) {
+    ctx.beginPath();
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+
+    // 光線上の矢印
+    const midX = (fromX + toX) / 2;
+    const midY = (fromY + toY) / 2;
+    const angle = Math.atan2(toY - fromY, toX - fromX);
+    const headlen = 10;
+
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.moveTo(midX, midY);
+    ctx.lineTo(midX - headlen * Math.cos(angle - Math.PI / 6), midY - headlen * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(midX - headlen * Math.cos(angle + Math.PI / 6), midY - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawArc(cx, cy, radius, startAngle, endAngle, color) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = color + '22'; // 薄い透過色
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  resizeCanvas();
+  render();
+
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { resizeCanvas(); render(); }, 100);
+  });
+</script>
+
+</body>
+</html>
