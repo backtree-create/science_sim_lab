@@ -32,13 +32,15 @@
   --font-m:'JetBrains Mono',monospace;
 }
 *{box-sizing:border-box;}
-html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font-b);}
+html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font-b);font-feature-settings:"palt" 1;-webkit-font-smoothing:antialiased;}
 body{overflow-x:hidden;-webkit-tap-highlight-color:transparent;}
 ::selection{background:var(--jet);color:#ffffff;}
 a{color:inherit;}
 button{font-family:var(--font-b);cursor:pointer;touch-action:manipulation;}
 h1,h2,h3{font-family:var(--font-d);margin:0;}
 .hidden{display:none !important;}
+:where(a,button,input,select,summary):focus-visible{outline:2px solid var(--jet);outline-offset:2px;border-radius:6px;}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;}}
 
 /* ---------- HOME ---------- */
 #home{position:relative;min-height:100vh;min-height:100dvh;overflow:hidden;}
@@ -59,6 +61,17 @@ h1,h2,h3{font-family:var(--font-d);margin:0;}
 .badge-HL.low{color:var(--low);bottom:14%;right:11%;}
 
 .home-inner{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:56px 24px 80px;}
+.lab-link{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-m);font-size:12px;letter-spacing:.05em;
+  color:var(--muted);text-decoration:none;
+  padding:8px 15px;border-radius:100px;
+  border:1px solid var(--line);background:var(--panel);
+  box-shadow:var(--shadow);
+  transition:color .2s,border-color .2s,transform .2s;
+  margin-bottom:26px;
+}
+.lab-link:hover{color:var(--jet);border-color:var(--jet);transform:translateX(-2px);}
 .home-head{text-align:left;margin-bottom:8px;}
 .eyebrow{font-family:var(--font-m);letter-spacing:.14em;font-size:12px;color:var(--jet);text-transform:uppercase;}
 .home-head h1{font-size:clamp(30px,5vw,52px);line-height:1.25;font-weight:900;margin:10px 0 14px;}
@@ -66,7 +79,7 @@ h1,h2,h3{font-family:var(--font-d);margin:0;}
 
 .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:40px;}
 .sim-card{position:relative;background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:var(--radius);padding:22px 20px 20px;text-align:left;overflow:hidden;transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;box-shadow:var(--shadow);}
-.sim-card:hover{transform:translateY(-4px);border-color:var(--jet);box-shadow:var(--shadow);}
+.sim-card:hover{transform:translateY(-4px);border-color:var(--jet);box-shadow:0 2px 6px rgba(20,30,50,.06), 0 16px 34px -14px rgba(138,79,209,.34);}
 .sim-card .tag{display:inline-block;font-family:var(--font-m);font-size:11px;letter-spacing:.08em;padding:3px 9px;border-radius:20px;margin-bottom:14px;}
 .sim-card h3{font-size:19px;margin-bottom:8px;line-height:1.4;}
 .sim-card p{color:var(--muted);font-size:13.5px;line-height:1.7;margin:0 0 18px;min-height:66px;}
@@ -179,6 +192,8 @@ input[type=range]{width:100%;accent-color:var(--jet);}
   </div>
 
   <div class="home-inner">
+    <a class="lab-link" href="index.html">← 理科シミュレーターラボ</a>
+
     <div class="home-head">
       <div class="eyebrow">3D Interactive &middot; 中学理科「日本の天気」</div>
       <h1>日本の四季と気圧配置<br>3Dシミュレーター</h1>
@@ -229,7 +244,7 @@ input[type=range]{width:100%;accent-color:var(--jet);}
       <button class="sim-card-btn" data-nav="sim-structure">
         <div class="sim-card c-struct">
           <div class="glow"></div>
-          <span class="tag">05 ／内部構造</span>
+          <span class="tag">05 ／ 台風の内部構造</span>
           <h3>台風の立体構造をのぞく</h3>
           <p>台風の目・壁雲・スパイラルバンドと、上空で時計回りに広がる吹き出しを断面表示で観察できる。</p>
           <span class="go">シミュレーターを開く →</span>

@@ -3,343 +3,149 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>コリオリ力 3Dインタラクティブシミュレーター</title>
-<!-- Three.js (3Dグラフィックス) & OrbitControls (カメラ操作) -->
+<title>コリオリの力 3Dインタラクティブシミュレーター</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <style>
-  :root {
-    --bg-base: #080c14;
-    --panel-bg: rgba(15, 23, 42, 0.75);
-    --panel-border: rgba(255, 255, 255, 0.1);
-    --accent-blue: #38bdf8;
-    --accent-indigo: #6366f1;
-    --accent-amber: #f59e0b;
-    --accent-emerald: #10b981;
-    --accent-rose: #f43f5e;
-    --accent-pink: #ec4899;
-    --text-main: #f1f5f9;
-    --text-muted: #94a3b8;
-  }
+  body.instrument{--accent:#38bdf8;}
+  .layout{grid-template-columns:1.35fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-  
-  body {
-    background: var(--bg-base);
-    background-image: 
-      radial-gradient(at 20% 20%, rgba(56, 189, 248, 0.05) 0px, transparent 50%),
-      radial-gradient(at 80% 80%, rgba(99, 102, 241, 0.05) 0px, transparent 50%);
-    color: var(--text-main);
-    min-height: 100vh;
-    min-height: 100dvh;
-    -webkit-tap-highlight-color: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px 10px;
-  }
+  /* ---------- ビューポート ---------- */
+  .stage{padding:0;position:relative;aspect-ratio:1/1;}
+  #canvasContainer{position:absolute;inset:0;overflow:hidden;border-radius:var(--r-md);}
+  #canvas2d{display:block;width:100%;height:100%;touch-action:manipulation;}
+  #canvas3d{width:100%;height:100%;}
+  #canvas3d canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none;}
 
-  /* ヘッダー */
-  .header {
-    text-align: center;
-    margin-bottom: 20px;
-    width: 100%;
-    max-width: 1100px;
+  .view-overlay{
+    position:absolute;top:12px;left:12px;z-index:2;
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;
+    color:var(--text-dim);background:rgba(9,13,20,.78);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--border);border-radius:100px;padding:6px 13px;
+    pointer-events:none;
   }
-  .header-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    background: rgba(56, 189, 248, 0.1);
-    border: 1px solid rgba(56, 189, 248, 0.2);
-    color: var(--accent-blue);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
+  .legend-overlay{
+    position:absolute;bottom:12px;left:12px;right:12px;z-index:2;
+    display:flex;flex-wrap:wrap;gap:7px;pointer-events:none;
   }
-  .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent-emerald);
-    box-shadow: 0 0 8px var(--accent-emerald);
+  .legend-item{
+    display:inline-flex;align-items:center;gap:7px;
+    font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim);
+    background:rgba(9,13,20,.78);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    border:1px solid var(--border);border-radius:100px;padding:5px 12px 5px 9px;
   }
-  h1 {
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
+  .legend-dot{width:8px;height:8px;border-radius:50%;flex:none;}
 
-  /* メインレイアウト */
-  .main-layout {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    max-width: 1100px;
-    width: 100%;
-    justify-content: center;
+  /* ---------- コントロール ---------- */
+  .label-flex{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
   }
+  .val-badge{
+    font-family:var(--font-mono);font-size:11.5px;font-weight:500;
+    color:var(--accent);background:rgba(56,189,248,.12);
+    border:1px solid rgba(56,189,248,.30);
+    padding:2px 9px;border-radius:var(--r-pill);white-space:nowrap;
+  }
+  .control-group{display:flex;flex-direction:column;gap:11px;}
 
-  /* ビューポート（キャンバスエリア） */
-  .view-container {
-    background: #020617;
-    border: 1px solid var(--panel-border);
-    border-radius: 16px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.05);
-    position: relative;
-    width: 580px;
-    height: 580px;
-    overflow: hidden;
+  .btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .btn-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .btn{
+    font-family:var(--font-mono);font-size:12px;letter-spacing:.03em;
+    border:1px solid var(--border);border-radius:var(--r-sm);
+    padding:11px 14px;cursor:pointer;transition:.16s var(--ease);
+    touch-action:manipulation;text-align:center;
+    background:var(--bg-panel-2);color:var(--text);
   }
-  canvas { display: block; width: 100%; height: 100%; border-radius: 15px; }
-  /* 3Dキャンバス: タッチでのカメラ操作時にページスクロール等を抑止 */
-  #canvas3d, #canvas3d canvas {
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
-  }
+  .btn:hover{border-color:var(--border-strong);background:#1c2430;transform:translateY(-1px);}
+  .btn:active{transform:translateY(0);}
+  .btn-primary{background:var(--accent);color:#06131c;border-color:transparent;font-weight:700;
+    box-shadow:0 2px 12px -3px rgba(56,189,248,.75);}
+  .btn-primary:hover{filter:brightness(1.08);background:var(--accent);}
+  .btn-accent{background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.45);color:#c4b5fd;}
+  .btn-accent:hover{background:rgba(167,139,250,.22);}
+  .btn-secondary{background:var(--bg-inset);color:var(--text-dim);}
+  .btn-toggle{background:rgba(74,222,128,.13);border-color:rgba(74,222,128,.42);color:#86efac;}
+  .btn-toggle:hover{background:rgba(74,222,128,.2);}
+  .btn-toggle.off{background:var(--bg-inset);border-color:var(--border);color:var(--text-faint);}
+  .btn-pink{background:rgba(244,114,182,.14);border-color:rgba(244,114,182,.45);color:#f9a8d4;}
+  .btn-pink:hover{background:rgba(244,114,182,.22);}
 
-  /* コントロールパネル */
-  .control-panel {
-    flex: 1;
-    min-width: 320px;
-    max-width: 480px;
-    background: var(--panel-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--panel-border);
-    padding: 20px;
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
+  .exp{display:none;}
+  .exp.on{display:block;}
 
-  /* セグメントタブ */
-  .tab-buttons {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-    background: rgba(2, 6, 23, 0.6);
-    padding: 4px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+  @media (max-width:900px){
+    .stage{aspect-ratio:1/1;}
   }
-  .tab-btn {
-    padding: 10px 4px;
-    border: none;
-    background: transparent;
-    font-weight: 600;
-    cursor: pointer;
-    touch-action: manipulation;
-    color: var(--text-muted);
-    font-size: 11px;
-    border-radius: 7px;
-    transition: all 0.2s ease;
-    text-align: center;
-  }
-  .tab-btn.active {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-main);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-  }
-
-  /* コントロールグループ */
-  .control-group {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    background: rgba(2, 6, 23, 0.4);
-    padding: 16px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-  }
-  .label-flex {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-  }
-  .val-badge {
-    color: var(--accent-blue);
-    font-family: monospace;
-    font-size: 12px;
-    background: rgba(56, 189, 248, 0.1);
-    padding: 2px 8px;
-    border-radius: 4px;
-    border: 1px solid rgba(56, 189, 248, 0.2);
-  }
-
-  /* スライダーカスタムデザイン */
-  input[type="range"] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-    outline: none;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--accent-blue);
-    cursor: pointer;
-    box-shadow: 0 0 10px var(--accent-blue);
-    transition: transform 0.1s;
-  }
-  input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-  }
-
-  /* ボタンデザイン */
-  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .btn-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-  .btn {
-    padding: 10px 8px;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 11px;
-    cursor: pointer;
-    touch-action: manipulation;
-    transition: all 0.2s ease;
-    text-align: center;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-  }
-  .btn:hover { transform: translateY(-1px); }
-  .btn-primary { background: rgba(2, 132, 199, 0.2); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); }
-  .btn-primary:hover { background: rgba(2, 132, 199, 0.4); }
-  .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border-color: rgba(255, 255, 255, 0.1); }
-  .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-main); }
-  .btn-accent { background: rgba(124, 58, 237, 0.2); color: #c084fc; border-color: rgba(192, 132, 252, 0.3); }
-  .btn-accent:hover { background: rgba(124, 58, 237, 0.4); }
-  .btn-pink { background: rgba(236, 72, 153, 0.2); color: #f472b6; border-color: rgba(236, 72, 153, 0.3); }
-  .btn-pink:hover { background: rgba(236, 72, 153, 0.4); }
-  .btn-toggle { background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(52, 211, 153, 0.3); }
-  .btn-toggle.off { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border-color: rgba(255, 255, 255, 0.1); }
-
-  /* ビューポートオーバーレイ */
-  .view-overlay {
-    position: absolute;
-    top: 14px;
-    left: 14px;
-    background: rgba(2, 6, 23, 0.8);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 11px;
-    color: var(--accent-blue);
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    pointer-events: none;
-    z-index: 10;
-  }
-  .legend-overlay {
-    position: absolute;
-    bottom: 14px;
-    left: 14px;
-    background: rgba(2, 6, 23, 0.8);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 11px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    pointer-events: none;
-    z-index: 10;
-  }
-  .legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 11px; }
-  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-
-  /* タブレット・スマートフォン向けレスポンシブ対応 */
-  @media (max-width: 640px) {
-    .view-container {
-      width: 100%;
-      max-width: 580px;
-      height: auto;
-      aspect-ratio: 1 / 1;
-    }
-    .control-panel {
-      min-width: 0;
-      width: 100%;
-      max-width: 580px;
-    }
-  }
-
-  /* タッチデバイス向け: 操作ターゲット拡大 */
-  @media (pointer: coarse) {
-    .btn, .tab-btn { min-height: 44px; }
-    input[type="range"] { height: 8px; }
-    input[type="range"]::-webkit-slider-thumb { width: 26px; height: 26px; }
-    input[type="range"]::-moz-range-thumb {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      background: var(--accent-blue);
-      border: none;
-    }
+  @media (pointer:coarse){
+    .btn{min-height:46px;}
   }
 </style>
 </head>
-<body>
+<body class="instrument">
 
-<div class="header">
-  <div class="header-badge"><span class="status-dot"></span> Interactive Physics Engine</div>
-  <h1>コリオリの力シミュレーター</h1>
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">17 ／ コリオリの力と地球規模の風</span>
 </div>
 
-<div class="main-layout">
-  <div class="view-container" id="canvasContainer">
-    <!-- 2D Canvas (モード1, 4用) -->
-    <canvas id="canvas2d" width="580" height="580"></canvas>
-    <!-- 3D Canvas Container (モード2, 3用) -->
-    <div id="canvas3d" style="width:100%; height:100%; display:none;"></div>
-    
-    <div id="overlayTag" class="view-overlay">MODE 1: 的当て (回転盤)</div>
-    <div id="legendBox" class="legend-overlay" style="display:none;"></div>
+<div class="sim-header">
+  <span class="eyebrow">Coriolis Effect · Rotating Frame</span>
+  <h1>コリオリの力シミュレーター</h1>
+  <p>回転している地球の上では、まっすぐ進んでいるはずのものが曲がって見えます。4つの実験で、その「見かけの力」の正体を確かめましょう。</p>
+</div>
+
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="stage">
+      <div id="canvasContainer">
+        <canvas id="canvas2d" width="580" height="580"></canvas>
+        <div id="canvas3d" style="display:none;"></div>
+        <div id="overlayTag" class="view-overlay">MODE 1 ／ 的当て（回転盤・北半球）</div>
+        <div id="legendBox" class="legend-overlay" style="display:none;"></div>
+      </div>
+    </div>
   </div>
-  
-  <div class="control-panel">
-    <div class="tab-buttons">
-      <button class="tab-btn active" onclick="setMode(1)">1. 的当て</button>
-      <button class="tab-btn" onclick="setMode(2)">2. 長振り子 (フーコー)</button>
-      <button class="tab-btn" onclick="setMode(3)">3. 3D立体地球</button>
-      <button class="tab-btn" onclick="setMode(4)">4. 日本マップ</button>
+
+  <div class="panel">
+    <h2><span class="dot"></span>実験を選ぶ</h2>
+
+    <div class="tabs" style="margin-bottom:18px;display:flex;flex-wrap:wrap;">
+      <button class="tab tab-btn active" onclick="setMode(1)">① 的当て</button>
+      <button class="tab tab-btn" onclick="setMode(2)">② フーコーの振り子</button>
+      <button class="tab tab-btn" onclick="setMode(3)">③ 立体地球</button>
+      <button class="tab tab-btn" onclick="setMode(4)">④ 日本マップ</button>
     </div>
 
     <!-- モード1 コントロール -->
     <div id="ctrl-mode1" class="control-group">
-      <div class="label-flex">
-        <span>視点モード</span>
-        <span id="viewLabel1" class="val-badge">宇宙固定視点</span>
+      <div>
+        <div class="label-flex">
+          <span>視点モード</span>
+          <span id="viewLabel1" class="val-badge">宇宙固定視点</span>
+        </div>
+        <button id="viewToggleBtn1" class="btn btn-accent" style="width:100%;margin-top:8px;" onclick="toggleView1()">回転地面視点に切替</button>
       </div>
-      <button id="viewToggleBtn1" class="btn btn-accent" onclick="toggleView1()">回転地面視点に切替</button>
-      <div class="label-flex" style="margin-top:4px;">
-        <span>自転速度</span>
-        <span id="speedVal1" class="val-badge">1.0x</span>
+      <div>
+        <div class="label-flex">
+          <span>自転速度</span>
+          <span id="speedVal1" class="val-badge">1.0x</span>
+        </div>
+        <input type="range" id="rotSpeed1" min="0" max="2.5" step="0.1" value="1.0" oninput="updateSpeed(1)" style="margin-top:8px;">
       </div>
-      <input type="range" id="rotSpeed1" min="0" max="2.5" step="0.1" value="1.0" oninput="updateSpeed(1)">
-      <div class="btn-grid" style="margin-top:4px;">
+      <div class="btn-grid">
         <button class="btn btn-primary" onclick="fireParticle1()">ボール発射</button>
         <button class="btn btn-secondary" onclick="clearPaths1()">軌跡クリア</button>
       </div>
@@ -347,17 +153,21 @@
 
     <!-- モード2 コントロール -->
     <div id="ctrl-mode2" class="control-group" style="display:none;">
-      <div class="label-flex">
-        <span>実験地の緯度</span>
-        <span id="latLabel2" class="val-badge">90° (北極)</span>
+      <div>
+        <div class="label-flex">
+          <span>実験地の緯度</span>
+          <span id="latLabel2" class="val-badge">90°（北極）</span>
+        </div>
+        <input type="range" id="latSlider2" min="0" max="90" step="5" value="90" oninput="updatePendulumLat()" style="margin-top:8px;">
       </div>
-      <input type="range" id="latSlider2" min="0" max="90" step="5" value="90" oninput="updatePendulumLat()">
-      <div class="label-flex" style="margin-top:4px;">
-        <span>時間経過速度</span>
-        <span id="speedVal2" class="val-badge">1.0x</span>
+      <div>
+        <div class="label-flex">
+          <span>時間経過速度</span>
+          <span id="speedVal2" class="val-badge">1.0x</span>
+        </div>
+        <input type="range" id="speedSlider2" min="0.1" max="3.0" step="0.1" value="1.0" oninput="updatePendulumSpeed()" style="margin-top:8px;">
       </div>
-      <input type="range" id="speedSlider2" min="0.1" max="3.0" step="0.1" value="1.0" oninput="updatePendulumSpeed()">
-      <div class="btn-grid" style="margin-top:4px;">
+      <div class="btn-grid">
         <button class="btn btn-primary" onclick="resetPendulum()">振り子リセット</button>
         <button class="btn btn-secondary" onclick="clearPendulumTrace()">軌跡クリア</button>
       </div>
@@ -365,47 +175,87 @@
 
     <!-- モード3 コントロール -->
     <div id="ctrl-mode3" class="control-group" style="display:none;">
-      <div class="label-flex">
-        <span>地球自転速度</span>
-        <span id="speedVal3" class="val-badge">1.0x (自転あり)</span>
+      <div>
+        <div class="label-flex">
+          <span>地球の自転速度</span>
+          <span id="speedVal3" class="val-badge">1.0x（自転あり）</span>
+        </div>
+        <input type="range" id="rotSpeed3" min="0" max="2.5" step="0.1" value="1.0" oninput="updateSpeed(3)" style="margin-top:8px;">
       </div>
-      <input type="range" id="rotSpeed3" min="0" max="2.5" step="0.1" value="1.0" oninput="updateSpeed(3)">
-      <div class="btn-grid" style="margin-top:2px;">
-        <button class="btn btn-accent" onclick="setZeroRotation3()">自転停止 (0.0x)</button>
-        <button class="btn btn-primary" onclick="setNormalRotation3()">標準自転 (1.0x)</button>
+      <div class="btn-grid">
+        <button class="btn btn-accent" onclick="setZeroRotation3()">自転を止める</button>
+        <button class="btn btn-primary" onclick="setNormalRotation3()">標準自転にもどす</button>
       </div>
-
-      <div class="label-flex" style="margin-top:4px;">
-        <span>大気循環帯・風流線表示</span>
-      </div>
-      <button id="circToggleBtn3" class="btn btn-toggle" onclick="toggleCirculation3()">風系流線表示: ON</button>
-
-      <div class="btn-grid" style="margin-top:4px;">
-        <button class="btn btn-primary" onclick="fireAirParticle3()">空気塊発射 (正面赤道から)</button>
+      <button id="circToggleBtn3" class="btn btn-toggle" onclick="toggleCirculation3()">風系の帯を表示: ON</button>
+      <div class="btn-grid">
+        <button class="btn btn-primary" onclick="fireAirParticle3()">赤道から空気を出す</button>
         <button class="btn btn-secondary" onclick="clearAirPaths3()">軌跡クリア</button>
       </div>
     </div>
 
     <!-- モード4 コントロール -->
     <div id="ctrl-mode4" class="control-group" style="display:none;">
-      <div class="label-flex">
-        <span>偏西風の強さ (風速)</span>
-        <span id="jetSpeedVal4" class="val-badge">5 (中)</span>
+      <div>
+        <div class="label-flex">
+          <span>偏西風の強さ（風速）</span>
+          <span id="jetSpeedVal4" class="val-badge">5（中）</span>
+        </div>
+        <input type="range" id="jetSpeed4" min="1" max="10" step="1" value="5" oninput="updateJetSpeedVal4()" style="margin-top:8px;">
       </div>
-      <input type="range" id="jetSpeed4" min="1" max="10" step="1" value="5" oninput="updateJetSpeedVal4()">
+      <div>
+        <div class="label-flex">
+          <span>偏西風の蛇行の大きさ</span>
+          <span id="meanderVal4" class="val-badge">35</span>
+        </div>
+        <input type="range" id="jetMeander4" min="0" max="80" step="5" value="35" oninput="updateMeanderVal4()" style="margin-top:8px;">
+      </div>
+      <div class="btn-grid-3">
+        <button class="btn btn-primary" onclick="spawnWeather4('L')">低気圧</button>
+        <button class="btn btn-toggle" onclick="spawnWeather4('H')">高気圧</button>
+        <button class="btn btn-pink" onclick="spawnWeather4('T')">台風</button>
+      </div>
+      <button class="btn btn-secondary" onclick="clearClouds4()">気圧配置クリア</button>
+    </div>
 
-      <div class="label-flex" style="margin-top:4px;">
-        <span>偏西風 (ジェット気流) 蛇行振幅</span>
-        <span id="meanderVal4" class="val-badge">35</span>
-      </div>
-      <input type="range" id="jetMeander4" min="0" max="80" step="5" value="35" oninput="updateMeanderVal4()">
+    <hr class="divider">
 
-      <div class="btn-grid-3" style="margin-top:4px;">
-        <button class="btn btn-primary" onclick="spawnWeather4('L')">低気圧 [低]</button>
-        <button class="btn btn-toggle" onclick="spawnWeather4('H')">高気圧 [高]</button>
-        <button class="btn btn-pink" onclick="spawnWeather4('T')">台風発生 [台]</button>
-      </div>
-      <button class="btn btn-secondary" style="width:100%; margin-top:2px;" onclick="clearClouds4()">気圧配置クリア</button>
+    <!-- 解説 -->
+    <div class="hint exp on" id="exp-mode1">
+      <span class="hint-title">この実験でわかること</span>
+      <ul>
+        <li>回転する円盤の中心から、まわりの的をねらってボールを投げます。</li>
+        <li><strong>宇宙固定視点</strong>で見ると、ボールはまっすぐ進んでいます。力は何も働いていません。</li>
+        <li>ところが<strong>回転地面視点</strong>（円盤に乗った人の目線）に切り替えると、同じボールが横にそれて見えます。この見かけの曲がりが<strong>コリオリの力</strong>です。</li>
+        <li>この円盤は北極の上から見た地球と同じ向き（反時計回り）に回しています。だからボールは進行方向に対して<strong>右</strong>へそれます。南半球では逆に左へそれます。</li>
+      </ul>
+    </div>
+
+    <div class="hint exp" id="exp-mode2">
+      <span class="hint-title">この実験でわかること</span>
+      <ul>
+        <li>長い振り子は、いったん振り始めると<strong>同じ面の中で振れ続けよう</strong>とします。</li>
+        <li>ところが地面のほうが自転で回っているため、床の上から見ると、振れる向きがゆっくり回っていくように見えます（<strong>フーコーの振り子</strong>）。</li>
+        <li>回る速さは<strong>緯度によって変わり</strong>、北極でいちばん速く（およそ24時間で1周）、緯度が低くなるほど遅くなり、<strong>赤道では回りません</strong>。</li>
+        <li>スライダーで緯度を変え、床のピンが倒れていく速さのちがいを比べてみましょう。</li>
+      </ul>
+    </div>
+
+    <div class="hint exp" id="exp-mode3">
+      <span class="hint-title">この実験でわかること</span>
+      <ul>
+        <li>赤道から北へ向かって空気を出すと、<strong>自転あり</strong>では進むほど東へそれていきます（北半球では進行方向の右へ）。</li>
+        <li><strong>自転を止める</strong>と、空気は南北にまっすぐ進みます。曲がりの原因が自転であることが確かめられます。</li>
+        <li>そらされる大きさは緯度が高いほど大きくなります。この曲がりが積み重なって、緯度15°付近の<strong>貿易風（東寄りの風）</strong>や緯度45°付近の<strong>偏西風（西寄りの風）</strong>という地球規模の風の帯ができます。</li>
+      </ul>
+    </div>
+
+    <div class="hint exp" id="exp-mode4">
+      <span class="hint-title">この実験でわかること</span>
+      <ul>
+        <li>日本付近の上空には<strong>偏西風</strong>が西から東へ吹いています。低気圧・高気圧はこれに流されるため、天気は<strong>西から東へ</strong>変わります。</li>
+        <li>南の海上で発生した<strong>台風</strong>は、はじめ太平洋高気圧のふちに沿って北西へ進み、偏西風帯に入ると進路を<strong>東寄りに変えます</strong>（転向）。</li>
+        <li>偏西風の強さと蛇行の大きさを変えると、台風の曲がり方がどう変わるか確かめてみましょう。</li>
+      </ul>
     </div>
 
   </div>
@@ -430,11 +280,22 @@ let geojsonData = null;
 // --- 初期化 ---
 window.onload = () => {
   initThreeJS();
+  resize2d();
   resizeRenderer();
   loadExternalMap();
   setMode(1);
   animate();
 };
+
+// 2Dキャンバスは論理座標 580x580 のまま、高解像度画面では実解像度だけ上げる
+const BASE2D = 580;
+function resize2d() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  c2d.width = BASE2D * dpr;
+  c2d.height = BASE2D * dpr;
+  ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize2d);
 
 // 画面サイズ変化時にレンダラー・カメラをコンテナサイズへ追従させる
 function resizeRenderer() {
@@ -472,9 +333,14 @@ function setMode(mode) {
   document.getElementById('ctrl-mode3').style.display = (mode === 3) ? 'flex' : 'none';
   document.getElementById('ctrl-mode4').style.display = (mode === 4) ? 'flex' : 'none';
 
+  // 解説パネルの切り替え
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('exp-mode' + i).classList.toggle('on', i === mode);
+  }
+
   const overlayTag = document.getElementById('overlayTag');
   const legendBox = document.getElementById('legendBox');
-  
+
   if (mode === 1 || mode === 4) {
     c2d.style.display = 'block';
     c3dContainer.style.display = 'none';
@@ -485,10 +351,10 @@ function setMode(mode) {
 
   // 凡例・オーバーレイ更新
   if (mode === 1) {
-    overlayTag.innerText = "MODE 1: 的当て (回転盤)";
+    overlayTag.innerText = "MODE 1 ／ 的当て（回転盤・北半球）";
     legendBox.style.display = 'none';
   } else if (mode === 2) {
-    overlayTag.innerText = "MODE 2: 長振り子 (フーコーの実験)";
+    overlayTag.innerText = "MODE 2 ／ フーコーの振り子";
     legendBox.style.display = 'flex';
     legendBox.innerHTML = `
       <div class="legend-item"><span class="legend-dot" style="background:#f43f5e;"></span>振動軌跡</div>
@@ -496,22 +362,22 @@ function setMode(mode) {
     `;
     setupPendulumScene();
   } else if (mode === 3) {
-    overlayTag.innerText = "MODE 3: 3D立体地球 (自転有無と大気循環)";
+    overlayTag.innerText = "MODE 3 ／ 立体地球（自転の有無と大気の流れ）";
     legendBox.style.display = 'flex';
     legendBox.innerHTML = `
-      <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span>偏西風 (西風)</div>
-      <div class="legend-item"><span class="legend-dot" style="background:#f43f5e;"></span>貿易風 (東風)</div>
-      <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span>自転なし (南北直線)</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span>偏西風帯（西寄りの風・緯度45°付近）</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f43f5e;"></span>貿易風帯（東寄りの風・緯度15°付近）</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span>自転なし（南北にまっすぐ）</div>
     `;
     setupGlobeScene();
   } else if (mode === 4) {
-    overlayTag.innerText = "MODE 4: 日本周辺マップ ＆ 偏西風・台風連動";
+    overlayTag.innerText = "MODE 4 ／ 日本付近の偏西風と台風";
     legendBox.style.display = 'flex';
     legendBox.innerHTML = `
-      <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span>偏西風 (ジェット気流)</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#38bdf8;"></span>偏西風（ジェット気流）</div>
       <div class="legend-item"><span class="legend-dot" style="background:#f43f5e;"></span>低気圧</div>
       <div class="legend-item"><span class="legend-dot" style="background:#facc15;"></span>高気圧</div>
-      <div class="legend-item"><span class="legend-dot" style="background:#ec4899;"></span>台風 (進行方向変化)</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#ec4899;"></span>台風（転向のようす）</div>
     `;
   }
 }
@@ -573,10 +439,10 @@ function updateSpeed(m) {
     rotSpeed3 = 0.01 * val;
     const label = document.getElementById('speedVal3');
     if (val === 0) {
-      label.innerText = "0.0x (自転なし)";
+      label.innerText = "0.0x（自転なし）";
       label.style.color = "#38bdf8";
     } else {
-      label.innerText = val.toFixed(1) + "x (自転あり)";
+      label.innerText = val.toFixed(1) + "x（自転あり）";
       label.style.color = "#f59e0b";
     }
     updateGlobeWindOverlay();
@@ -593,7 +459,9 @@ function clearPaths1() { particles1 = []; }
 
 function drawMode1() {
   const cx = 290, cy = 290;
-  angle1 += rotSpeed1;
+  // 北極の上から見た地球と同じ「反時計回り」に回す
+  // （canvas の rotate は正の値で時計回りなので符号を反転させる）
+  angle1 -= rotSpeed1;
   ctx2d.save();
   ctx2d.translate(cx, cy);
 
@@ -705,7 +573,11 @@ function setupPendulumScene() {
 
 function updatePendulumLat() {
   pendulumLat = parseFloat(document.getElementById('latSlider2').value);
-  document.getElementById('latLabel2').innerText = pendulumLat + '°';
+  let note = '';
+  if (pendulumLat >= 89) note = '（北極）';
+  else if (pendulumLat <= 1) note = '（赤道・回らない）';
+  else if (Math.abs(pendulumLat - 35) <= 2.5) note = '（日本付近）';
+  document.getElementById('latLabel2').innerText = pendulumLat + '°' + note;
 }
 function updatePendulumSpeed() {
   pendulumSpeed = parseFloat(document.getElementById('speedSlider2').value);
@@ -799,6 +671,7 @@ function setupGlobeScene() {
   globeGroup.add(windLinesGroup);
 
   scene3d.add(globeGroup);
+  airParticles3 = []; // シーンを作り直したので、前の空気塊の参照は捨てる
   updateGlobeWindOverlay();
 }
 
@@ -879,14 +752,25 @@ function fireAirParticle3() {
   const earthRot = earth ? earth.rotation.y : 0;
 
   // 地球のローカル座標系においてカメラ正面を指す経度(度)
-  let centerLonDeg = (camAngle - earthRot) * (180 / Math.PI);
+  // 位置計算は theta = lon + 180° を使うため、方位角は lon + 90° になる。
+  // その 90° のぶんを引かないと発射点が正面からずれてしまう。
+  let centerLonDeg = (camAngle - earthRot) * (180 / Math.PI) - 90;
   centerLonDeg = ((centerLonDeg + 180) % 360 + 360) % 360 - 180;
+
+  // 空気塊が多くなりすぎないように上限を設ける
+  if (airParticles3.length >= 12) {
+    const old = airParticles3.shift();
+    if (old.mesh.parent) old.mesh.parent.remove(old.mesh);
+  }
 
   const pGeo = new THREE.SphereGeometry(3.5, 16, 16);
   const pMat = new THREE.MeshBasicMaterial({ color: rotSpeed3Val === 0 ? 0x38bdf8 : 0xfacc15 });
   const pMesh = new THREE.Mesh(pGeo, pMat);
-  
-  scene3d.add(pMesh);
+
+  // 地球と一緒に回るよう earthMesh の子にする
+  // （lon は地球のローカル経度なので、scene に直接置くと自転ぶんずれてしまう）
+  if (earth) earth.add(pMesh); else scene3d.add(pMesh);
+
   airParticles3.push({
     mesh: pMesh,
     lat: 0,
@@ -896,7 +780,7 @@ function fireAirParticle3() {
 }
 
 function clearAirPaths3() {
-  airParticles3.forEach(p => scene3d.remove(p.mesh));
+  airParticles3.forEach(p => { if (p.mesh.parent) p.mesh.parent.remove(p.mesh); });
   airParticles3 = [];
 }
 
@@ -974,6 +858,38 @@ function latLonToCanvas(lat, lon) {
   return { x, y };
 }
 
+// 描画範囲（画面に見える範囲より少し広く取り、切り口が画面外に出るようにする）
+const MAP_CLIP = { lon0: 105, lon1: 168, lat0: 12, lat1: 62 };
+
+// Sutherland–Hodgman 法で緯度経度の矩形にポリゴンを切り取る
+function clipRingToBox(ring, box) {
+  const clipEdge = (pts, inside, cross) => {
+    const out = [];
+    for (let i = 0; i < pts.length; i++) {
+      const cur = pts[i], prv = pts[(i + pts.length - 1) % pts.length];
+      const ci = inside(cur), pi = inside(prv);
+      if (ci) { if (!pi) out.push(cross(prv, cur)); out.push(cur); }
+      else if (pi) out.push(cross(prv, cur));
+    }
+    return out;
+  };
+  const ix = (a, b, x) => { const t = (x - a[0]) / (b[0] - a[0]); return [x, a[1] + t * (b[1] - a[1])]; };
+  const iy = (a, b, y) => { const t = (y - a[1]) / (b[1] - a[1]); return [a[0] + t * (b[0] - a[0]), y]; };
+
+  let p = ring;
+  if (p.length > 1) {
+    const f = p[0], l = p[p.length - 1];
+    if (f[0] === l[0] && f[1] === l[1]) p = p.slice(0, -1);   // 閉じ点の重複を除く
+  }
+  if (p.length < 3) return null;
+
+  p = clipEdge(p, q => q[0] >= box.lon0, (a, b) => ix(a, b, box.lon0)); if (p.length < 3) return null;
+  p = clipEdge(p, q => q[0] <= box.lon1, (a, b) => ix(a, b, box.lon1)); if (p.length < 3) return null;
+  p = clipEdge(p, q => q[1] >= box.lat0, (a, b) => iy(a, b, box.lat0)); if (p.length < 3) return null;
+  p = clipEdge(p, q => q[1] <= box.lat1, (a, b) => iy(a, b, box.lat1)); if (p.length < 3) return null;
+  return p;
+}
+
 // フォールバック用簡易マップデータ
 const mapPathsFallback = {
   honshu: [[41.5,141.5],[39.0,142.0],[37.0,140.8],[35.8,140.0],[35.3,139.8],[34.6,138.7],[34.7,136.9],[34.2,135.2],[34.3,133.0],[33.9,130.9],[34.6,132.5],[35.6,134.5],[36.0,136.0],[36.7,137.2],[37.9,139.0],[40.0,140.0],[41.2,140.6]],
@@ -1026,17 +942,17 @@ function drawMode4() {
 
       const renderPoly = (coords) => {
         coords.forEach(ring => {
+          // 表示範囲でポリゴンを「切り取って」から描く。
+          // 単に範囲外の点を飛ばすと、出入りする場所どうしが直線で結ばれ、
+          // ユーラシア大陸のような大きな輪郭に偽の海岸線が現れてしまう。
+          const clipped = clipRingToBox(ring, MAP_CLIP);
+          if (!clipped || clipped.length < 3) return;
           ctx2d.beginPath();
-          let drawn = false;
-          ring.forEach(pt => {
-            const lon = pt[0], lat = pt[1];
-            if (lon >= 105 && lon <= 165 && lat >= 15 && lat <= 60) {
-              const pos = latLonToCanvas(lat, lon);
-              if (!drawn) { ctx2d.moveTo(pos.x, pos.y); drawn = true; }
-              else { ctx2d.lineTo(pos.x, pos.y); }
-            }
+          clipped.forEach((pt, i) => {
+            const pos = latLonToCanvas(pt[1], pt[0]);
+            if (i === 0) ctx2d.moveTo(pos.x, pos.y); else ctx2d.lineTo(pos.x, pos.y);
           });
-          if (drawn) { ctx2d.closePath(); ctx2d.fill(); ctx2d.stroke(); }
+          ctx2d.closePath(); ctx2d.fill(); ctx2d.stroke();
         });
       };
 
