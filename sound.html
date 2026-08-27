@@ -1,268 +1,113 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>モノコードシミュレーター</title>
-    <style>
-        :root {
-            --bg-color: #1a1e24;
-            --panel-bg: #252b33;
-            --accent-color: #00d2ff;
-            --amplitude-color: #ff4757;
-            --frequency-color: #2ed573;
-            --text-color: #e0e6ed;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>モノコードシミュレーター</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .layout{grid-template-columns:1.6fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+  .canvas-container{position:relative;}
+  .canvas-container + .canvas-container{margin-top:14px;}
+  .canvas-container canvas{display:block;width:100%;height:100%;touch-action:manipulation;}
+  #monochordCanvas{height:100%;}
+  .stage.mono{height:260px;}
+  .stage.wave{height:230px;}
 
-        body {
-            -webkit-tap-highlight-color: transparent;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
+  /* キャンバスの役割を示す小さな見出し */
+  .stage .caption{
+    position:absolute;top:10px;left:12px;z-index:2;
+    font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--text-faint);pointer-events:none;
+  }
 
-        header {
-            margin-bottom: 20px;
-            text-align: center;
-        }
+  /* 3段階スライダーの目盛り */
+  .control .ticks{
+    display:flex;justify-content:space-between;
+    font-family:var(--font-mono);font-size:10px;color:var(--text-faint);
+    margin-top:-2px;
+  }
+  .control-group{display:flex;flex-direction:column;gap:9px;}
 
-        h1 {
-            font-size: 1.5rem;
-            letter-spacing: 1px;
-            color: #fff;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 900px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .display-section {
-            background-color: var(--panel-bg);
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .canvas-container {
-            position: relative;
-            width: 100%;
-            height: 200px;
-            background-color: #111418;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #333d47;
-        }
-
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            touch-action: manipulation;
-        }
-
-        .control-section {
-            background-color: var(--panel-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            background: rgba(0,0,0,0.2);
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid var(--accent-color);
-        }
-
-        .control-group.amplitude { border-left-color: var(--amplitude-color); }
-        .control-group.frequency { border-left-color: var(--frequency-color); }
-
-        .control-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-
-        input[type=range] {
-            width: 100%;
-            height: 6px;
-            background: #444;
-            border-radius: 3px;
-            outline: none;
-            accent-color: var(--accent-color);
-            cursor: pointer;
-        }
-
-        .control-group.amplitude input[type=range] { accent-color: var(--amplitude-color); }
-        .control-group.frequency input[type=range] { accent-color: var(--frequency-color); }
-
-        .button-container {
-            grid-column: 1 / -1;
-            display: flex;
-            justify-content: center;
-            margin-top: 10px;
-        }
-
-        .pluck-btn {
-            background: linear-gradient(135deg, #ff4757, #ff6b81);
-            color: white;
-            border: none;
-            padding: 15px 50px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
-            transition: all 0.1s ease;
-        }
-
-        .pluck-btn:active {
-            transform: scale(0.96);
-            box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
-        }
-
-        .indicator {
-            font-size: 0.8rem;
-            color: #aaa;
-        }
-
-        button {
-            touch-action: manipulation;
-        }
-
-        /* タッチ端末向け：ボタンとスライダーのつまみを大きく */
-        @media (pointer: coarse) {
-            .pluck-btn {
-                min-height: 48px;
-            }
-            input[type=range] {
-                -webkit-appearance: none;
-                appearance: none;
-                height: 30px;
-                background: transparent;
-            }
-            input[type=range]::-webkit-slider-runnable-track {
-                height: 6px;
-                background: #444;
-                border-radius: 3px;
-            }
-            input[type=range]::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                width: 26px;
-                height: 26px;
-                border-radius: 50%;
-                background: var(--accent-color);
-                border: 2px solid #fff;
-                margin-top: -10px;
-            }
-            input[type=range]::-moz-range-track {
-                height: 6px;
-                background: #444;
-                border-radius: 3px;
-            }
-            input[type=range]::-moz-range-thumb {
-                width: 26px;
-                height: 26px;
-                border-radius: 50%;
-                background: var(--accent-color);
-                border: 2px solid #fff;
-            }
-            .control-group.amplitude input[type=range]::-webkit-slider-thumb { background: var(--amplitude-color); }
-            .control-group.frequency input[type=range]::-webkit-slider-thumb { background: var(--frequency-color); }
-            .control-group.amplitude input[type=range]::-moz-range-thumb { background: var(--amplitude-color); }
-            .control-group.frequency input[type=range]::-moz-range-thumb { background: var(--frequency-color); }
-        }
-    </style>
+  @media (max-width:600px){
+    .stage.mono{height:220px;}
+    .stage.wave{height:190px;}
+  }
+</style>
 </head>
-<body>
+<body class="instrument">
 
-<header>
-    <h1>モノコードシミュレーター</h1>
-</header>
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">09 ／ モノコードと音の性質</span>
+</div>
 
-<div class="container">
-    <div class="display-section">
-        <!-- モノコードビジュアル Canvas -->
-        <div class="canvas-container">
-            <canvas id="monochordCanvas"></canvas>
-        </div>
+<div class="sim-header">
+  <span class="eyebrow">Monochord · Pitch and Loudness</span>
+  <h1>モノコードシミュレーター</h1>
+  <p>弦の条件を変えて「弦をはじく」と、音の高さと大きさがどう変わるかを、波形と音で同時に確かめられます。</p>
+</div>
 
-        <!-- オシロスコープ（波形） Canvas -->
-        <div class="canvas-container">
-            <canvas id="waveCanvas"></canvas>
-        </div>
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="canvas-container stage mono">
+      <span class="caption">Monochord</span>
+      <canvas id="monochordCanvas"></canvas>
     </div>
 
-    <div class="control-section">
-        <!-- はじく強さ -->
-        <div class="control-group amplitude">
-            <div class="control-label">
-                <span>はじく強さ</span>
-                <span id="pluckVal" class="indicator">中</span>
-            </div>
-            <input type="range" id="pluckSlider" min="1" max="3" step="1" value="2">
-        </div>
-
-        <!-- 弦の長さ -->
-        <div class="control-group frequency">
-            <div class="control-label">
-                <span>弦の長さ</span>
-                <span id="lengthVal" class="indicator">中</span>
-            </div>
-            <input type="range" id="lengthSlider" min="1" max="3" step="1" value="2">
-        </div>
-
-        <!-- 弦を張る力 -->
-        <div class="control-group frequency">
-            <div class="control-label">
-                <span>弦を張る力</span>
-                <span id="tensionVal" class="indicator">中</span>
-            </div>
-            <input type="range" id="tensionSlider" min="1" max="3" step="1" value="2">
-        </div>
-
-        <!-- 弦の太さ -->
-        <div class="control-group frequency">
-            <div class="control-label">
-                <span>弦の太さ</span>
-                <span id="thicknessVal" class="indicator">中</span>
-            </div>
-            <input type="range" id="thicknessSlider" min="1" max="3" step="1" value="2">
-        </div>
-
-        <div class="button-container">
-            <button class="pluck-btn" id="pluckBtn">弦をはじく</button>
-        </div>
+    <div class="canvas-container stage wave">
+      <span class="caption">Waveform</span>
+      <canvas id="waveCanvas"></canvas>
     </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>弦の条件</h2>
+
+    <div class="controls">
+      <!-- はじく強さ -->
+      <div class="control control-group amplitude">
+        <label for="pluckSlider">はじく強さ<span class="val" id="pluckVal">中</span></label>
+        <input type="range" id="pluckSlider" min="1" max="3" step="1" value="2">
+        <div class="ticks"><span>弱</span><span>中</span><span>強</span></div>
+      </div>
+
+      <!-- 弦の長さ -->
+      <div class="control control-group frequency">
+        <label for="lengthSlider">弦の長さ<span class="val" id="lengthVal">中</span></label>
+        <input type="range" id="lengthSlider" min="1" max="3" step="1" value="2">
+        <div class="ticks"><span>長</span><span>中</span><span>短</span></div>
+      </div>
+
+      <!-- 弦を張る力 -->
+      <div class="control control-group frequency">
+        <label for="tensionSlider">弦を張る力<span class="val" id="tensionVal">中</span></label>
+        <input type="range" id="tensionSlider" min="1" max="3" step="1" value="2">
+        <div class="ticks"><span>弱</span><span>中</span><span>強</span></div>
+      </div>
+
+      <!-- 弦の太さ -->
+      <div class="control control-group frequency">
+        <label for="thicknessSlider">弦の太さ<span class="val" id="thicknessVal">中</span></label>
+        <input type="range" id="thicknessSlider" min="1" max="3" step="1" value="2">
+        <div class="ticks"><span>細</span><span>中</span><span>太</span></div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="btnrow">
+      <button class="btn primary" id="pluckBtn" style="flex:1">弦をはじく</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -271,6 +116,14 @@
     const waveCanvas = document.getElementById('waveCanvas');
     const ctxM = monochordCanvas.getContext('2d');
     const ctxW = waveCanvas.getContext('2d');
+
+    // 描画色はテーマトークンから読み出す
+    const _cs = getComputedStyle(document.body);
+    const tok = (n, f) => (_cs.getPropertyValue(n).trim() || f);
+    const C_TRACE = tok('--accent', '#2fd6c3');   // 波形
+    const C_AMP   = tok('--force',  '#ff6b5a');   // 振幅（音の大きさ）
+    const C_WAVE  = tok('--normal', '#4ade80');   // 波長（音の高さ）
+    const C_DIMLN = tok('--border-strong', '#3a4757');
 
     // UI Elements
     const pluckSlider = document.getElementById('pluckSlider');
@@ -432,21 +285,41 @@
         const marginX = 60;
         const bridgeY = h * 0.55;
 
-        // 木の台
-        ctxM.fillStyle = '#6e421f';
-        ctxM.fillRect(marginX - 20, bridgeY + 10, w - (marginX * 2) + 40, 25);
-        ctxM.fillStyle = '#523015';
-        ctxM.fillRect(marginX - 20, bridgeY + 35, w - (marginX * 2) + 40, 5);
+        // 木の台（木口の陰影をつける）
+        const boardX = marginX - 20, boardW = w - (marginX * 2) + 40;
+        const woodGrad = ctxM.createLinearGradient(0, bridgeY + 10, 0, bridgeY + 35);
+        woodGrad.addColorStop(0, '#8a5628');
+        woodGrad.addColorStop(1, '#5e3717');
+        ctxM.fillStyle = woodGrad;
+        ctxM.fillRect(boardX, bridgeY + 10, boardW, 25);
+        ctxM.fillStyle = '#3d2310';
+        ctxM.fillRect(boardX, bridgeY + 35, boardW, 5);
+        // 天板のハイライト
+        ctxM.fillStyle = 'rgba(255,255,255,.14)';
+        ctxM.fillRect(boardX, bridgeY + 10, boardW, 2);
 
         // 左端の固定具
-        ctxM.fillStyle = '#888';
+        const nutGrad = ctxM.createLinearGradient(marginX - 15, 0, marginX - 5, 0);
+        nutGrad.addColorStop(0, '#c3ccd8');
+        nutGrad.addColorStop(1, '#6d7787');
+        ctxM.fillStyle = nutGrad;
         ctxM.fillRect(marginX - 15, bridgeY - 15, 10, 30);
 
         // 右端の滑車
         const pulleyX = w - marginX;
         ctxM.beginPath();
         ctxM.arc(pulleyX, bridgeY + 5, 12, 0, Math.PI * 2);
-        ctxM.fillStyle = '#aaa';
+        const pulGrad = ctxM.createLinearGradient(pulleyX - 12, bridgeY - 7, pulleyX + 12, bridgeY + 17);
+        pulGrad.addColorStop(0, '#d5dce6');
+        pulGrad.addColorStop(1, '#7d8798');
+        ctxM.fillStyle = pulGrad;
+        ctxM.fill();
+        ctxM.strokeStyle = '#5b6575';
+        ctxM.lineWidth = 1.5;
+        ctxM.stroke();
+        ctxM.beginPath();
+        ctxM.arc(pulleyX, bridgeY + 5, 3.5, 0, Math.PI * 2);
+        ctxM.fillStyle = '#3a4757';
         ctxM.fill();
 
         // 駒（ことじ）の位置
@@ -459,9 +332,10 @@
         ctxM.lineTo(activeBridgeX + 12, bridgeY + 10);
         ctxM.lineTo(activeBridgeX, bridgeY - 15);
         ctxM.closePath();
-        ctxM.fillStyle = '#eccc68';
+        ctxM.fillStyle = '#f0c96a';
         ctxM.fill();
-        ctxM.strokeStyle = '#b58900';
+        ctxM.strokeStyle = '#a97d15';
+        ctxM.lineWidth = 1.5;
         ctxM.stroke();
 
         // おもり
@@ -470,15 +344,21 @@
         ctxM.beginPath();
         ctxM.moveTo(pulleyX + 5, bridgeY + 5);
         ctxM.lineTo(pulleyX + 5, weightY);
-        ctxM.strokeStyle = '#ccc';
+        ctxM.strokeStyle = '#9aa8ba';
         ctxM.lineWidth = 1.5;
         ctxM.stroke();
 
+        // おもり（重ねるほど張力が強い）
         for (let i = 0; i < tensionVal; i++) {
-            ctxM.fillStyle = '#70a1ff';
-            ctxM.fillRect(pulleyX - 10, weightY + (i * 14), 30, 12);
-            ctxM.strokeStyle = '#2ed573';
-            ctxM.strokeRect(pulleyX - 10, weightY + (i * 14), 30, 12);
+            const wy = weightY + (i * 14);
+            const wg = ctxM.createLinearGradient(0, wy, 0, wy + 12);
+            wg.addColorStop(0, '#7fa8e8');
+            wg.addColorStop(1, '#3f6bb5');
+            ctxM.fillStyle = wg;
+            ctxM.fillRect(pulleyX - 10, wy, 30, 12);
+            ctxM.strokeStyle = '#2b4a80';
+            ctxM.lineWidth = 1;
+            ctxM.strokeRect(pulleyX - 9.5, wy + .5, 29, 11);
         }
 
         // 弦の振動計算
@@ -501,32 +381,46 @@
         const thicknessVal = parseInt(thicknessSlider.value);
         const stringLineWidth = [2, 4, 7][thicknessVal - 1];
 
-        // 弦（非振動部分）
+        // 弦（非振動部分）— 駒の左側は鳴らないので落ち着いた色にする
+        ctxM.save();
+        ctxM.lineCap = 'round';
         ctxM.beginPath();
         ctxM.moveTo(marginX - 10, bridgeY - 10);
         ctxM.lineTo(activeBridgeX, bridgeY - 15);
-        ctxM.strokeStyle = '#ff7f50';
+        ctxM.strokeStyle = '#a2724f';
         ctxM.lineWidth = stringLineWidth;
         ctxM.stroke();
 
-        // 弦（振動部分）
+        // 弦（振動部分）— 鳴っている間は淡い光をまとわせる
+        const midX = (activeBridgeX + pulleyX) / 2;
+        if (isVibrating) {
+            ctxM.shadowColor = C_AMP;
+            ctxM.shadowBlur = 14;
+        }
         ctxM.beginPath();
         ctxM.moveTo(activeBridgeX, bridgeY - 15);
-        const midX = (activeBridgeX + pulleyX) / 2;
         ctxM.quadraticCurveTo(midX, (bridgeY - 15) + vibrOffset, pulleyX, bridgeY - 10);
-        ctxM.strokeStyle = isVibrating ? '#ff4757' : '#ffa502';
+        ctxM.strokeStyle = isVibrating ? C_AMP : '#e8a04a';
         ctxM.lineWidth = stringLineWidth;
         ctxM.stroke();
+        ctxM.restore();
 
         // 振動する長さのガイド表示
+        ctxM.save();
         ctxM.beginPath();
         ctxM.moveTo(activeBridgeX, bridgeY - 30);
         ctxM.lineTo(pulleyX, bridgeY - 30);
-        ctxM.strokeStyle = '#2ed573';
+        ctxM.strokeStyle = C_WAVE;
         ctxM.lineWidth = 2;
         ctxM.stroke();
+        ctxM.fillStyle = C_WAVE;
         ctxM.fillRect(activeBridgeX, bridgeY - 35, 2, 10);
         ctxM.fillRect(pulleyX, bridgeY - 35, 2, 10);
+        ctxM.font = '500 10px "JetBrains Mono", monospace';
+        ctxM.textAlign = 'center';
+        ctxM.textBaseline = 'bottom';
+        ctxM.fillText('振動する長さ', (activeBridgeX + pulleyX) / 2, bridgeY - 38);
+        ctxM.restore();
     }
 
     // 波形描画（オシロスコープ）
@@ -537,16 +431,21 @@
         ctxW.clearRect(0, 0, w, h);
 
         // 方眼線の描画
-        ctxW.strokeStyle = '#222c36';
+        ctxW.strokeStyle = 'rgba(47,214,195,.10)';
         ctxW.lineWidth = 1;
         ctxW.beginPath();
-        ctxW.moveTo(0, centerY); ctxW.lineTo(w, centerY);
         for (let y = 0; y < h; y += 25) {
-            ctxW.moveTo(0, y); ctxW.lineTo(w, y);
+            ctxW.moveTo(0, y + .5); ctxW.lineTo(w, y + .5);
         }
         for (let x = 0; x < w; x += 40) {
-            ctxW.moveTo(x, 0); ctxW.lineTo(x, h);
+            ctxW.moveTo(x + .5, 0); ctxW.lineTo(x + .5, h);
         }
+        ctxW.stroke();
+
+        // センター軸
+        ctxW.strokeStyle = 'rgba(47,214,195,.32)';
+        ctxW.beginPath();
+        ctxW.moveTo(0, centerY + .5); ctxW.lineTo(w, centerY + .5);
         ctxW.stroke();
 
         // 弦をはじいていない場合は直線（波形なし）のみ表示
@@ -559,7 +458,8 @@
         if (displayAmp > 0) {
             // 振幅ガイドライン（赤点線）
             ctxW.setLineDash([4, 4]);
-            ctxW.strokeStyle = 'rgba(255, 71, 87, 0.6)';
+            ctxW.strokeStyle = C_AMP + '99';
+            ctxW.lineWidth = 1.5;
             ctxW.beginPath();
             ctxW.moveTo(0, centerY - displayAmp); ctxW.lineTo(w, centerY - displayAmp);
             ctxW.moveTo(0, centerY + displayAmp); ctxW.lineTo(w, centerY + displayAmp);
@@ -568,14 +468,14 @@
 
             // 振幅矢印（縦矢印）
             const arrowX = 30;
-            ctxW.strokeStyle = '#ff4757';
+            ctxW.strokeStyle = C_AMP;
             ctxW.lineWidth = 2;
             ctxW.beginPath();
             ctxW.moveTo(arrowX, centerY - displayAmp);
             ctxW.lineTo(arrowX, centerY + displayAmp);
             ctxW.stroke();
             
-            ctxW.fillStyle = '#ff4757';
+            ctxW.fillStyle = C_AMP;
             ctxW.beginPath();
             ctxW.moveTo(arrowX - 5, centerY - displayAmp + 8);
             ctxW.lineTo(arrowX + 5, centerY - displayAmp + 8);
@@ -591,13 +491,13 @@
             // 波長ガイド（横矢印）
             const arrowY = h - 20;
             const waveStartX = w / 2;
-            ctxW.strokeStyle = '#2ed573';
+            ctxW.strokeStyle = C_WAVE;
             ctxW.beginPath();
             ctxW.moveTo(waveStartX, arrowY);
             ctxW.lineTo(waveStartX + wavelength, arrowY);
             ctxW.stroke();
 
-            ctxW.fillStyle = '#2ed573';
+            ctxW.fillStyle = C_WAVE;
             ctxW.fillRect(waveStartX, arrowY - 6, 2, 12);
             ctxW.fillRect(waveStartX + wavelength, arrowY - 6, 2, 12);
         }
@@ -605,7 +505,7 @@
         // 波形（サイン波または基準直線）の描画
         ctxW.beginPath();
         ctxW.lineWidth = 3;
-        ctxW.strokeStyle = isVibrating ? '#00d2ff' : '#445566';
+        ctxW.strokeStyle = isVibrating ? C_TRACE : C_DIMLN;
 
         for (let x = 0; x < w; x++) {
             const angle = (x / wavelength) * Math.PI * 2 - (isVibrating ? time * 10 : 0);

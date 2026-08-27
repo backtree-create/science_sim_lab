@@ -1,46 +1,66 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>中3理科：斜面上の力の分解</title>
-  <style>
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; color: #333; margin: 20px; }
-    .container { max-width: 700px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    canvas { background: #ffffff; border: 1px solid #ddd; border-radius: 8px; width: 100%; max-width: 600px; height: auto; touch-action: manipulation; }
-    .controls { margin: 20px 0; font-size: 1.1rem; }
-    input[type=range] { width: 60%; cursor: pointer; }
-    .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; font-weight: bold; font-size: 0.95rem; margin-top: 10px; }
-    .legend-item { display: flex; align-items: center; gap: 5px; }
-    .box-gravity { color: #d90429; }
-    .box-parallel { color: #0077b6; }
-    .box-perp { color: #2a9d8f; }
-
-    @media (max-width: 600px) {
-      body { margin: 10px; }
-      .container { padding: 14px; }
-      input[type=range] { width: 90%; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>中3理科：斜面上の力の分解</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:var(--force);--accent-soft:var(--force-soft);}
+  .layout{grid-template-columns:1.55fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  #simCanvas{
+    display:block;width:100%;height:auto;
+    border-radius:var(--r-md);
+    touch-action:manipulation;
+  }
+  .stage{padding:0;}
+</style>
 </head>
 <body>
 
-<div class="container">
-  <h2>斜面上の重力の分解</h2>
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">12 ／ 斜面上の力の分解</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Resolving Gravity on an Incline</span>
+  <h1>斜面上の重力の分解</h1>
   <p>スライダーを動かして、斜面の傾きと分力の変化を観察しよう！</p>
+</div>
 
-  <div class="controls">
-    <label for="angleSlider">斜面の角度: <span id="angleVal">30</span>°</label><br>
-    <input type="range" id="angleSlider" min="0" max="75" value="30">
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="stage">
+      <canvas id="simCanvas" width="600" height="400"></canvas>
+    </div>
   </div>
 
-  <canvas id="simCanvas" width="600" height="400"></canvas>
+  <div class="panel">
+    <h2><span class="dot"></span>コントロール</h2>
 
-  <div class="legend">
-    <div class="legend-item box-gravity">■ 重力（真下）</div>
-    <div class="legend-item box-parallel">■ 斜面に平行な分力</div>
-    <div class="legend-item box-perp">■ 斜面に垂直な分力</div>
+    <div class="controls">
+      <div class="control">
+        <label for="angleSlider">斜面の角度<span class="val"><span id="angleVal">30</span>°</span></label>
+        <input type="range" id="angleSlider" min="0" max="75" value="30">
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h3>凡例</h3>
+    <div class="legend">
+      <div class="item"><span class="sw dot" style="background:var(--force)"></span>重力（真下）</div>
+      <div class="item"><span class="sw dot" style="background:var(--water)"></span>斜面に平行な分力</div>
+      <div class="item"><span class="sw dot" style="background:var(--normal)"></span>斜面に垂直な分力</div>
+    </div>
   </div>
+
 </div>
 
 <script>
@@ -48,6 +68,17 @@
   const ctx = canvas.getContext('2d');
   const slider = document.getElementById('angleSlider');
   const angleVal = document.getElementById('angleVal');
+
+  // 描画に使う色はデザイントークンから読み出す（凡例と必ず一致させるため）
+  const css = getComputedStyle(document.documentElement);
+  const tok = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+  const C_GRAVITY  = tok('--force',   '#e2503a');
+  const C_PARALLEL = tok('--water',   '#1f7fd0');
+  const C_PERP     = tok('--normal',  '#219a5d');
+  const C_INK      = tok('--text',    '#111726');
+  const C_DIM      = tok('--text-dim','#5a6478');
+  const C_FAINT    = tok('--text-faint','#98a1b4');
+  const C_LINE     = tok('--border',  '#e3e7ef');
 
   // 論理座標系は 600x400 のまま、高解像度画面では実解像度のみ上げる
   const BASE_W = 600, BASE_H = 400;
@@ -61,25 +92,66 @@
   // 定数設定
   const W = 160; // 重力の大きさ（ピクセル）
 
-  function drawArrow(fromX, fromY, toX, toY, color, width = 3) {
-    if (Math.hypot(toX - fromX, toY - fromY) < 2) return; // 長さがほぼゼロなら描画しない
-    const headlen = 12;
+  function drawArrow(fromX, fromY, toX, toY, color, width = 3, label = '') {
+    const len = Math.hypot(toX - fromX, toY - fromY);
+    if (len < 2) return; // 長さがほぼゼロなら描画しない
+    const headlen = 14;
     const angle = Math.atan2(toY - fromY, toX - fromX);
-    
+    // 軸は矢じりの根元で止め、線と三角形の重なりを防ぐ
+    const shaftX = toX - headlen * 0.82 * Math.cos(angle);
+    const shaftY = toY - headlen * 0.82 * Math.sin(angle);
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(17,23,38,.18)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 1.5;
+
     ctx.beginPath();
     ctx.lineWidth = width;
+    ctx.lineCap = 'round';
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.moveTo(fromX, fromY);
-    ctx.lineTo(toX, toY);
+    ctx.lineTo(shaftX, shaftY);
     ctx.stroke();
 
     ctx.beginPath();
+    ctx.lineJoin = 'round';
     ctx.moveTo(toX, toY);
-    ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
-    ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 7), toY - headlen * Math.sin(angle - Math.PI / 7));
+    ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 7), toY - headlen * Math.sin(angle + Math.PI / 7));
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
+
+    // 矢印の先に凡例と同じ名前を添える
+    if (label && len > 26) {
+      const lx = toX + 14 * Math.cos(angle);
+      const ly = toY + 14 * Math.sin(angle);
+      ctx.save();
+      ctx.font = '600 12px "JetBrains Mono", monospace';
+      ctx.textAlign = Math.cos(angle) < -0.35 ? 'right' : (Math.cos(angle) > 0.35 ? 'left' : 'center');
+      ctx.textBaseline = Math.sin(angle) > 0.35 ? 'top' : (Math.sin(angle) < -0.35 ? 'bottom' : 'middle');
+      const pad = 5, tw = ctx.measureText(label).width;
+      const bx = ctx.textAlign === 'right' ? lx - tw - pad : (ctx.textAlign === 'left' ? lx - pad : lx - tw / 2 - pad);
+      const by = ctx.textBaseline === 'top' ? ly - 2 : (ctx.textBaseline === 'bottom' ? ly - 16 : ly - 9);
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      roundRect(bx, by, tw + pad * 2, 18, 5);
+      ctx.fill();
+      ctx.fillStyle = color;
+      ctx.fillText(label, lx, ly);
+      ctx.restore();
+    }
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
   }
 
   function render() {
@@ -89,38 +161,110 @@
 
     ctx.clearRect(0, 0, BASE_W, BASE_H);
 
+    // 背景の方眼（作図のあたりを取りやすくする）
+    ctx.save();
+    ctx.strokeStyle = C_LINE;
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= BASE_W; x += 30) {
+      ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, BASE_H); ctx.stroke();
+    }
+    for (let y = 0; y <= BASE_H; y += 30) {
+      ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(BASE_W, y + .5); ctx.stroke();
+    }
+    ctx.restore();
+
     // 基準点（台車の中心位置）
     const objX = 300;
     const objY = 200;
 
+    const slopeLength = 400;
+    const loX = objX - slopeLength / 2 * Math.cos(rad); // 斜面の下端
+    const loY = objY + slopeLength / 2 * Math.sin(rad);
+    const hiX = objX + slopeLength / 2 * Math.cos(rad); // 斜面の上端
+    const hiY = objY - slopeLength / 2 * Math.sin(rad);
+    const baseY = loY + 120;
+
     // 斜面の描画
     ctx.save();
     ctx.beginPath();
-    ctx.fillStyle = '#e9ecef';
-    ctx.strokeStyle = '#adb5bd';
-    ctx.lineWidth = 2;
-    // 斜面の三角台を描く
-    const slopeLength = 400;
-    ctx.moveTo(objX - slopeLength/2 * Math.cos(rad), objY + slopeLength/2 * Math.sin(rad));
-    ctx.lineTo(objX + slopeLength/2 * Math.cos(rad), objY - slopeLength/2 * Math.sin(rad));
-    ctx.lineTo(objX + slopeLength/2 * Math.cos(rad), objY + slopeLength/2 * Math.sin(rad) + 120);
-    ctx.lineTo(objX - slopeLength/2 * Math.cos(rad), objY + slopeLength/2 * Math.sin(rad) + 120);
+    ctx.moveTo(loX, loY);
+    ctx.lineTo(hiX, hiY);
+    ctx.lineTo(hiX, baseY);
+    ctx.lineTo(loX, baseY);
     ctx.closePath();
+    const g = ctx.createLinearGradient(loX, hiY, hiX, baseY);
+    g.addColorStop(0, '#eef1f7');
+    g.addColorStop(1, '#dde3ec');
+    ctx.fillStyle = g;
     ctx.fill();
+    // 斜面のハッチング（地面らしさを出す）
+    ctx.save();
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(17,23,38,.055)';
+    ctx.lineWidth = 1;
+    for (let i = -BASE_H; i < BASE_W + BASE_H; i += 9) {
+      ctx.beginPath(); ctx.moveTo(i, baseY); ctx.lineTo(i + BASE_H, baseY - BASE_H); ctx.stroke();
+    }
+    ctx.restore();
+    // 斜面の表面だけを濃く
+    ctx.beginPath();
+    ctx.moveTo(loX, loY); ctx.lineTo(hiX, hiY);
+    ctx.strokeStyle = '#98a1b4';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
     ctx.stroke();
+    ctx.restore();
+
+    // 水平の基準線と角度θの扇形
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = C_FAINT;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(loX, loY);
+    ctx.lineTo(loX + 120, loY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (deg > 0.5) {
+      ctx.beginPath();
+      ctx.moveTo(loX, loY);
+      ctx.arc(loX, loY, 54, -rad, 0);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(17,23,38,.05)';
+      ctx.fill();
+      ctx.strokeStyle = C_DIM;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(loX, loY, 54, -rad, 0);
+      ctx.stroke();
+      ctx.fillStyle = C_DIM;
+      ctx.font = '500 13px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(deg + '°', loX + 62, loY - 16);
+    }
     ctx.restore();
 
     // 台車（物体）の描画
     ctx.save();
     ctx.translate(objX, objY);
     ctx.rotate(-rad);
-    ctx.fillStyle = '#495057';
-    ctx.fillRect(-25, -20, 50, 20); // 物体本体
+    ctx.shadowColor = 'rgba(17,23,38,.25)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#3b4557';
+    roundRect(-25, -20, 50, 20, 4);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    // 車体のハイライト
+    ctx.fillStyle = 'rgba(255,255,255,.16)';
+    roundRect(-25, -20, 50, 8, 4);
+    ctx.fill();
     // 車輪
     ctx.beginPath();
-    ctx.arc(-15, 0, 5, 0, Math.PI*2);
-    ctx.arc(15, 0, 5, 0, Math.PI*2);
-    ctx.fillStyle = '#212529';
+    ctx.arc(-15, 0, 5, 0, Math.PI * 2);
+    ctx.arc(15, 0, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#111726';
     ctx.fill();
     ctx.restore();
 
@@ -144,10 +288,11 @@
     };
 
     // 平行四辺形（破線）の作図
+    ctx.save();
     ctx.beginPath();
-    ctx.setLineDash([4, 4]);
+    ctx.setLineDash([5, 5]);
     ctx.lineWidth = 1.5;
-    ctx.strokeStyle = '#6c757d';
+    ctx.strokeStyle = C_FAINT;
     // 平行分力の先から重力エンドへ
     ctx.moveTo(paraEnd.x, paraEnd.y);
     ctx.lineTo(gEnd.x, gEnd.y);
@@ -155,22 +300,23 @@
     ctx.moveTo(perpEnd.x, perpEnd.y);
     ctx.lineTo(gEnd.x, gEnd.y);
     ctx.stroke();
-    ctx.setLineDash([]); // 実線に戻す
+    ctx.restore();
 
     // 矢印の描画
     // 1. 斜面に平行な分力 (青)
-    drawArrow(objX, objY, paraEnd.x, paraEnd.y, '#0077b6', 4);
-    // 2. 斜面に垂直な分力 (緑)
-    drawArrow(objX, objY, perpEnd.x, perpEnd.y, '#2a9d8f', 4);
+    drawArrow(objX, objY, paraEnd.x, paraEnd.y, C_PARALLEL, 4.5, '平行');
+    // 2. 斜面に垂直な分力 (緑)　※水平（0°付近）では重力と重なるのでラベルは伏せる
+    drawArrow(objX, objY, perpEnd.x, perpEnd.y, C_PERP, 4.5, deg > 6 ? '垂直' : '');
     // 3. 重力 (赤)
-    drawArrow(objX, objY, gEnd.x, gEnd.y, '#d90429', 4);
+    drawArrow(objX, objY, gEnd.x, gEnd.y, C_GRAVITY, 4.5, '重力');
 
     // 作用点
     ctx.beginPath();
-    ctx.arc(objX, objY, 5, 0, Math.PI * 2);
+    ctx.arc(objX, objY, 5.5, 0, Math.PI * 2);
     ctx.fillStyle = '#fff';
     ctx.fill();
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = C_INK;
+    ctx.lineWidth = 2;
     ctx.stroke();
   }
 
@@ -178,6 +324,7 @@
   setupCanvas();
   render();
   window.addEventListener('resize', function() { setupCanvas(); render(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 </script>
 
 </body>

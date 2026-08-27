@@ -25,9 +25,18 @@
             background: var(--bg);
             color: var(--text);
             font-family: 'Noto Sans JP', sans-serif;
+            font-feature-settings: "palt" 1;
+            -webkit-font-smoothing: antialiased;
             user-select: none;
             -webkit-user-select: none;
             -webkit-tap-highlight-color: transparent;
+        }
+        :where(a, button, select, input):focus-visible {
+            outline: 2px solid var(--cyan);
+            outline-offset: 2px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
         }
         button, select { touch-action: manipulation; }
         .card { touch-action: manipulation; }
@@ -62,10 +71,26 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 40px; text-align: center;
         }
+        /* 理科シミュレーターラボ（ハブ）へ戻る導線 */
+        .lab-link {
+            /* 画面が低いときにタイトルへ重ならないよう、絶対配置ではなく流し込みで置く */
+            align-self: flex-start; margin-bottom: 18px;
+            display: inline-flex; align-items: center; gap: 8px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+            letter-spacing: 0.08em; color: var(--text-dim); text-decoration: none;
+            padding: 9px 16px; border-radius: 100px;
+            border: 1px solid var(--panel-border);
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 2px 10px rgba(20,50,70,0.07);
+            transition: all 0.2s ease;
+        }
+        .lab-link:hover { color: var(--cyan); border-color: var(--cyan); transform: translateX(-2px); }
+
         .home-title {
             font-family: 'Orbitron', 'Noto Sans JP', sans-serif;
             font-size: 2.2rem; font-weight: 900; color: #0d2634;
             margin-bottom: 8px; letter-spacing: 0.05em;
+            text-wrap: balance;
         }
         .home-sub {
             font-size: 0.95rem; color: var(--cyan); margin-bottom: 30px;
@@ -294,6 +319,7 @@
                 justify-content: flex-start;
                 -webkit-overflow-scrolling: touch;
             }
+            .lab-link { margin-bottom: 14px; }
             .home-title { font-size: 1.45rem; }
             .home-sub { font-size: 0.8rem; margin-bottom: 20px; }
             .grid-cards { grid-template-columns: 1fr; gap: 12px; }
@@ -351,6 +377,7 @@
     <div id="atmosphere"></div>
 
     <div id="home-screen">
+        <a class="lab-link" href="index.html">← SCIENCE SIM LAB</a>
         <div class="home-title">中学理科 電気分野 3D LAB</div>
         <div class="home-sub">INTERACTIVE CIRCUIT SIMULATOR &amp; SCHEMATIC CAD</div>
         <div class="grid-cards">

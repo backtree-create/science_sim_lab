@@ -1,87 +1,94 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>中3理科：力の合成と分解シミュレーター</title>
-  <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background: #f0f4f8; margin: 0; padding: 20px; text-align: center; color: #2b2d42; -webkit-tap-highlight-color: transparent; }
-    .card { max-width: 750px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-    h2 { margin-top: 0; color: #1d3557; }
-    
-    .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-    .tab-btn { padding: 10px 24px; font-size: 1rem; font-weight: bold; border: 2px solid #457b9d; background: #fff; color: #457b9d; border-radius: 25px; cursor: pointer; transition: all 0.2s; }
-    .tab-btn.active { background: #457b9d; color: #fff; }
-    
-    .options { display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; font-size: 0.95rem; }
-    .options label { cursor: pointer; display: flex; align-items: center; gap: 5px; }
-    
-    canvas { background: #fafafa; border: 2px solid #e0e0e0; border-radius: 12px; cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none; max-width: 100%; height: auto; }
-    
-    .legend { display: flex; justify-content: center; gap: 20px; margin-top: 15px; font-weight: bold; font-size: 0.95rem; }
-    .legend-item { display: flex; align-items: center; gap: 6px; }
-    .dot { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
-    .bg-red { background: #e63946; }
-    .bg-blue { background: #1d3557; }
-    .bg-green { background: #2a9d8f; }
-
-    .hint { background: #f1faee; border-left: 4px solid #457b9d; padding: 10px 15px; text-align: left; margin-top: 20px; border-radius: 0 8px 8px 0; font-size: 0.9rem; line-height: 1.5; }
-
-    button { touch-action: manipulation; }
-
-    @media (max-width: 600px) {
-      body { padding: 12px; }
-      .card { padding: 14px; }
-      .nav-tabs { flex-wrap: wrap; }
-      .tab-btn { padding: 10px 14px; font-size: 0.9rem; }
-      .options { flex-wrap: wrap; gap: 10px; }
-      .legend { flex-wrap: wrap; gap: 10px; }
-    }
-
-    @media (pointer: coarse) {
-      .tab-btn { min-height: 44px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>中3理科：力の合成と分解シミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:var(--force);--accent-soft:var(--force-soft);}
+  .layout{grid-template-columns:1.6fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  #simCanvas{
+    display:block;width:100%;height:auto;
+    cursor:crosshair;
+    touch-action:none;user-select:none;-webkit-user-select:none;
+  }
+  .stage{padding:0;}
+  .tabbar{margin-bottom:16px;}
+  .draghint{
+    font-family:var(--font-mono);font-size:11px;color:var(--text-faint);
+    text-align:center;margin-top:12px;
+  }
+</style>
 </head>
 <body>
 
-<div class="card">
-  <h2>力の合成と分解（平行四辺形の法則）</h2>
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">11 ／ 力の合成と分解</span>
+</div>
 
-  <!-- モード切替タブ -->
-  <div class="nav-tabs">
-    <button class="tab-btn active" id="btnCombine" onclick="setMode('combine')">① 力の合成（2つの力をまとめる）</button>
-    <button class="tab-btn" id="btnResolve" onclick="setMode('resolve')">② 力の分解（1つの力を分ける）</button>
+<div class="sim-header">
+  <span class="eyebrow">Vector Composition · Parallelogram Law</span>
+  <h1>力の合成と分解（平行四辺形の法則）</h1>
+</div>
+
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="stage">
+      <canvas id="simCanvas" width="650" height="420"></canvas>
+    </div>
+    <div class="draghint">丸い先端をドラッグして操作します</div>
   </div>
 
-  <!-- オプション設定 -->
-  <div class="options">
-    <label><input type="checkbox" id="chkGrid" checked onchange="render()"> 方眼紙（マス目）を表示</label>
-    <label><input type="checkbox" id="chkValues" checked onchange="render()"> 力の大きさを表示</label>
+  <div class="panel">
+    <h2><span class="dot"></span>コントロール</h2>
+
+    <div class="tabs tabbar">
+      <button class="tab active" id="btnCombine" onclick="setMode('combine')">① 力の合成</button>
+      <button class="tab" id="btnResolve" onclick="setMode('resolve')">② 力の分解</button>
+    </div>
+
+    <div class="checkrow">
+      <label><input type="checkbox" id="chkGrid" checked onchange="render()"> 方眼紙（マス目）</label>
+      <label><input type="checkbox" id="chkValues" checked onchange="render()"> 力の大きさ</label>
+    </div>
+
+    <hr class="divider">
+
+    <h3>凡例</h3>
+    <div class="legend">
+      <div class="item"><span class="sw dot" style="background:#1f7fd0;"></span>分力 A</div>
+      <div class="item"><span class="sw dot" style="background:#219a5d;"></span>分力 B</div>
+      <div class="item"><span class="sw dot" style="background:#e2503a;"></span>合力（元の力）</div>
+    </div>
+
+    <div class="hint" id="hintBox" style="margin-top:16px">
+      <span class="hint-title">合成モードの操作ヒント</span>
+      青と緑の矢印の先端をドラッグして動かしてみよう。2つの力が作る平行四辺形の対角線に「合力（赤色の矢印）」が作られます。2つの力の角度を変えると合力の大きさはどう変わるかな？
+    </div>
   </div>
 
-  <!-- メイン描画エリア -->
-  <canvas id="simCanvas" width="650" height="420"></canvas>
-
-  <!-- 凡例 -->
-  <div class="legend">
-    <div class="legend-item"><span class="dot bg-blue"></span> 分力 A</div>
-    <div class="legend-item"><span class="dot bg-green"></span> 分力 B</div>
-    <div class="legend-item"><span class="dot bg-red"></span> 合力（元の力）</div>
-  </div>
-
-  <!-- 動的なヒント解説 -->
-  <div class="hint" id="hintBox">
-    <strong>【合成モードの操作ヒント】</strong><br>
-    青と緑の矢印の先端をドラッグして動かしてみよう。2つの力が作る平行四辺形の対角線に「合力（赤色の矢印）」が作られます。2つの力の角度を変えると合力の大きさはどう変わるかな？
-  </div>
 </div>
 
 <script>
   const canvas = document.getElementById('simCanvas');
   const ctx = canvas.getContext('2d');
-  
+
+  // 論理座標系は 650x420 のまま、高解像度画面では実解像度のみ上げる
+  const BASE_W = 650, BASE_H = 420;
+  function setupCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = BASE_W * dpr;
+    canvas.height = BASE_H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
   let mode = 'combine'; // 'combine' または 'resolve'
   const origin = { x: 325, y: 250 }; // 作用点（中心）
 
@@ -103,9 +110,9 @@
     
     const hint = document.getElementById('hintBox');
     if (mode === 'combine') {
-      hint.innerHTML = '<strong>【合成モードの操作ヒント】</strong><br>青と緑の矢印の先端をドラッグして動かしてみよう。2つの力が作る平行四辺形の対角線に「合力（赤色の矢印）」が作られます。2つの力の角度を変えると合力の大きさはどう変わるかな？';
+      hint.innerHTML = '<span class="hint-title">合成モードの操作ヒント</span>青と緑の矢印の先端をドラッグして動かしてみよう。2つの力が作る平行四辺形の対角線に「合力（赤色の矢印）」が作られます。2つの力の角度を変えると合力の大きさはどう変わるかな？';
     } else {
-      hint.innerHTML = '<strong>【分解モードの操作ヒント】</strong><br>赤色の矢印（元の力）の先端や、点線（分解する方向の軸）上の丸をドラッグしてみよう。元の力を2つの方向に分解したときの「分力（青と緑）」が平行四辺形によって決まる様子が分かります。';
+      hint.innerHTML = '<span class="hint-title">分解モードの操作ヒント</span>赤色の矢印（元の力）の先端や、点線（分解する方向の軸）上の丸をドラッグしてみよう。元の力を2つの方向に分解したときの「分力（青と緑）」が平行四辺形によって決まる様子が分かります。';
     }
     render();
   }
@@ -114,48 +121,118 @@
   function drawArrow(fromX, fromY, toX, toY, color, width = 3) {
     const len = Math.hypot(toX - fromX, toY - fromY);
     if (len < 5) return;
-    const headlen = 14;
+    const headlen = 16;
     const angle = Math.atan2(toY - fromY, toX - fromX);
-    
-    ctx.beginPath();
-    ctx.lineWidth = width;
+    // 軸は矢じりの根元で止め、線と三角形の重なりを防ぐ
+    const shaftX = toX - headlen * 0.82 * Math.cos(angle);
+    const shaftY = toY - headlen * 0.82 * Math.sin(angle);
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(17,23,38,.16)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 1.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
+
+    ctx.beginPath();
+    ctx.lineWidth = width;
     ctx.moveTo(fromX, fromY);
-    ctx.lineTo(toX, toY);
+    ctx.lineTo(shaftX, shaftY);
     ctx.stroke();
 
     ctx.beginPath();
     ctx.moveTo(toX, toY);
-    ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
-    ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 7), toY - headlen * Math.sin(angle - Math.PI / 7));
+    ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 7), toY - headlen * Math.sin(angle + Math.PI / 7));
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
   }
 
-  // マス目描画
-  function drawGrid() {
-    ctx.strokeStyle = '#e9ecef';
+  // 数値ラベル（読みやすいよう白い下地を敷く）
+  function drawLabel(x, y, text, color) {
+    ctx.save();
+    ctx.font = '500 12.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const w = ctx.measureText(text).width;
+    let bx = x, by = y;
+    if (bx + w + 14 > BASE_W) bx = BASE_W - w - 14;   // 右端で切れないように
+    if (by < 14) by = 14;
+    if (by > BASE_H - 14) by = BASE_H - 14;
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    roundRect(bx - 7, by - 11, w + 14, 22, 6);
+    ctx.fill();
+    ctx.strokeStyle = color + '40';
     ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.fillText(text, bx, by);
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // ドラッグできる点であることが分かる、白抜きのハンドル
+  function drawHandle(x, y, color) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(17,23,38,.22)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 1.5;
+    ctx.fill();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+
+  // マス目描画（20px＝1目盛り。5目盛りごとに濃い線を入れて数えやすくする）
+  function drawGrid() {
     const step = 20;
-    for (let x = 0; x < canvas.width; x += step) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    for (let x = 0; x <= BASE_W; x += step) {
+      ctx.beginPath();
+      ctx.strokeStyle = (Math.round((x - origin.x) / step) % 5 === 0) ? 'rgba(17,23,38,.10)' : 'rgba(17,23,38,.045)';
+      ctx.lineWidth = 1;
+      ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, BASE_H); ctx.stroke();
     }
-    for (let y = 0; y < canvas.height; y += step) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    for (let y = 0; y <= BASE_H; y += step) {
+      ctx.beginPath();
+      ctx.strokeStyle = (Math.round((y - origin.y) / step) % 5 === 0) ? 'rgba(17,23,38,.10)' : 'rgba(17,23,38,.045)';
+      ctx.lineWidth = 1;
+      ctx.moveTo(0, y + .5); ctx.lineTo(BASE_W, y + .5); ctx.stroke();
     }
   }
 
   function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, BASE_W, BASE_H);
 
     if (document.getElementById('chkGrid').checked) drawGrid();
 
     // 作用点
+    ctx.save();
     ctx.beginPath();
     ctx.arc(origin.x, origin.y, 7, 0, Math.PI * 2);
-    ctx.fillStyle = '#212529';
+    ctx.fillStyle = '#fff';
     ctx.fill();
+    ctx.strokeStyle = '#111726';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
 
     const showValues = document.getElementById('chkValues').checked;
 
@@ -168,7 +245,7 @@
       // 平行四辺形 (点線)
       ctx.beginPath();
       ctx.setLineDash([5, 5]);
-      ctx.strokeStyle = '#8d99ae';
+      ctx.strokeStyle = '#98a1b4';
       ctx.lineWidth = 2;
       ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRes.x, pRes.y);
       ctx.moveTo(pB.x, pB.y); ctx.lineTo(pRes.x, pRes.y);
@@ -176,16 +253,19 @@
       ctx.setLineDash([]);
 
       // 矢印描画
-      drawArrow(origin.x, origin.y, pA.x, pA.y, '#1d3557', 4); // 分力A
-      drawArrow(origin.x, origin.y, pB.x, pB.y, '#2a9d8f', 4); // 分力B
-      drawArrow(origin.x, origin.y, pRes.x, pRes.y, '#e63946', 5); // 合力
+      drawArrow(origin.x, origin.y, pA.x, pA.y, '#1f7fd0', 4); // 分力A
+      drawArrow(origin.x, origin.y, pB.x, pB.y, '#219a5d', 4); // 分力B
+      drawArrow(origin.x, origin.y, pRes.x, pRes.y, '#e2503a', 5); // 合力
+
+      // ドラッグできる先端
+      drawHandle(pA.x, pA.y, '#1f7fd0');
+      drawHandle(pB.x, pB.y, '#219a5d');
 
       // 数値表示
       if (showValues) {
-        ctx.font = '13px sans-serif';
-        ctx.fillStyle = '#1d3557'; ctx.fillText(`A: ${(Math.hypot(vA.x, vA.y)/20).toFixed(1)} N`, pA.x + 10, pA.y);
-        ctx.fillStyle = '#2a9d8f'; ctx.fillText(`B: ${(Math.hypot(vB.x, vB.y)/20).toFixed(1)} N`, pB.x + 10, pB.y);
-        ctx.fillStyle = '#e63946'; ctx.fillText(`合力: ${(Math.hypot(vA.x + vB.x, vA.y + vB.y)/20).toFixed(1)} N`, pRes.x + 10, pRes.y);
+        drawLabel(pA.x + 14, pA.y, `A: ${(Math.hypot(vA.x, vA.y)/20).toFixed(1)} N`, '#1f7fd0');
+        drawLabel(pB.x + 14, pB.y, `B: ${(Math.hypot(vB.x, vB.y)/20).toFixed(1)} N`, '#219a5d');
+        drawLabel(pRes.x + 14, pRes.y, `合力: ${(Math.hypot(vA.x + vB.x, vA.y + vB.y)/20).toFixed(1)} N`, '#e2503a');
       }
 
     } else {
@@ -211,7 +291,7 @@
       // 分解のガイド軸（長い点線）
       ctx.beginPath();
       ctx.setLineDash([3, 3]);
-      ctx.strokeStyle = '#adb5bd';
+      ctx.strokeStyle = '#c3c9d6';
       ctx.lineWidth = 1.5;
       ctx.moveTo(origin.x - uA.x * 300, origin.y - uA.y * 300);
       ctx.lineTo(origin.x + uA.x * 300, origin.y + uA.y * 300);
@@ -221,7 +301,7 @@
 
       // 平行四辺形 (点線)
       ctx.setLineDash([5, 5]);
-      ctx.strokeStyle = '#8d99ae';
+      ctx.strokeStyle = '#98a1b4';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRes.x, pRes.y);
@@ -232,30 +312,41 @@
       // 軸調整用ハンドル（円）
       const handleA = { x: origin.x + uA.x * 180, y: origin.y + uA.y * 180 };
       const handleB = { x: origin.x + uB.x * 180, y: origin.y + uB.y * 180 };
-      ctx.beginPath(); ctx.arc(handleA.x, handleA.y, 6, 0, Math.PI * 2); ctx.fillStyle = '#1d3557'; ctx.fill();
-      ctx.beginPath(); ctx.arc(handleB.x, handleB.y, 6, 0, Math.PI * 2); ctx.fillStyle = '#2a9d8f'; ctx.fill();
+      drawHandle(handleA.x, handleA.y, '#1f7fd0');
+      drawHandle(handleB.x, handleB.y, '#219a5d');
 
       // 矢印描画
-      drawArrow(origin.x, origin.y, pA.x, pA.y, '#1d3557', 4); // 分力A
-      drawArrow(origin.x, origin.y, pB.x, pB.y, '#2a9d8f', 4); // 分力B
-      drawArrow(origin.x, origin.y, pRes.x, pRes.y, '#e63946', 5); // 元の力
+      drawArrow(origin.x, origin.y, pA.x, pA.y, '#1f7fd0', 4); // 分力A
+      drawArrow(origin.x, origin.y, pB.x, pB.y, '#219a5d', 4); // 分力B
+      drawArrow(origin.x, origin.y, pRes.x, pRes.y, '#e2503a', 5); // 元の力
+      drawHandle(pRes.x, pRes.y, '#e2503a');
 
       // 数値表示
       if (showValues) {
-        ctx.font = '13px sans-serif';
-        ctx.fillStyle = '#1d3557'; ctx.fillText(`分力A: ${(Math.abs(cA)/20).toFixed(1)} N`, pA.x + 10, pA.y);
-        ctx.fillStyle = '#2a9d8f'; ctx.fillText(`分力B: ${(Math.abs(cB)/20).toFixed(1)} N`, pB.x + 10, pB.y);
-        ctx.fillStyle = '#e63946'; ctx.fillText(`元の力: ${(Math.hypot(vResult.x, vResult.y)/20).toFixed(1)} N`, pRes.x + 10, pRes.y);
+        drawLabel(pA.x + 14, pA.y, `分力A: ${(Math.abs(cA)/20).toFixed(1)} N`, '#1f7fd0');
+        drawLabel(pB.x + 14, pB.y, `分力B: ${(Math.abs(cB)/20).toFixed(1)} N`, '#219a5d');
+        drawLabel(pRes.x + 14, pRes.y, `元の力: ${(Math.hypot(vResult.x, vResult.y)/20).toFixed(1)} N`, '#e2503a');
       }
     }
+
+    // 作用点は最後に描き直し、矢印に隠れないようにする
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(origin.x, origin.y, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#111726';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
   }
 
   // イベント処理（Pointer Events：マウス・タッチ・ペン共通）
   function getPos(e) {
     const rect = canvas.getBoundingClientRect();
-    // CSSで縮小表示されても内部座標(650x420)に正しく変換する
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    // CSSで縮小表示されても論理座標(650x420)に正しく変換する
+    const scaleX = BASE_W / rect.width;
+    const scaleY = BASE_H / rect.height;
     return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
   }
 
@@ -263,7 +354,7 @@
     const pos = getPos(e);
     // 縮小表示時・タッチ操作時でも掴みやすいよう、判定半径を実表示スケールに合わせる
     const rect = canvas.getBoundingClientRect();
-    const hitR = 25 * Math.max(1, canvas.width / rect.width);
+    const hitR = 25 * Math.max(1, BASE_W / rect.width);
     if (mode === 'combine') {
       const pA = { x: origin.x + vA.x, y: origin.y + vA.y };
       const pB = { x: origin.x + vB.x, y: origin.y + vB.y };
@@ -315,7 +406,10 @@
   canvas.addEventListener('pointercancel', onEnd);
   window.addEventListener('pointerup', onEnd);
 
+  setupCanvas();
   render();
+  window.addEventListener('resize', function() { setupCanvas(); render(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 </script>
 
 </body>

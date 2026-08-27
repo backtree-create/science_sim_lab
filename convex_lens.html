@@ -1,80 +1,81 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>中1理科：凸レンズの働きと作図シミュレーター</title>
-  <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-    body { background: #f0f4f8; margin: 0; padding: 20px; text-align: center; color: #2b2d42; }
-    .card { max-width: 760px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-    h2 { margin-top: 0; color: #1d3557; }
-    
-    .nav-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 15px; }
-    .tab-btn { padding: 8px 20px; font-size: 0.95rem; font-weight: bold; border: 2px solid #457b9d; background: #fff; color: #457b9d; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
-    .tab-btn.active { background: #457b9d; color: #fff; }
-
-    .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 8px; }
-    .control-group { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
-    input[type=range] { width: 130px; cursor: pointer; }
-    
-    canvas { background: #ffffff; border: 2px solid #e0e0e0; border-radius: 12px; width: 100%; max-width: 700px; height: auto; touch-action: manipulation; }
-
-    .status-box { margin-top: 10px; font-size: 1.05rem; font-weight: bold; min-height: 28px; color: #e63946; }
-
-    .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; font-size: 0.85rem; font-weight: bold; margin-top: 8px; }
-    .legend-item { display: flex; align-items: center; gap: 4px; }
-    .dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-
-    .hint { background: #f1faee; border-left: 4px solid #457b9d; padding: 10px 15px; text-align: left; margin-top: 15px; border-radius: 0 8px 8px 0; font-size: 0.9rem; line-height: 1.5; }
-
-    @media (max-width: 600px) {
-      body { padding: 12px; }
-      .card { padding: 14px; }
-      .controls { gap: 10px; padding: 10px; }
-      input[type=range] { width: 160px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>中1理科：凸レンズの働きと作図シミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:var(--highlight);--accent-soft:var(--highlight-soft);}
+  .layout{grid-template-columns:1.6fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  #simCanvas{display:block;width:100%;height:auto;touch-action:manipulation;}
+  .stage{padding:0;}
+  .tabbar{margin-bottom:18px;}
+</style>
 </head>
 <body>
 
-<div class="card">
-  <h2>凸レンズの働きと光の進み方</h2>
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">08 ／ 凸レンズの働きと作図</span>
+</div>
 
-  <!-- モード切替 -->
-  <div class="nav-tabs">
-    <button class="tab-btn active" id="btnMode1" onclick="setMode('rays3')">① 作図の3本の光（像の形成）</button>
-    <button class="tab-btn" id="btnMode2" onclick="setMode('parallel')">② 平行な3本の光（焦点を観察）</button>
+<div class="sim-header">
+  <span class="eyebrow">Convex Lens · Ray Diagram</span>
+  <h1>凸レンズの働きと光の進み方</h1>
+</div>
+
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="stage">
+      <canvas id="simCanvas" width="700" height="380"></canvas>
+    </div>
+    <div class="statusline on" id="statusText"></div>
   </div>
 
-  <div class="controls">
-    <div class="control-group">
-      <label for="focalSlider">焦点距離 ($f$): <span id="focalVal">90</span>px</label>
-      <input type="range" id="focalSlider" min="50" max="130" value="90" oninput="render()">
+  <div class="panel">
+    <h2><span class="dot"></span>コントロール</h2>
+
+    <div class="tabs tabbar">
+      <button class="tab active" id="btnMode1" onclick="setMode('rays3')">① 作図の3本の光</button>
+      <button class="tab" id="btnMode2" onclick="setMode('parallel')">② 平行な3本の光</button>
     </div>
 
-    <div class="control-group" id="objPosGroup">
-      <label for="objSlider">物体の位置: <span id="objVal">180</span>px</label>
-      <input type="range" id="objSlider" min="30" max="260" value="180" oninput="render()">
+    <div class="controls">
+      <div class="control">
+        <label for="focalSlider">焦点距離 f<span class="val"><span id="focalVal">90</span> px</span></label>
+        <input type="range" id="focalSlider" min="50" max="130" value="90" oninput="render()">
+      </div>
+
+      <div class="control" id="objPosGroup">
+        <label for="objSlider">物体の位置<span class="val"><span id="objVal">180</span> px</span></label>
+        <input type="range" id="objSlider" min="30" max="260" value="180" oninput="render()">
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="legend" id="legendBox">
+      <div class="item"><span class="sw dot" style="background:#1f7fd0;"></span>① 軸に平行な光 ➔ 焦点を通る</div>
+      <div class="item"><span class="sw dot" style="background:#219a5d;"></span>② 中心を通る光 ➔ 直進する</div>
+      <div class="item"><span class="sw dot" style="background:#7c3aed;"></span>③ 焦点を通る光 ➔ 軸に平行に進む</div>
+    </div>
+
+    <div class="hint" id="hintBox" style="margin-top:16px">
+      <span class="hint-title">作図の3本の光と像のポイント</span>
+      <ul>
+        <li><strong>実像：</strong> 光が実際に集まってできる上下左右が逆の像（物体が焦点の外側にあるとき）。</li>
+        <li><strong>虚像：</strong> レンズをのぞいたときに見える正立の大きな像（物体が焦点の内側にあるとき）。</li>
+        <li><strong>焦点の2倍の位置：</strong> 物体を焦点の2倍の位置に置くと、同じ大きさの実像ができます。</li>
+      </ul>
     </div>
   </div>
 
-  <canvas id="simCanvas" width="700" height="380"></canvas>
-
-  <div class="status-box" id="statusText"></div>
-
-  <div class="legend" id="legendBox">
-    <div class="legend-item"><span class="dot" style="background:#0077b6;"></span> ① 軸に平行な光 ➔ 焦点を通る</div>
-    <div class="legend-item"><span class="dot" style="background:#2a9d8f;"></span> ② 中心を通る光 ➔ 直進する</div>
-    <div class="legend-item"><span class="dot" style="background:#9d4edd;"></span> ③ 焦点を通る光 ➔ 軸に平行に進む</div>
-  </div>
-
-  <div class="hint" id="hintBox">
-    <strong>【作図の3本の光と像のポイント】</strong><br>
-    ・<strong>実像：</strong> 光が実際に集まってできる上下左右が逆の像（物体が焦点の外側にあるとき）。<br>
-    ・<strong>虚像：</strong> レンズをのぞいたときに見える正立の大きな像（物体が焦点の内側にあるとき）。<br>
-    ・<strong>焦点の2倍の位置：</strong> 物体を焦点の2倍の位置に置くと、同じ大きさの実像ができます。
-  </div>
 </div>
 
 <script>
@@ -103,10 +104,15 @@
 
     if (mode === 'rays3') {
       legend.style.display = 'flex';
-      hint.innerHTML = '<strong>【作図の3本の光と像のポイント】</strong><br>・<strong>実像：</strong> 光が実際に集まってできる上下左右が逆の像（物体が焦点の外側にあるとき）。<br>・<strong>虚像：</strong> レンズをのぞいたときに見える正立の大きな像（物体が焦点の内側にあるとき）。<br>・<strong>焦点の2倍の位置：</strong> 物体を焦点の2倍の位置に置くと、同じ大きさの実像ができます。';
+      hint.innerHTML = '<span class="hint-title">作図の3本の光と像のポイント</span><ul>'
+        + '<li><strong>実像：</strong> 光が実際に集まってできる上下左右が逆の像（物体が焦点の外側にあるとき）。</li>'
+        + '<li><strong>虚像：</strong> レンズをのぞいたときに見える正立の大きな像（物体が焦点の内側にあるとき）。</li>'
+        + '<li><strong>焦点の2倍の位置：</strong> 物体を焦点の2倍の位置に置くと、同じ大きさの実像ができます。</li></ul>';
     } else {
       legend.style.display = 'none';
-      hint.innerHTML = '<strong>【平行な光の集まり方】</strong><br>・主軸に平行に入った光は、すべて反対側の<strong>「焦点」</strong>に集まります。<br>・スライダーで焦点距離を変えると、光が集まる位置が変化する様子が分かります。';
+      hint.innerHTML = '<span class="hint-title">平行な光の集まり方</span><ul>'
+        + '<li>主軸に平行に入った光は、すべて反対側の<strong>「焦点」</strong>に集まります。</li>'
+        + '<li>スライダーで焦点距離を変えると、光が集まる位置が変化する様子が分かります。</li></ul>';
     }
     render();
   }
@@ -148,29 +154,52 @@
 
     ctx.clearRect(0, 0, W, H);
 
-    // 主軸（中央の横線）
-    ctx.beginPath();
-    ctx.strokeStyle = '#8d99ae';
+    // 背景の方眼（作図用紙のイメージ）
+    ctx.save();
+    ctx.strokeStyle = 'rgba(17,23,38,.05)';
     ctx.lineWidth = 1;
-    ctx.moveTo(10, cY); ctx.lineTo(W - 10, cY);
-    ctx.stroke();
+    for (let x = 0; x <= W; x += 25) { ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += 25) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke(); }
+    ctx.restore();
 
-    // 凸レンズの描画
+    // 主軸（中央の横線）
+    ctx.save();
     ctx.beginPath();
-    ctx.fillStyle = 'rgba(173, 216, 230, 0.4)';
-    ctx.strokeStyle = '#0077b6';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#8a94a8';
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(10, cY + .5); ctx.lineTo(W - 10, cY + .5);
+    ctx.stroke();
+    ctx.restore();
+
+    // レンズ中心軸（縦点線）— レンズより先に描き、ガラスの下に潜らせる
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#c3c9d6';
+    ctx.lineWidth = 1;
+    ctx.moveTo(cX, 16); ctx.lineTo(cX, H - 16);
+    ctx.stroke();
+    ctx.restore();
+
+    // 凸レンズの描画（ガラスらしい縦グラデーション＋ハイライト）
+    ctx.save();
+    const lensGrad = ctx.createLinearGradient(cX - 18, 0, cX + 18, 0);
+    lensGrad.addColorStop(0,   'rgba(96,165,250,.34)');
+    lensGrad.addColorStop(.42, 'rgba(191,219,254,.20)');
+    lensGrad.addColorStop(1,   'rgba(96,165,250,.34)');
+    ctx.beginPath();
     ctx.ellipse(cX, cY, 18, 140, 0, 0, Math.PI * 2);
+    ctx.fillStyle = lensGrad;
     ctx.fill();
+    ctx.strokeStyle = '#1f7fd0';
+    ctx.lineWidth = 2;
     ctx.stroke();
-
-    // レンズ中心軸（縦点線）
+    // 表面のハイライト
     ctx.beginPath();
-    ctx.setLineDash([3, 3]);
-    ctx.strokeStyle = '#adb5bd';
-    ctx.moveTo(cX, 20); ctx.lineTo(cX, H - 20);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.ellipse(cX - 7, cY - 34, 3.2, 52, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.fill();
+    ctx.restore();
 
     // 焦点 (F, 2F) の描画
     drawPoint(cX - f, cY, 'F');
@@ -187,20 +216,24 @@
       const offsets = [-60, 0, 60];
       offsets.forEach(offY => {
         const startY = cY + offY;
-        ctx.beginPath();
-        ctx.lineWidth = 2.5;
-        ctx.strokeStyle = '#e63946';
-        
-        // 入射光（平行）
-        ctx.moveTo(30, startY);
-        ctx.lineTo(cX, startY);
-        
-        // 屈折光（焦点Fへ）
-        ctx.lineTo(cX + f * 2.2, cY + (offY === 0 ? 0 : (cY - startY) * 1.2));
-        ctx.stroke();
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#e2503a';
+        // 入射光（平行）→ 屈折光（焦点Fへ）を一筆で
+        for (const pass of [{ a: .18, w: 8 }, { a: 1, w: 2.6 }]) {
+          ctx.globalAlpha = pass.a;
+          ctx.lineWidth = pass.w;
+          ctx.beginPath();
+          ctx.moveTo(30, startY);
+          ctx.lineTo(cX, startY);
+          ctx.lineTo(cX + f * 2.2, cY + (offY === 0 ? 0 : (cY - startY) * 1.2));
+          ctx.stroke();
+        }
+        ctx.restore();
 
         // 矢印マーク
-        drawRayArrow(cX - 100, startY, 1, 0, '#e63946');
+        drawRayArrow(cX - 100, startY, 1, 0, '#e2503a');
       });
 
     } else {
@@ -210,9 +243,9 @@
       const objY = cY;
 
       // 物体（赤矢印）
-      drawArrow(objX, objY, ho, '#e63946');
-      ctx.fillStyle = '#e63946';
-      ctx.font = 'bold 12px sans-serif';
+      drawArrow(objX, objY, ho, '#e2503a');
+      ctx.fillStyle = '#e2503a';
+      ctx.font = '700 12.5px "JetBrains Mono", monospace';
       ctx.fillText('物体', objX - 12, objY + 18);
 
       const topX = objX;
@@ -223,11 +256,11 @@
         statusEl.innerText = '⚠️ 物体が焦点上にあるため、光が平行になり「像はできません」';
 
         // 光線1（平行 ➔ 焦点）
-        drawLine(topX, topY, cX, topY, '#0077b6');
-        drawLine(cX, topY, cX + f * 2, topY + f * 2, '#0077b6');
+        drawLine(topX, topY, cX, topY, '#1f7fd0');
+        drawLine(cX, topY, cX + f * 2, topY + f * 2, '#1f7fd0');
 
         // 光線2（中心直進）
-        drawLine(topX, topY, cX + f * 2, cY + ho * 2, '#2a9d8f');
+        drawLine(topX, topY, cX + f * 2, cY + ho * 2, '#219a5d');
 
       } else if (doPos > f) {
         // --- 実像ができる場合 ($d_o > f$) ---
@@ -247,21 +280,21 @@
 
         // 実像の描画
         if (imgX < W - 20) {
-          drawArrow(imgX, cY, -hi, '#0077b6');
-          ctx.fillStyle = '#0077b6';
+          drawArrow(imgX, cY, -hi, '#1f7fd0');
+          ctx.fillStyle = '#1f7fd0';
           ctx.fillText('実像', imgX - 12, cY + (hi > 0 ? hi + 18 : -hi - 10));
         }
 
         // 光線1（青）：平行 ➔ レンズ ➔ 焦点 ➔ 像の先端
-        drawLine(topX, topY, cX, topY, '#0077b6');
-        drawLine(cX, topY, imgX, imgY, '#0077b6');
+        drawLine(topX, topY, cX, topY, '#1f7fd0');
+        drawLine(cX, topY, imgX, imgY, '#1f7fd0');
 
         // 光線2（緑）：中心直進 ➔ 像の先端
-        drawLine(topX, topY, imgX, imgY, '#2a9d8f');
+        drawLine(topX, topY, imgX, imgY, '#219a5d');
 
         // 光線3（紫）：手前焦点 ➔ レンズ ➔ 平行 ➔ 像の先端
-        drawLine(topX, topY, cX, cY + hi, '#9d4edd');
-        drawLine(cX, cY + hi, imgX, imgY, '#9d4edd');
+        drawLine(topX, topY, cX, cY + hi, '#7c3aed');
+        drawLine(cX, cY + hi, imgX, imgY, '#7c3aed');
 
       } else {
         // --- 虚像ができる場合 ($d_o < f$) ---
@@ -273,48 +306,67 @@
         statusEl.innerText = '🔍 焦点の内側：レンズの中に拡大された「正立虚像」が見える';
 
         // 虚像の描画（点線）
-        drawArrow(imgX, cY, hi, '#d90429', true);
-        ctx.fillStyle = '#d90429';
+        drawArrow(imgX, cY, hi, '#c1362a', true);
+        ctx.fillStyle = '#c1362a';
         ctx.fillText('虚像', imgX - 12, cY + 18);
 
         // 光線1（青）：平行 ➔ レンズ ➔ 右下へ（反対側の焦点経由）
-        drawLine(topX, topY, cX, topY, '#0077b6');
-        drawLine(cX, topY, cX + f * 1.5, topY + 1.5 * ho, '#0077b6');
+        drawLine(topX, topY, cX, topY, '#1f7fd0');
+        drawLine(cX, topY, cX + f * 1.5, topY + 1.5 * ho, '#1f7fd0');
         // 光線1延長（点線）
-        drawDashedLine(cX, topY, imgX, imgY, '#0077b6');
+        drawDashedLine(cX, topY, imgX, imgY, '#1f7fd0');
 
         // 光線2（緑）：中心直進（右下へ）
-        drawLine(topX, topY, cX + 100, cY + (100 / doPos) * ho, '#2a9d8f');
+        drawLine(topX, topY, cX + 100, cY + (100 / doPos) * ho, '#219a5d');
         // 光線2延長（点線）
-        drawDashedLine(cX, cY, imgX, imgY, '#2a9d8f');
+        drawDashedLine(cX, cY, imgX, imgY, '#219a5d');
 
         // 光線3（紫）：手前焦点からの延長上 ➔ レンズ ➔ 右へ平行
         const lensY3 = cY - (f / (f - doPos)) * ho;
-        drawLine(topX, topY, cX, lensY3, '#9d4edd');
-        drawLine(cX, lensY3, cX + 150, lensY3, '#9d4edd');
+        drawLine(topX, topY, cX, lensY3, '#7c3aed');
+        drawLine(cX, lensY3, cX + 150, lensY3, '#7c3aed');
         // 光線3延長（点線）
-        drawDashedLine(cX, lensY3, imgX, imgY, '#9d4edd');
+        drawDashedLine(cX, lensY3, imgX, imgY, '#7c3aed');
       }
     }
   }
 
   function drawPoint(x, y, label) {
     if (x < 10 || x > BASE_W - 10) return;
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#1d3557';
+    ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
     ctx.fill();
-    ctx.font = '12px sans-serif';
-    ctx.fillText(label, x - 6, y + 18);
+    ctx.strokeStyle = '#3b4557';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = '500 11.5px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#5a6478';
+    ctx.fillText(label, x, y + 10);
+    ctx.restore();
   }
 
   function drawLine(x1, y1, x2, y2, color) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    // 光の芯のまわりに淡いにじみを添える
+    ctx.globalAlpha = .18;
     ctx.beginPath();
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 7;
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.lineWidth = 2.2;
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   function drawDashedLine(x1, y1, x2, y2, color) {
@@ -345,6 +397,7 @@
   setupCanvas();
   render();
   window.addEventListener('resize', function() { setupCanvas(); render(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 </script>
 
 </body>

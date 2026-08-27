@@ -1,97 +1,109 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>理科：簡易WEBオシロスコープ（音の波形観察）</title>
-  <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-    body { background: #121212; color: #e0e0e0; margin: 0; padding: 20px; text-align: center; -webkit-tap-highlight-color: transparent; }
-    .card { max-width: 800px; margin: 0 auto; background: #1e1e1e; padding: 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-    h2 { margin-top: 0; color: #00f5d4; }
-    
-    .btn { padding: 10px 24px; font-size: 1rem; font-weight: bold; border: none; background: #00f5d4; color: #121212; border-radius: 20px; cursor: pointer; transition: all 0.2s; margin: 5px; touch-action: manipulation; }
-    .btn:hover { background: #00bbf9; }
-    .btn-stop { background: #f72585; color: #fff; }
-
-    /* メーターディスプレイ */
-    .dashboard { display: flex; justify-content: space-around; background: #2b2b2b; padding: 15px; border-radius: 12px; margin: 15px 0; }
-    .data-box { display: flex; flex-direction: column; align-items: center; }
-    .data-label { font-size: 0.85rem; color: #aaa; margin-bottom: 4px; }
-    .data-value { font-size: 1.5rem; font-weight: bold; color: #00f5d4; }
-
-    /* オシロスコープ画面 */
-    canvas { background: #050d0a; border: 2px solid #005f73; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,255,200,0.1); width: 100%; max-width: 760px; height: 320px; touch-action: manipulation; }
-
-    /* コントロールバー */
-    .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 15px; background: #2b2b2b; padding: 10px; border-radius: 8px; font-size: 0.9rem; }
-    .control-group { display: flex; align-items: center; gap: 8px; }
-    input[type=range] { cursor: pointer; }
-
-    .hint { background: #1f2d3d; border-left: 4px solid #00f5d4; padding: 10px 15px; text-align: left; margin-top: 20px; border-radius: 0 8px 8px 0; font-size: 0.9rem; line-height: 1.5; color: #d0d0d0; }
-
-    /* ---------- モバイル・タブレット対応 ---------- */
-    @media (max-width: 600px) {
-      body { padding: 12px; }
-      .card { padding: 16px 12px; }
-      .dashboard { flex-wrap: wrap; gap: 12px; padding: 12px; }
-      .controls { gap: 12px; }
-      .control-group { flex-wrap: wrap; justify-content: center; }
-      canvas { height: 240px; }
-    }
-    @media (pointer: coarse) {
-      .btn { min-height: 44px; }
-      input[type=range] { height: 36px; min-width: 140px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>理科：簡易WEBオシロスコープ（音の波形観察）</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .layout{grid-template-columns:1.7fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  #scopeCanvas{display:block;width:100%;height:340px;touch-action:manipulation;}
+  .stage{padding:0;}
+  .meters{margin-top:14px;}
+  /* 録音中を示すランプ */
+  .reclamp{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;
+    color:var(--text-faint);text-transform:uppercase;
+  }
+  .reclamp .bulb{
+    width:8px;height:8px;border-radius:50%;background:var(--border-strong);
+    transition:background .25s var(--ease),box-shadow .25s var(--ease);
+  }
+  .reclamp.live{color:var(--accent);}
+  .reclamp.live .bulb{background:var(--accent);box-shadow:0 0 0 4px rgba(47,214,195,.18);animation:pulse 1.4s infinite;}
+  @keyframes pulse{50%{opacity:.35;}}
+  @media (max-width:600px){
+    #scopeCanvas{height:240px;}
+  }
+</style>
 </head>
-<body>
+<body class="instrument">
 
-<div class="card">
-  <h2>簡易WEBオシロスコープ</h2>
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">10 ／ 音の波形観察</span>
+</div>
 
-  <div>
-    <button class="btn" id="startBtn" onclick="toggleAudio()">🎤 マイクを開始</button>
-    <button class="btn btn-stop" id="freezeBtn" onclick="toggleFreeze()" disabled>⏸️ 波形を静止</button>
-  </div>
+<div class="sim-header">
+  <span class="eyebrow">Web Oscilloscope · Live Waveform</span>
+  <h1>簡易WEBオシロスコープ</h1>
+  <p>マイクから取り込んだ音を波形にして映します。声や楽器の音を出して、振幅と振動数の変化を観察しよう。</p>
+</div>
 
-  <!-- 数値モニタリング画面 -->
-  <div class="dashboard">
-    <div class="data-box">
-      <div class="data-label">音の大小（振幅レベル）</div>
-      <div class="data-value" id="volVal">0 %</div>
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="stage">
+      <canvas id="scopeCanvas" width="760" height="340"></canvas>
     </div>
-    <div class="data-box">
-      <div class="data-label">音の高低（周波数）</div>
-      <div class="data-value" id="freqVal">-- Hz</div>
-    </div>
-    <div class="data-box">
-      <div class="data-label">推定音名</div>
-      <div class="data-value" id="noteVal">--</div>
-    </div>
-  </div>
 
-  <!-- 波形表示用キャンバス -->
-  <canvas id="scopeCanvas" width="760" height="320"></canvas>
-
-  <!-- 操作ダイヤル風調整 -->
-  <div class="controls">
-    <div class="control-group">
-      <label for="gainSlider">縦軸（音の大きさ倍率）:</label>
-      <input type="range" id="gainSlider" min="1" max="10" value="3">
-    </div>
-    <div class="control-group">
-      <label for="speedSlider">横軸（時間スケール）:</label>
-      <input type="range" id="speedSlider" min="1" max="8" value="2">
+    <div class="meters">
+      <div class="meter">
+        <div class="k">音の大小（振幅レベル）</div>
+        <div class="v" id="volVal">0 %</div>
+      </div>
+      <div class="meter">
+        <div class="k">音の高低（周波数）</div>
+        <div class="v" id="freqVal">-- Hz</div>
+      </div>
+      <div class="meter">
+        <div class="k">推定音名</div>
+        <div class="v" id="noteVal">--</div>
+      </div>
     </div>
   </div>
 
-  <div class="hint">
-    <strong>【観察と実験のヒント】</strong><br>
-    ・<strong>大きな声・小さな声：</strong> 声の大きさを変えると、波の上下の高さ（振幅）がどう変わるか観察しよう。<br>
-    ・<strong>高い声・低い声：</strong> ソプラノのような高い声や笛の音を出すと波の山が詰まり（周波数が高い）、低い声を出すと波の山がゆったり伸びます。<br>
-    ・<strong>観察のポイント：</strong> 「波形を静止」ボタンを押すと、きれいに1波分をストップして作図や観察ができます。
+  <div class="panel">
+    <h2><span class="dot"></span>コントロール</h2>
+
+    <div class="btnrow">
+      <button class="btn primary" id="startBtn" onclick="toggleAudio()">🎤 マイクを開始</button>
+      <button class="btn" id="freezeBtn" onclick="toggleFreeze()" disabled>⏸️ 波形を静止</button>
+    </div>
+
+    <div class="reclamp" id="recLamp" style="margin-top:14px"><span class="bulb"></span><span id="recText">待機中</span></div>
+
+    <hr class="divider">
+
+    <div class="controls">
+      <div class="control">
+        <label for="gainSlider">縦軸（音の大きさ倍率）<span class="val" id="gainVal">×3</span></label>
+        <input type="range" id="gainSlider" min="1" max="10" value="3">
+      </div>
+      <div class="control">
+        <label for="speedSlider">横軸（時間スケール）<span class="val" id="speedVal">×2</span></label>
+        <input type="range" id="speedSlider" min="1" max="8" value="2">
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="hint">
+      <span class="hint-title">観察と実験のヒント</span>
+      <ul>
+        <li><strong>大きな声・小さな声：</strong> 声の大きさを変えると、波の上下の高さ（振幅）がどう変わるか観察しよう。</li>
+        <li><strong>高い声・低い声：</strong> ソプラノのような高い声や笛の音を出すと波の山が詰まり（周波数が高い）、低い声を出すと波の山がゆったり伸びます。</li>
+        <li><strong>観察のポイント：</strong> 「波形を静止」ボタンを押すと、きれいに1波分をストップして作図や観察ができます。</li>
+      </ul>
+    </div>
   </div>
+
 </div>
 
 <script>
@@ -104,6 +116,9 @@
 
   const canvas = document.getElementById('scopeCanvas');
   const ctx = canvas.getContext('2d');
+
+  // 輝線の色はテーマのアクセントに合わせる
+  const TRACE = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#2fd6c3';
 
   // 表示サイズ（CSS px）に合わせ、devicePixelRatio対応で描画バッファを設定する
   let W = canvas.width;   // 論理幅（CSS px）
@@ -148,6 +163,7 @@
         isRunning = true;
         document.getElementById('startBtn').innerText = "⏹️ マイクを停止";
         freezeBtn.disabled = false;
+        setLamp('live');
         draw();
       } catch (err) {
         alert("マイクへのアクセスが拒否されたか、マイクが見つかりませんでした。");
@@ -168,6 +184,8 @@
     document.getElementById('startBtn').innerText = "🎤 マイクを開始";
     freezeBtn.innerText = "⏸️ 波形を静止";
     freezeBtn.disabled = true;
+    freezeBtn.classList.remove('active');
+    setLamp('idle');
     volVal.innerText = "0 %";
     freqVal.innerText = "-- Hz";
     noteVal.innerText = "--";
@@ -177,31 +195,49 @@
   function toggleFreeze() {
     isFrozen = !isFrozen;
     freezeBtn.innerText = isFrozen ? "▶️ 再開" : "⏸️ 波形を静止";
+    freezeBtn.classList.toggle('active', isFrozen);
+    setLamp(isFrozen ? 'frozen' : 'live');
     if (!isFrozen) draw();
   }
 
   function clearCanvas() {
-    ctx.fillStyle = '#050d0a';
+    // ブラウン管らしく、中央がわずかに明るい暗幕を敷く
+    const bg = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * .72);
+    bg.addColorStop(0, '#0b1a19');
+    bg.addColorStop(1, '#05090d');
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
     drawGrid();
   }
 
   // オシロスコープの背景グリッドを描画
   function drawGrid() {
-    ctx.strokeStyle = '#002b22';
-    ctx.lineWidth = 1;
     const gridSpacing = 40;
 
-    for (let x = 0; x < W; x += gridSpacing) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    // 細かい目盛り（1マスを5分割）
+    ctx.strokeStyle = 'rgba(47,214,195,.055)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += gridSpacing / 5) {
+      ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); ctx.stroke();
     }
-    for (let y = 0; y < H; y += gridSpacing) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    for (let y = 0; y < H; y += gridSpacing / 5) {
+      ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke();
     }
 
-    // センター軸
-    ctx.strokeStyle = '#005f73';
+    // 主目盛り
+    ctx.strokeStyle = 'rgba(47,214,195,.14)';
+    for (let x = 0; x < W; x += gridSpacing) {
+      ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += gridSpacing) {
+      ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke();
+    }
+
+    // センター軸（縦横）
+    ctx.strokeStyle = 'rgba(47,214,195,.34)';
+    ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
   }
 
   function draw() {
@@ -247,9 +283,11 @@
     const speed = parseInt(document.getElementById('speedSlider').value);
 
     ctx.lineWidth = 2.5;
-    ctx.strokeStyle = '#00f5d4';
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = '#00f5d4';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = TRACE;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = TRACE;
     ctx.beginPath();
 
     const sliceWidth = (W * 1.0) / (bufferLength / speed);
@@ -278,6 +316,12 @@
       if (x > W) break;
     }
 
+    // 残光を思わせる二重描き（太く淡い層 → 細く明るい芯）
+    ctx.save();
+    ctx.globalAlpha = .28;
+    ctx.lineWidth = 7;
+    ctx.stroke();
+    ctx.restore();
     ctx.stroke();
     ctx.shadowBlur = 0; // シャドウのリセット
   }
@@ -315,6 +359,30 @@
     return noteNames[noteIndex];
   }
 
+  // --- 表示まわりの補助（スライダーの倍率表示・録音ランプ） ---
+  const gainSlider = document.getElementById('gainSlider');
+  const speedSlider = document.getElementById('speedSlider');
+  const gainValEl = document.getElementById('gainVal');
+  const speedValEl = document.getElementById('speedVal');
+  const recLamp = document.getElementById('recLamp');
+  const recText = document.getElementById('recText');
+
+  function syncSliderLabels() {
+    gainValEl.textContent = '×' + gainSlider.value;
+    speedValEl.textContent = '×' + speedSlider.value;
+    // 静止中でも、つまみを動かした結果が画面に反映されるようにする
+    if (isFrozen && lastTimeData) renderWave(lastTimeData);
+  }
+  gainSlider.addEventListener('input', syncSliderLabels);
+  speedSlider.addEventListener('input', syncSliderLabels);
+
+  function setLamp(state) {
+    recLamp.classList.toggle('live', state === 'live');
+    recText.textContent = state === 'live' ? '計測中' : (state === 'frozen' ? '静止中' : '待機中');
+  }
+
+  syncSliderLabels();
+  setLamp('idle');
   resizeCanvas();
 </script>
 
