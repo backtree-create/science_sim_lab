@@ -20,14 +20,10 @@
     --faint:#61728a;
     --accent:#38bdf8;
     --accent-2:#22d3ee;
-    --future:#fbbf24;
     --font-jp:'Zen Kaku Gothic New','Noto Sans JP',sans-serif;
     --font-mono:'JetBrains Mono',ui-monospace,monospace;
     --ease:cubic-bezier(.22,.61,.36,1);
   }
-  /* 未来モードではアクセントを琥珀色に切り替える */
-  body.future{--accent:var(--future);--accent-2:#fcd34d;}
-
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
   body{
@@ -73,11 +69,6 @@
     line-height:1.15;font-variant-numeric:tabular-nums;text-shadow:0 0 24px currentColor;
   }
   .chrono .period{font-size:11.5px;color:var(--sub);margin-top:3px;font-weight:500;}
-  .chrono .predict{
-    display:none;margin-top:8px;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;
-    color:#04121c;background:var(--future);padding:3px 9px;border-radius:100px;
-  }
-  body.future .chrono .predict{display:inline-block;}
   .chrono .src{
     margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
     font-family:var(--font-mono);font-size:8.5px;line-height:1.7;color:var(--faint);letter-spacing:.02em;
@@ -91,11 +82,6 @@
   }
   .info .t{font-size:.92rem;font-weight:700;color:var(--accent);margin-bottom:5px;}
   .info .d{font-size:.79rem;color:var(--sub);line-height:1.7;}
-  .info .warn{
-    display:none;margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
-    font-size:.72rem;line-height:1.65;color:var(--future);
-  }
-  body.future .info .warn{display:block;}
 
   /* ---------- 凡例 ---------- */
   .legend{position:absolute;right:18px;bottom:190px;z-index:10;padding:12px 14px;border-radius:14px;display:flex;flex-direction:column;gap:7px;}
@@ -157,7 +143,6 @@
   .chip:hover{background:rgba(255,255,255,.11);color:var(--ink);}
   .chip.active{background:rgba(56,189,248,.18);background:color-mix(in srgb, var(--accent) 18%, transparent);border-color:var(--accent);color:var(--accent);font-weight:700;}
   .chip b{font-family:var(--font-mono);font-weight:500;font-size:9.5px;opacity:.72;margin-right:5px;}
-  .chip.fut{border-style:dashed;}
 
   .toggle{
     flex:none;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.04em;
@@ -233,7 +218,6 @@
   <div class="k">GEOLOGIC TIME</div>
   <div class="v" id="chronoVal">0 Ma</div>
   <div class="period" id="chronoPeriod">現在</div>
-  <div class="predict">PREDICTION</div>
   <div class="src">
     DATA: GPlates Web Service<br>(EarthByte, Univ. of Sydney)<br>ROTATION MODEL: MÜLLER et al. 2022
   </div>
@@ -242,10 +226,7 @@
 <div class="info glass">
   <span class="era" id="infoEra">現在</span>
   <div class="t" id="infoTitle">現在（0 Ma）</div>
-  <div class="d" id="infoDesc">現在の海岸線の配置です。スライダーを左へ動かすと過去、右へ動かすと未来の予測に移ります。</div>
-  <div class="warn" id="infoWarn">
-    ※ここから先は「現在のプレートの動きがそのまま続いたら」という外挿です。実際にはプレートの境界そのものが移り変わるため、その通りにはなりません。
-  </div>
+  <div class="d" id="infoDesc">現在の海岸線の配置です。スライダーを左へ動かすと、同じ海岸線が地質時代のどこにあったかを再現します。</div>
 </div>
 
 <div class="legend glass" id="legend">
@@ -259,7 +240,7 @@
       <div class="eras" id="eras"></div>
       <input type="range" id="timeSlider" min="0" max="400" step="0.5" value="0">
       <div class="scale">
-        <span>3億年前</span><span>2億年前</span><span>1億年前</span><span>現在</span><span>1億年後</span>
+        <span>3億年前</span><span>2億年前</span><span>1億年前</span><span>現在</span>
       </div>
     </div>
   </div>
@@ -283,9 +264,6 @@ const LAND_R  = 10.06;
 const GRID_DEG = 4;
 const AUTOSPIN = 0.3;
 
-const AGE_MIN = -100;   // 未来 1 億年後
-const STAGE   = 10;     // 直近 10Ma の動きを未来へ外挿する
-
 /* ============================================================
    地質時代（国際年代層序表 ICS の境界年代と配色）
    ============================================================ */
@@ -300,13 +278,12 @@ const PERIODS = [
   { from:   2.6, to:   0.0, name: '第四紀',   color: '#f9f97f' }
 ];
 function periodOf(age) {
-  if (age < 0) return { name: '未来（予測）', color: '#fbbf24' };
   for (const p of PERIODS) if (age <= p.from && age > p.to) return p;
   return { name: '現在', color: '#f9f97f' };
 }
 
 /* ============================================================
-   出来事（過去は実際の地質イベント、未来は外挿から言えること）
+   出来事（実際の地質イベントにひもづけた解説）
    ============================================================ */
 const EVENTS = [
   { age: 300, chip: 'パンゲア完成', title: '約3億年前 ― 超大陸パンゲアの完成',
@@ -340,15 +317,7 @@ const EVENTS = [
   { age:   3, chip: 'パナマ地峡', title: '約300万年前 ― 南北アメリカがつながる',
     desc: 'パナマ地峡ができて南北アメリカが陸続きになりました。太平洋と大西洋の海水の行き来が止まり、世界の海流と気候が大きく変わります。' },
   { age:   0, chip: '現在', title: '現在（0 Ma）',
-    desc: '現在の海岸線の配置です。大西洋は今も年に2〜3cmずつ広がり、インドは年5cmでユーラシアを押し続けています。' },
-  { age: -20, chip: '2000万年後', title: '約2000万年後 ― 東アフリカが割れる',
-    desc: '東アフリカ大地溝帯の裂け目が広がり、ソマリア半島側がアフリカ本体から離れはじめます。紅海はさらに開いて外洋とつながります。' },
-  { age: -50, chip: '5000万年後', title: '約5000万年後 ― 地中海が閉じ、オーストラリアが北上',
-    desc: 'アフリカがヨーロッパへ約500km近づき、地中海は大きく狭まってアルプスのような山脈ができます。オーストラリアは赤道を越えるところまで北上し、東南アジアに迫ります。' },
-  { age: -75, chip: '7500万年後', title: '約7500万年後 ― 大西洋がさらに拡大',
-    desc: '大西洋は現在より数千km広くなり、そのぶん太平洋が縮みます。カリフォルニア半島側の陸地は北へすべり続けます。' },
-  { age: -100, chip: '1億年後', title: '約1億年後 ― 現在の動きの延長線',
-    desc: 'このまま動きが続けば、オーストラリアはアジアと一体化し、サンフランシスコのあたりはアラスカ沖まで移動します。ただしこれは「今の速さと向きが変わらなければ」という仮定の上の姿です。' }
+    desc: '現在の海岸線の配置です。大西洋は今も年に2〜3cmずつ広がり、インドは年5cmでユーラシアを押し続けています。' }
 ];
 
 const CONTINENTS = {
@@ -412,25 +381,19 @@ function lonLatToVec3(lon, lat, r) {
   return new THREE.Vector3(r * cl * Math.cos(lon * DEG), r * Math.sin(lat * DEG), -r * cl * Math.sin(lon * DEG));
 }
 
-const _ax = new THREE.Vector3(), _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
-/* 年代 age（負なら未来）における node の回転を out に入れる */
+const _qb = new THREE.Quaternion();
+/* 年代 age（Ma）における node の回転を out に入れる */
 function rotationFor(age, n, out) {
-  if (age >= 0) {
-    const x = Math.min(data.tMax, age) / data.tStep;
-    const i0 = Math.min(nTimes - 1, Math.floor(x));
-    const i1 = Math.min(nTimes - 1, i0 + 1);
-    const f = x - i0;
-    const p0 = poleAt(i0, n);
-    out.setFromAxisAngle(axisFromPole(p0[0], p0[1]), p0[2] * DEG);
-    if (i1 !== i0 && f > 0) {
-      const p1 = poleAt(i1, n);
-      _qb.setFromAxisAngle(axisFromPole(p1[0], p1[1]), p1[2] * DEG);
-      out.slerp(_qb, f);
-    }
-  } else {
-    // 未来：直近 STAGE Ma の有限回転を逆向きに引き延ばす
-    const s = poleAt(STAGE / data.tStep, n);
-    out.setFromAxisAngle(axisFromPole(s[0], s[1]), -s[2] * DEG * (-age / STAGE));
+  const x = Math.max(0, Math.min(data.tMax, age)) / data.tStep;
+  const i0 = Math.min(nTimes - 1, Math.floor(x));
+  const i1 = Math.min(nTimes - 1, i0 + 1);
+  const f = x - i0;
+  const p0 = poleAt(i0, n);
+  out.setFromAxisAngle(axisFromPole(p0[0], p0[1]), p0[2] * DEG);
+  if (i1 !== i0 && f > 0) {
+    const p1 = poleAt(i1, n);
+    _qb.setFromAxisAngle(axisFromPole(p1[0], p1[1]), p1[2] * DEG);
+    out.slerp(_qb, f);
   }
   return out;
 }
@@ -484,19 +447,6 @@ function buildGlobe() {
   for (let lon = 0; lon <= 360; lon += 2) eqPts.push(lonLatToVec3(lon, 0, GLOBE_R + .02));
   scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(eqPts),
     new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: .30 })));
-
-  const atmo = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(0x38bdf8) } },
-    vertexShader: `varying vec3 vN; varying vec3 vP;
-      void main(){ vN = normalize(normalMatrix * normal);
-        vec4 mv = modelViewMatrix * vec4(position,1.0); vP = mv.xyz;
-        gl_Position = projectionMatrix * mv; }`,
-    fragmentShader: `uniform vec3 uColor; varying vec3 vN; varying vec3 vP;
-      void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(-vP))), 3.0);
-        gl_FragColor = vec4(uColor, f * 0.55); }`,
-    transparent: true, side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending
-  });
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(GLOBE_R * 1.055, 64, 48), atmo));
 
   const n = 2200, sp = new Float32Array(n * 3), ss = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -639,11 +589,17 @@ function buildArrows(age) {
     const nd = nodes[i];
     if (!nd.anchor || nd.weight < ARROW_MIN_W) continue;
 
+    // ARROW_DT 百万年ぶんの移動（範囲の端でははみ出さないよう寄せる）
+    const tEarly = Math.min(data.tMax, age + ARROW_DT);
+    rotationFor(tEarly, i, qa);
+    rotationFor(tEarly - ARROW_DT, i, qb);
+    const pE = nd.anchor.clone().applyQuaternion(qa);
+    const pL = nd.anchor.clone().applyQuaternion(qb);
+    const move = pL.clone().sub(pE);
+
+    // 矢印の根もとは「今表示している年代」の位置に置く
     rotationFor(age, i, qa);
-    rotationFor(age - ARROW_DT, i, qb);      // ARROW_DT 百万年あと
     const p1 = nd.anchor.clone().applyQuaternion(qa);
-    const p2 = nd.anchor.clone().applyQuaternion(qb);
-    const move = p2.clone().sub(p1);
     if (move.length() * ARROW_GAIN < 0.18) continue;   // ほぼ動いていないプレートは省く
 
     const L = Math.min(2.9, move.length() * ARROW_GAIN);
@@ -691,7 +647,7 @@ const ageToSlider = a => data.tMax - a;
 
 function buildEras() {
   const el = document.getElementById('eras');
-  const span = data.tMax - AGE_MIN;
+  const span = data.tMax;
   const stops = [];
   const pos = a => (100 * (data.tMax - a) / span);
   for (const p of PERIODS) {
@@ -699,7 +655,6 @@ function buildEras() {
     if (from <= to) continue;
     stops.push(`${p.color} ${pos(from).toFixed(2)}% ${pos(to).toFixed(2)}%`);
   }
-  stops.push(`rgba(251,191,36,.30) ${pos(0).toFixed(2)}% 100%`);
   el.style.background = `linear-gradient(90deg, ${stops.join(', ')})`;
 
   for (const e of EVENTS) {
@@ -729,38 +684,34 @@ function buildChips() {
   const el = document.getElementById('chips');
   EVENTS.forEach(e => {
     const b = document.createElement('button');
-    b.className = 'chip' + (e.age < 0 ? ' fut' : '');
-    b.innerHTML = `<b>${e.age > 0 ? e.age + 'Ma' : (e.age === 0 ? '0' : '+' + (-e.age))}</b>${e.chip}`;
+    b.className = "chip";
+    b.innerHTML = `<b>${e.age > 0 ? e.age + "Ma" : "0"}</b>${e.chip}`;
     b.addEventListener('click', () => { isPlaying = false; syncPlay(); setAge(e.age); });
     el.appendChild(b);
   });
 }
 
 function formatJp(age) {
-  if (Math.abs(age) < 0.5) return '現在';
-  const man = Math.round(Math.abs(age) * 100);
-  const suffix = age > 0 ? '年前' : '年後';
+  if (age < 0.5) return '現在';
+  const man = Math.round(age * 100);
   if (man >= 10000) {
     const oku = Math.floor(man / 10000), rest = man % 10000;
-    return (rest === 0 ? `${oku}億` : `${oku}億${rest}万`) + suffix;
+    return (rest === 0 ? `${oku}億` : `${oku}億${rest}万`) + '年前';
   }
-  return `${man}万` + suffix;
+  return `${man}万年前`;
 }
 
 function setAge(age, fromSlider) {
-  currentAge = Math.max(AGE_MIN, Math.min(data.tMax, age));
+  currentAge = Math.max(0, Math.min(data.tMax, age));
   if (!fromSlider) document.getElementById('timeSlider').value = String(ageToSlider(currentAge));
   applyAge(currentAge);
   buildArrows(currentAge);
 
-  const future = currentAge < -0.001;
-  document.body.classList.toggle('future', future);
-
   const per = periodOf(currentAge);
   document.getElementById('chronoVal').textContent =
-    (Math.abs(currentAge) < 0.5) ? '0 Ma' : (future ? '+' : '') + Math.abs(currentAge).toFixed(0) + ' Ma';
+    (currentAge < 0.5) ? '0 Ma' : currentAge.toFixed(0) + ' Ma';
   document.getElementById('chronoPeriod').textContent =
-    Math.abs(currentAge) < 0.5 ? '現在' : `${per.name}　${formatJp(currentAge)}`;
+    currentAge < 0.5 ? '現在' : `${per.name}　${formatJp(currentAge)}`;
 
   const era = document.getElementById('infoEra');
   era.textContent = per.name;
@@ -776,7 +727,7 @@ function setAge(age, fromSlider) {
   });
 
   const tick = document.getElementById('nowTick');
-  if (tick) tick.style.left = (100 * (data.tMax - currentAge) / (data.tMax - AGE_MIN)).toFixed(2) + '%';
+  if (tick) tick.style.left = (100 * (data.tMax - currentAge) / data.tMax).toFixed(2) + '%';
 }
 function syncPlay() { document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶'; }
 
@@ -792,8 +743,6 @@ function initThree() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
   el.appendChild(renderer.domElement);
 
   controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -805,11 +754,11 @@ function initThree() {
   controls.autoRotateSpeed = AUTOSPIN;
   controls.enablePan = false;
 
-  scene.add(new THREE.AmbientLight(0xbcd4ff, 0.55));
-  const sun = new THREE.DirectionalLight(0xfff4e0, 1.35);
+  scene.add(new THREE.AmbientLight(0xc6d8f0, 0.46));
+  const sun = new THREE.DirectionalLight(0xfff6e6, 1.0);
   sun.position.set(40, 26, 26);
   scene.add(sun);
-  const rim = new THREE.DirectionalLight(0x2e6fb7, 0.55);
+  const rim = new THREE.DirectionalLight(0x3f7fc4, 0.4);
   rim.position.set(-32, -12, -22);
   scene.add(rim);
 
@@ -828,7 +777,7 @@ function animate(now) {
   lastFrame = now;
   if (isPlaying) {
     let a = currentAge - dt * 14;      // 1秒あたり1400万年
-    if (a <= AGE_MIN) { a = AGE_MIN; isPlaying = false; syncPlay(); }
+    if (a <= 0) { a = 0; isPlaying = false; syncPlay(); }
     setAge(a);
   }
   controls.update();
@@ -860,7 +809,7 @@ async function start() {
     console.log(`PALEOGLOBE: rings=${data.nRings} nodes=${nNodes} times=${nTimes} triangles=${Math.round(tri)}`);
 
     document.getElementById('timeSlider').min = '0';
-    document.getElementById('timeSlider').max = String(data.tMax - AGE_MIN);
+    document.getElementById("timeSlider").max = String(data.tMax);
     buildEras();
     buildLegend();
     buildChips();
@@ -870,7 +819,7 @@ async function start() {
       setAge(sliderToAge(parseFloat(e.target.value)), true);
     });
     document.getElementById('playBtn').addEventListener('click', () => {
-      if (!isPlaying && currentAge <= AGE_MIN + 0.5) setAge(data.tMax);
+      if (!isPlaying && currentAge <= 0.5) setAge(data.tMax);
       isPlaying = !isPlaying; syncPlay();
     });
     document.getElementById('arrowBtn').addEventListener('click', e => {
