@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>中3理科：遺伝の規則性シミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:var(--bio);--accent-soft:var(--bio-soft);}
+  .layout{grid-template-columns:1.5fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  #stageCanvas{display:block;width:100%;height:auto;touch-action:manipulation;}
+  .stage{padding:0;}
+
+  /* 交配のステージ表示 */
+  .stagebar{
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    background:var(--bg-panel-2);border:1px solid var(--border);
+    border-radius:var(--r-pill);padding:8px 16px;margin-top:14px;
+  }
+  .stagebar b{color:var(--accent);font-weight:500;}
+
+  /* 遺伝子型セレクタ */
+  .genopick{display:flex;flex-direction:column;gap:8px;}
+  .genorow{display:flex;align-items:center;gap:10px;}
+  .genorow .who{
+    font-family:var(--font-mono);font-size:11px;color:var(--text-faint);
+    width:44px;flex:none;
+  }
+  .seg{display:flex;gap:4px;flex:1;background:var(--bg-inset);border:1px solid var(--border);border-radius:var(--r-sm);padding:3px;}
+  .seg button{
+    flex:1;font-family:var(--font-mono);font-size:13px;font-weight:500;
+    border:none;background:transparent;color:var(--text-dim);
+    padding:8px 4px;border-radius:6px;cursor:pointer;transition:.15s var(--ease);
+    touch-action:manipulation;
+  }
+  .seg button:hover{color:var(--text);}
+  .seg button.on{background:#fff;color:var(--accent);font-weight:700;box-shadow:var(--sh-1);}
+  .phen{
+    font-size:11.5px;color:var(--text-faint);width:70px;flex:none;text-align:right;
+  }
+
+  /* 格子表 */
+  .punnett{
+    border-collapse:separate;border-spacing:0;width:100%;
+    font-family:var(--font-mono);font-size:13px;
+  }
+  .punnett th,.punnett td{
+    border:1px solid var(--border);padding:9px 4px;text-align:center;
+  }
+  .punnett th{background:var(--bg-panel-2);color:var(--text-dim);font-weight:500;font-size:12px;}
+  .punnett th.corner{background:transparent;border-color:transparent;}
+  .punnett td{font-weight:500;color:var(--text);}
+  .punnett td.dom{background:var(--bio-soft);}
+  .punnett td.rec{background:var(--bg-inset);color:var(--text-dim);}
+
+  /* 結果 */
+  .ratiobar{
+    display:flex;height:30px;border-radius:var(--r-pill);overflow:hidden;
+    border:1px solid var(--border);background:var(--bg-inset);
+    box-shadow:inset 0 1px 3px rgba(17,23,38,.10);
+  }
+  .ratiobar div{
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:11.5px;font-weight:500;
+    transition:width .25s var(--ease);white-space:nowrap;overflow:hidden;
+  }
+  .ratiobar .rb-dom{background:linear-gradient(180deg,var(--bio-2),var(--bio));color:#06240f;}
+  .ratiobar .rb-rec{background:linear-gradient(180deg,#e2e7ef,#cbd3df);color:#3a4757;}
+
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px;}
+  .kv .box{
+    background:var(--bg-panel-2);border:1px solid var(--border);border-radius:var(--r-sm);
+    padding:10px 12px;
+  }
+  .kv .k{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);margin-bottom:4px;}
+  .kv .v{font-family:var(--font-mono);font-size:15px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;}
+  .kv .v.sub{font-size:12.5px;font-weight:500;color:var(--text-dim);}
+
+  #convCanvas{display:block;width:100%;height:auto;border-radius:var(--r-sm);}
+
+  .mendel{
+    font-size:12.5px;line-height:1.85;color:var(--text-dim);
+    background:var(--bg-inset);border:1px solid var(--border);
+    border-radius:var(--r-sm);padding:12px 14px;
+  }
+  .mendel b{color:var(--text);font-weight:500;font-family:var(--font-mono);}
+
+  .nudge{
+    display:none;margin-top:12px;padding:12px 14px;
+    background:var(--bio-soft);border:1px solid rgba(22,163,74,.28);
+    border-left:3px solid var(--accent);border-radius:0 var(--r-sm) var(--r-sm) 0;
+    font-size:12.5px;line-height:1.8;color:var(--text-dim);
+  }
+  .nudge.on{display:block;}
+  .nudge b{color:var(--text);font-weight:700;}
+  .nudge button{margin-top:9px;width:100%;}
+
+  @media (pointer:coarse){
+    .seg button{min-height:44px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">18 ／ 遺伝の規則性</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Mendelian Inheritance · Law of Segregation</span>
+  <h1>遺伝の規則性を1000回試す</h1>
+  <p>教科書の「3：1」は、少ない数では現れません。個体数を増やしていくと実際の比がどう動くのかを、自分の手で確かめましょう。エンドウの形質とメンデルの実験値を使います。</p>
+</div>
+
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="stage">
+      <canvas id="stageCanvas" width="720" height="560"></canvas>
+    </div>
+    <div class="stagebar" id="stageBar">かけ合わせを選んでください</div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>かけ合わせの設定</h2>
+
+    <h3>形質を選ぶ</h3>
+    <div class="tabs" style="display:flex;width:100%;margin-bottom:18px;">
+      <button class="tab on-trait active" data-trait="seed">種子の形</button>
+      <button class="tab on-trait" data-trait="cotyledon">子葉の色</button>
+      <button class="tab on-trait" data-trait="height">草丈</button>
+    </div>
+
+    <h3>親の遺伝子型</h3>
+    <div class="genopick">
+      <div class="genorow">
+        <span class="who">親①</span>
+        <div class="seg" data-parent="0">
+          <button data-g="AA" class="on">AA</button>
+          <button data-g="Aa">Aa</button>
+          <button data-g="aa">aa</button>
+        </div>
+        <span class="phen" id="phen0">丸</span>
+      </div>
+      <div class="genorow">
+        <span class="who">親②</span>
+        <div class="seg" data-parent="1">
+          <button data-g="AA">AA</button>
+          <button data-g="Aa">Aa</button>
+          <button data-g="aa" class="on">aa</button>
+        </div>
+        <span class="phen" id="phen1">しわ</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h3>よく使うかけ合わせ</h3>
+    <div class="btnrow">
+      <button class="btn" data-preset="AA,aa">純系どうし</button>
+      <button class="btn" data-preset="Aa,Aa">子どうし</button>
+      <button class="btn" data-preset="Aa,aa">検定交雑</button>
+    </div>
+
+    <hr class="divider">
+
+    <h3>子を生まれさせる</h3>
+    <div class="btnrow">
+      <button class="btn primary" id="add1">＋1個体</button>
+      <button class="btn" id="add100">＋100</button>
+      <button class="btn" id="add1000">＋1000</button>
+      <button class="btn" id="resetBtn">やり直す</button>
+    </div>
+
+    <div class="nudge" id="nudge">
+      <b>子（F1）はすべて顕性形質になりました。</b><br>
+      潜性形質は消えてしまったのでしょうか。この子どうしをかけ合わせると、どうなるでしょう。
+      <button class="btn primary" id="toF2">この子どうしをかけ合わせる →</button>
+    </div>
+
+    <hr class="divider">
+
+    <h3>結果</h3>
+    <div class="ratiobar" id="ratioBar">
+      <div class="rb-dom" id="rbDom" style="width:0%"></div>
+      <div class="rb-rec" id="rbRec" style="width:0%"></div>
+    </div>
+    <div class="kv">
+      <div class="box"><div class="k">生まれた個体数</div><div class="v" id="kTotal">0</div></div>
+      <div class="box"><div class="k">実測の比</div><div class="v" id="kRatio">－</div></div>
+      <div class="box"><div class="k">理論上の比</div><div class="v sub" id="kTheory">－</div></div>
+      <div class="box"><div class="k">遺伝子型の内訳</div><div class="v sub" id="kGeno">－</div></div>
+    </div>
+
+    <hr class="divider">
+
+    <h3>顕性形質の割合の動き</h3>
+    <canvas id="convCanvas" width="600" height="230"></canvas>
+
+    <hr class="divider">
+
+    <h3>格子表（かけ合わせ）</h3>
+    <table class="punnett" id="punnett"></table>
+
+    <hr class="divider">
+
+    <h3>メンデルの実験値</h3>
+    <div class="mendel" id="mendelBox"></div>
+
+    <div class="hint" style="margin-top:18px">
+      <span class="hint-title">確かめたいこと</span>
+      <ul>
+        <li><strong>分離の法則：</strong>対になっている遺伝子は、生殖細胞ができるとき（減数分裂）に1つずつに分かれます。だから親①が <code>Aa</code> なら、A の生殖細胞と a の生殖細胞が半分ずつできます。</li>
+        <li><strong>顕性（優性）と潜性（劣性）：</strong>A と a が対になると A の形質だけが現れます。<code>Aa</code> は見た目では <code>AA</code> と区別がつきません。</li>
+        <li><strong>少ない数では比は合わない：</strong>10個体では 3：1 からかなりずれます。100、1000 と増やすほど理論の比に近づいていくことを、上のグラフで確かめましょう。</li>
+        <li><strong>検定交雑：</strong>顕性形質の個体が <code>AA</code> か <code>Aa</code> かを調べるには、<code>aa</code> とかけ合わせます。潜性形質の子が出れば <code>Aa</code> だったとわかります。</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   形質のデータ（メンデル 1866年の論文に記載された実測値つき）
+   ============================================================ */
+const TRAITS = {
+  seed: {
+    name: '種子の形', gene: 'R',
+    dom: { label: '丸',   color: '#d9a441', edge: '#9a6f1f' },
+    rec: { label: 'しわ', color: '#b8894a', edge: '#7d5722' },
+    mendel: { dom: 5474, rec: 1850, domName: '丸', recName: 'しわ' },
+    draw: 'seed'
+  },
+  cotyledon: {
+    name: '子葉の色', gene: 'Y',
+    dom: { label: '黄色', color: '#e8c944', edge: '#a58a12' },
+    rec: { label: '緑色', color: '#5aa04e', edge: '#356b2c' },
+    mendel: { dom: 6022, rec: 2001, domName: '黄色', recName: '緑色' },
+    draw: 'cotyledon'
+  },
+  height: {
+    name: '草丈', gene: 'T',
+    dom: { label: '高い', color: '#3f9e5a', edge: '#256b39' },
+    rec: { label: '低い', color: '#8fc27a', edge: '#4e8244' },
+    mendel: { dom: 787, rec: 277, domName: '高い', recName: '低い' },
+    draw: 'height'
+  }
+};
+
+const MAX_POP = 10000;
+
+let traitKey = 'seed';
+let parents = ['AA', 'aa'];
+let population = [];          // 'AA' | 'Aa' | 'aa'
+let history = [];             // {n, frac}
+
+const canvas = document.getElementById('stageCanvas');
+const ctx = canvas.getContext('2d');
+const BASE_W = 720, BASE_H = 560;
+const conv = document.getElementById('convCanvas');
+const cctx = conv.getContext('2d');
+const CONV_W = 600, CONV_H = 230;
+
+const css = getComputedStyle(document.documentElement);
+const tok = (n, f) => (css.getPropertyValue(n).trim() || f);
+const C_INK   = tok('--text', '#111726');
+const C_DIM   = tok('--text-dim', '#5a6478');
+const C_FAINT = tok('--text-faint', '#98a1b4');
+const C_LINE  = tok('--border', '#e3e7ef');
+const C_BIO   = tok('--bio', '#16a34a');
+const MONO    = '"JetBrains Mono", ui-monospace, monospace';
+
+function setupCanvas() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = BASE_W * dpr; canvas.height = BASE_H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  conv.width = CONV_W * dpr; conv.height = CONV_H * dpr;
+  cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+/* ============================================================
+   遺伝の計算
+   ============================================================ */
+const isDom = g => g !== 'aa';
+function combine(a, b) { return [a, b].sort().join(''); }
+
+/* 減数分裂：対の遺伝子が1つずつに分かれる */
+function makeGamete(genotype) {
+  return genotype[Math.random() < 0.5 ? 0 : 1];
+}
+function breed() {
+  return combine(makeGamete(parents[0]), makeGamete(parents[1]));
+}
+
+/* 格子表から理論上の割合を出す */
+function theory() {
+  const g0 = parents[0].split(''), g1 = parents[1].split('');
+  const counts = { AA: 0, Aa: 0, aa: 0 };
+  for (const a of g0) for (const b of g1) counts[combine(a, b)]++;
+  const domCount = counts.AA + counts.Aa;
+  return { counts, total: 4, domFrac: domCount / 4 };
+}
+
+/* 比を「3 : 1」のような形に整える */
+function ratioText(a, b) {
+  if (a === 0 && b === 0) return '－';
+  if (b === 0) return 'すべて顕性';
+  if (a === 0) return 'すべて潜性';
+  return (a / b).toFixed(2) + ' : 1';
+}
+
+/* ============================================================
+   個体を増やす
+   ============================================================ */
+function addIndividuals(n) {
+  const room = MAX_POP - population.length;
+  const add = Math.min(n, room);
+  if (add <= 0) return;
+  // 履歴は最大 400 点程度に間引いて記録する
+  const step = Math.max(1, Math.floor(add / 120));
+  let domCount = population.filter(isDom).length;
+  for (let i = 0; i < add; i++) {
+    const g = breed();
+    population.push(g);
+    if (isDom(g)) domCount++;
+    if (i % step === 0 || i === add - 1) {
+      history.push({ n: population.length, frac: domCount / population.length });
+    }
+  }
+  if (history.length > 500) {
+    // 古い点を間引いて総数を保つ
+    const keep = [];
+    for (let i = 0; i < history.length; i += 2) keep.push(history[i]);
+    keep.push(history[history.length - 1]);
+    history = keep;
+  }
+  render();
+}
+
+function resetAll() {
+  population = [];
+  history = [];
+  render();
+}
+
+/* ============================================================
+   個体の絵
+   ============================================================ */
+function drawIndividual(x, y, s, genotype, t, detailed) {
+  const p = isDom(genotype) ? t.dom : t.rec;
+  if (!detailed) {
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.lineJoin = 'round';
+
+  if (t.draw === 'height') {
+    const h = isDom(genotype) ? s * 0.86 : s * 0.44;
+    ctx.strokeStyle = p.edge; ctx.lineWidth = Math.max(1.4, s * 0.055); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, s * 0.42); ctx.lineTo(0, s * 0.42 - h); ctx.stroke();
+    ctx.fillStyle = p.color;
+    const leaves = isDom(genotype) ? 3 : 2;
+    for (let i = 0; i < leaves; i++) {
+      const ly = s * 0.42 - h * (0.3 + 0.28 * i);
+      const dir = i % 2 ? 1 : -1;
+      ctx.beginPath();
+      ctx.ellipse(dir * s * 0.16, ly, s * 0.17, s * 0.075, dir * -0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (t.draw === 'cotyledon') {
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(0, 0, s * 0.38, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = p.edge; ctx.lineWidth = Math.max(1, s * 0.035);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 0.34); ctx.lineTo(0, s * 0.34);
+    ctx.stroke();
+  } else {
+    // 種子の形：丸 と しわ
+    ctx.fillStyle = p.color;
+    ctx.strokeStyle = p.edge;
+    ctx.lineWidth = Math.max(1, s * 0.035);
+    ctx.beginPath();
+    if (isDom(genotype)) {
+      ctx.arc(0, 0, s * 0.38, 0, Math.PI * 2);
+    } else {
+      const R = s * 0.37;
+      for (let a = 0; a <= 64; a++) {
+        const th = (a / 64) * Math.PI * 2;
+        const r = R * (1 + 0.13 * Math.sin(th * 7));
+        const px = Math.cos(th) * r, py = Math.sin(th) * r;
+        if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    }
+    ctx.fill(); ctx.stroke();
+    // つや
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.12, -s * 0.14, s * 0.10, s * 0.06, -0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   メインの描画
+   ============================================================ */
+function render() {
+  const t = TRAITS[traitKey];
+  ctx.clearRect(0, 0, BASE_W, BASE_H);
+
+  // ---- 親 ----
+  const py = 62;
+  [0, 1].forEach(i => {
+    const px = i === 0 ? 250 : 470;
+    drawIndividual(px, py, 62, parents[i], t, true);
+    ctx.fillStyle = C_INK;
+    ctx.font = '600 15px ' + MONO;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(parents[i], px, py + 40);
+    ctx.fillStyle = C_FAINT;
+    ctx.font = '400 12px ' + MONO;
+    ctx.fillText(isDom(parents[i]) ? t.dom.label : t.rec.label, px, py + 60);
+  });
+  ctx.fillStyle = C_DIM;
+  ctx.font = '500 22px ' + MONO;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('×', 360, py);
+
+  // ---- 生殖細胞（分離の法則） ----
+  ctx.strokeStyle = C_LINE; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(30, 138); ctx.lineTo(BASE_W - 30, 138); ctx.stroke();
+
+  ctx.font = '500 12px ' + MONO;
+  ctx.textBaseline = 'middle';
+  [0, 1].forEach(i => {
+    const px = i === 0 ? 250 : 470;
+    const g = [...new Set(parents[i].split(''))];
+    ctx.fillStyle = C_DIM;
+    ctx.textAlign = 'center';
+    ctx.fillText('生殖細胞 ' + g.join(' / '), px, 156);
+  });
+
+  // ---- 子の集団 ----
+  const top = 178, pad = 22;
+  const gw = BASE_W - pad * 2, gh = BASE_H - top - 14;
+  const n = population.length;
+
+  if (n === 0) {
+    ctx.fillStyle = C_FAINT;
+    ctx.font = '400 13px ' + MONO;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('「＋1個体」を押すと、子が1つずつ生まれます', BASE_W / 2, top + gh / 2);
+  } else {
+    let cell = Math.sqrt(gw * gh / n);
+    let cols = Math.max(1, Math.floor(gw / cell));
+    let rows = Math.ceil(n / cols);
+    let guard = 0;
+    while (rows * cell > gh && guard++ < 400) {
+      cell *= 0.97;
+      cols = Math.max(1, Math.floor(gw / cell));
+      rows = Math.ceil(n / cols);
+    }
+    const detailed = cell >= 22;
+    const ox = pad + (gw - cols * cell) / 2;
+    for (let i = 0; i < n; i++) {
+      const c = i % cols, r = Math.floor(i / cols);
+      drawIndividual(ox + c * cell + cell / 2, top + r * cell + cell / 2, cell * 0.92, population[i], t, detailed);
+    }
+  }
+
+  drawConvergence();
+  updateUI();
+}
+
+/* ============================================================
+   収束グラフ（横軸は対数目盛り）
+   ============================================================ */
+function drawConvergence() {
+  const th = theory().domFrac;
+  cctx.clearRect(0, 0, CONV_W, CONV_H);
+
+  const L = 46, R = CONV_W - 14, T = 16, B = CONV_H - 30;
+  const maxN = Math.max(10, population.length);
+  const lx = v => L + (Math.log10(Math.max(1, v)) / Math.log10(maxN)) * (R - L);
+  const ly = v => B - v * (B - T);
+
+  // 目盛り
+  cctx.strokeStyle = C_LINE; cctx.lineWidth = 1;
+  cctx.fillStyle = C_FAINT;
+  cctx.font = '400 10px ' + MONO;
+  cctx.textAlign = 'right'; cctx.textBaseline = 'middle';
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+    cctx.beginPath(); cctx.moveTo(L, ly(v)); cctx.lineTo(R, ly(v)); cctx.stroke();
+    cctx.fillText((v * 100) + '%', L - 7, ly(v));
+  });
+  cctx.textAlign = 'center'; cctx.textBaseline = 'top';
+  for (let e = 0; Math.pow(10, e) <= maxN; e++) {
+    const v = Math.pow(10, e);
+    cctx.fillText(String(v), lx(v), B + 7);
+  }
+
+  // 理論値のライン
+  cctx.save();
+  cctx.setLineDash([5, 4]);
+  cctx.strokeStyle = C_BIO; cctx.lineWidth = 1.6;
+  cctx.beginPath(); cctx.moveTo(L, ly(th)); cctx.lineTo(R, ly(th)); cctx.stroke();
+  cctx.restore();
+  cctx.fillStyle = C_BIO;
+  cctx.font = '500 10.5px ' + MONO;
+  cctx.textAlign = 'left'; cctx.textBaseline = 'bottom';
+  cctx.fillText('理論 ' + (th * 100).toFixed(0) + '%', L + 4, ly(th) - 4);
+
+  // 実測の折れ線
+  if (history.length > 1) {
+    cctx.strokeStyle = C_INK; cctx.lineWidth = 1.8;
+    cctx.lineJoin = 'round';
+    cctx.beginPath();
+    history.forEach((h, i) => {
+      const x = lx(h.n), y = ly(h.frac);
+      if (i === 0) cctx.moveTo(x, y); else cctx.lineTo(x, y);
+    });
+    cctx.stroke();
+    const last = history[history.length - 1];
+    cctx.fillStyle = C_INK;
+    cctx.beginPath(); cctx.arc(lx(last.n), ly(last.frac), 3.5, 0, Math.PI * 2); cctx.fill();
+  } else {
+    cctx.fillStyle = C_FAINT;
+    cctx.font = '400 11.5px ' + MONO;
+    cctx.textAlign = 'center'; cctx.textBaseline = 'middle';
+    cctx.fillText('個体を増やすと線が伸びます', (L + R) / 2, (T + B) / 2);
+  }
+
+  cctx.fillStyle = C_FAINT;
+  cctx.font = '400 10px ' + MONO;
+  cctx.textAlign = 'right'; cctx.textBaseline = 'bottom';
+  cctx.fillText('個体数（対数）', R, CONV_H - 2);
+}
+
+/* ============================================================
+   UI の更新
+   ============================================================ */
+function updateUI() {
+  const t = TRAITS[traitKey];
+  const n = population.length;
+  const dom = population.filter(isDom).length;
+  const rec = n - dom;
+
+  document.getElementById('rbDom').style.width = (n ? dom / n * 100 : 0) + '%';
+  document.getElementById('rbRec').style.width = (n ? rec / n * 100 : 0) + '%';
+  document.getElementById('rbDom').textContent = dom ? `${t.dom.label} ${dom}` : '';
+  document.getElementById('rbRec').textContent = rec ? `${t.rec.label} ${rec}` : '';
+
+  document.getElementById('kTotal').textContent = n + (n >= MAX_POP ? '（上限）' : '');
+  document.getElementById('kRatio').textContent = ratioText(dom, rec);
+
+  const th = theory();
+  const tDom = th.counts.AA + th.counts.Aa, tRec = th.counts.aa;
+  document.getElementById('kTheory').textContent =
+    tRec === 0 ? 'すべて顕性' : (tDom === 0 ? 'すべて潜性' : `${tDom / gcd(tDom, tRec)} : ${tRec / gcd(tDom, tRec)}`);
+
+  const gc = { AA: 0, Aa: 0, aa: 0 };
+  population.forEach(g => gc[g]++);
+  document.getElementById('kGeno').textContent =
+    n ? `AA ${gc.AA} / Aa ${gc.Aa} / aa ${gc.aa}` : '－';
+
+  // ステージ表示
+  const key = parents.join(',');
+  let stage = 'かけ合わせ';
+  if (key === 'AA,aa' || key === 'aa,AA') stage = '<b>純系の親（P）どうし</b>　⟶　子（F1）';
+  else if (key === 'Aa,Aa') stage = '<b>子（F1）どうし</b>　⟶　孫（F2）';
+  else if (key === 'Aa,aa' || key === 'aa,Aa') stage = '<b>検定交雑</b>　顕性形質の遺伝子型を調べる';
+  else if (key === 'AA,AA') stage = '<b>純系（顕性）どうし</b>';
+  else if (key === 'aa,aa') stage = '<b>純系（潜性）どうし</b>';
+  else stage = '<b>' + parents[0] + ' × ' + parents[1] + '</b> のかけ合わせ';
+  document.getElementById('stageBar').innerHTML = stage;
+
+  // 顕性形質しか出ない交配で十分な個体が出たら、次の世代へ誘導する
+  const showNudge = (key === 'AA,aa' || key === 'aa,AA') && n >= 20;
+  document.getElementById('nudge').classList.toggle('on', showNudge);
+
+  // 表現型のラベル
+  document.getElementById('phen0').textContent = isDom(parents[0]) ? t.dom.label : t.rec.label;
+  document.getElementById('phen1').textContent = isDom(parents[1]) ? t.dom.label : t.rec.label;
+
+  buildPunnett();
+  buildMendel();
+  document.getElementById('add1000').disabled = n >= MAX_POP;
+  document.getElementById('add100').disabled = n >= MAX_POP;
+  document.getElementById('add1').disabled = n >= MAX_POP;
+}
+
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+
+function buildPunnett() {
+  const t = TRAITS[traitKey];
+  const g0 = parents[0].split(''), g1 = parents[1].split('');
+  const el = document.getElementById('punnett');
+  let html = '<tr><th class="corner"></th>' + g1.map(g => `<th>${g}</th>`).join('') + '</tr>';
+  g0.forEach(a => {
+    html += `<tr><th>${a}</th>`;
+    g1.forEach(b => {
+      const g = combine(a, b);
+      html += `<td class="${isDom(g) ? 'dom' : 'rec'}">${g}</td>`;
+    });
+    html += '</tr>';
+  });
+  el.innerHTML = html;
+}
+
+function buildMendel() {
+  const t = TRAITS[traitKey], m = t.mendel;
+  const r = (m.dom / m.rec).toFixed(2);
+  document.getElementById('mendelBox').innerHTML =
+    `メンデルが実際に育てた ${t.name} の孫の代（F2）は、` +
+    `<b>${m.domName} ${m.dom.toLocaleString()}個体</b> ／ <b>${m.recName} ${m.rec.toLocaleString()}個体</b>。` +
+    `比になおすと <b>${r} : 1</b> で、理論の 3：1 にごく近い値でした。`;
+}
+
+/* ============================================================
+   操作
+   ============================================================ */
+document.querySelectorAll('.on-trait').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.on-trait').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    traitKey = b.dataset.trait;
+    resetAll();
+  });
+});
+
+document.querySelectorAll('.seg').forEach(seg => {
+  seg.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const idx = +seg.dataset.parent;
+    parents[idx] = btn.dataset.g;
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === btn));
+    resetAll();
+  });
+});
+
+function setParents(a, b) {
+  parents = [a, b];
+  document.querySelectorAll('.seg').forEach((seg, i) => {
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.g === parents[i]));
+  });
+  resetAll();
+}
+
+document.querySelectorAll('[data-preset]').forEach(b => {
+  b.addEventListener('click', () => {
+    const [a, c] = b.dataset.preset.split(',');
+    setParents(a, c);
+  });
+});
+
+document.getElementById('add1').addEventListener('click', () => addIndividuals(1));
+document.getElementById('add100').addEventListener('click', () => addIndividuals(100));
+document.getElementById('add1000').addEventListener('click', () => addIndividuals(1000));
+document.getElementById('resetBtn').addEventListener('click', resetAll);
+document.getElementById('toF2').addEventListener('click', () => setParents('Aa', 'Aa'));
+
+setupCanvas();
+render();
+window.addEventListener('resize', () => { setupCanvas(); render(); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+</script>
+
+</body>
+</html>

@@ -22,6 +22,7 @@
     --card:#ffffff;
     --phys:#2563eb;  --phys-2:#60a5fa;  --phys-soft:#edf3fe;
     --chem:#0ca08e;  --chem-2:#34d3b6;  --chem-soft:#e7f8f4;
+    --bio:#16a34a;   --bio-2:#4ade80;   --bio-soft:#e9f7ee;
     --geo:#d97706;   --geo-2:#fbbf24;   --geo-soft:#fdf4e4;
     --cosmo:#7c3aed; --cosmo-2:#a78bfa; --cosmo-soft:#f3eefe;
     --r-card:22px;
@@ -135,6 +136,7 @@
   .stat small{font-size:11.5px;color:var(--sub);font-weight:700;letter-spacing:.08em}
   .stat i{font-style:normal;font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:.22em;color:var(--faint);text-transform:uppercase}
   .stat.phys b{color:var(--phys)} .stat.chem b{color:var(--chem)}
+  .stat.bio b{color:var(--bio)}
   .stat.geo b{color:var(--geo)} .stat.cosmo b{color:var(--cosmo)}
 
   /* ===== ツールバー ===== */
@@ -198,6 +200,7 @@
   .sec-rule{flex:1;height:1px;background:linear-gradient(to right,var(--line) 60%,transparent);align-self:center}
   section[data-cat="phys"]{--accent:var(--phys);--accent2:var(--phys-2);--soft:var(--phys-soft)}
   section[data-cat="chem"]{--accent:var(--chem);--accent2:var(--chem-2);--soft:var(--chem-soft)}
+  section[data-cat="bio"]{--accent:var(--bio);--accent2:var(--bio-2);--soft:var(--bio-soft)}
   section[data-cat="geo"]{--accent:var(--geo);--accent2:var(--geo-2);--soft:var(--geo-soft)}
   section[data-cat="cosmo"]{--accent:var(--cosmo);--accent2:var(--cosmo-2);--soft:var(--cosmo-soft)}
 
@@ -342,6 +345,7 @@
     <div class="stats">
       <div class="stat phys"><b id="n-phys">0</b><small>物理</small><i>Physics</i></div>
       <div class="stat chem"><b id="n-chem">0</b><small>化学</small><i>Chemistry</i></div>
+      <div class="stat bio"><b id="n-bio">0</b><small>生物</small><i>Biology</i></div>
       <div class="stat geo"><b id="n-geo">0</b><small>地学</small><i>Earth</i></div>
       <div class="stat cosmo"><b id="n-cosmo">0</b><small>宇宙</small><i>Space</i></div>
     </div>
@@ -353,6 +357,7 @@
       <button class="chip active" data-filter="all">すべて<span class="n" id="c-all">0</span></button>
       <button class="chip" data-filter="phys">物理<span class="n" id="c-phys">0</span></button>
       <button class="chip" data-filter="chem">化学<span class="n" id="c-chem">0</span></button>
+      <button class="chip" data-filter="bio">生物<span class="n" id="c-bio">0</span></button>
       <button class="chip" data-filter="geo">地学<span class="n" id="c-geo">0</span></button>
       <button class="chip" data-filter="cosmo">宇宙<span class="n" id="c-cosmo">0</span></button>
     </div>
@@ -497,10 +502,33 @@
     </div>
   </section>
 
+  <!-- ================= 生物 ================= -->
+  <section data-cat="bio">
+    <div class="sec-head">
+      <span class="sec-no">03</span>
+      <h2>生物</h2>
+      <span class="sec-en">Biology</span>
+      <div class="sec-rule"></div>
+    </div>
+    <div class="grid">
+
+      <a class="card bio" href="heredity_sim.html" data-key="遺伝 遺伝の規則性 メンデル 分離の法則 顕性 潜性 優性 劣性 検定交雑 エンドウ 中3">
+        <div class="card-top">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3c0 4.5 10 5.5 10 10S7 18.5 7 21"/><path d="M17 3c0 4.5-10 5.5-10 10s10 4.5 10 8"/><path d="M8.5 7h7M8.5 17h7M7.5 12h9"/></svg></div>
+          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        </div>
+        <h3>遺伝の規則性を1000回試す</h3>
+        <p>個体数を増やすほど実測の比が3：1へ近づく。メンデルの実測値ともくらべられます。</p>
+        <div class="tags"><span class="tag accent">中3遺伝</span><span class="tag">統計</span></div>
+      </a>
+
+    </div>
+  </section>
+
   <!-- ================= 地学 ================= -->
   <section data-cat="geo">
     <div class="sec-head">
-      <span class="sec-no">03</span>
+      <span class="sec-no">04</span>
       <h2>地学</h2>
       <span class="sec-en">Earth Science</span>
       <div class="sec-rule"></div>
@@ -583,7 +611,7 @@
   <!-- ================= 宇宙 ================= -->
   <section data-cat="cosmo">
     <div class="sec-head">
-      <span class="sec-no">04</span>
+      <span class="sec-no">05</span>
       <h2>宇宙</h2>
       <span class="sec-en">Space</span>
       <div class="sec-rule"></div>
@@ -700,7 +728,7 @@
 
   /* ===== 件数カウント ===== */
   var sections = Array.prototype.slice.call(document.querySelectorAll('section'));
-  var counts = {phys:0, chem:0, geo:0, cosmo:0}, total = 0;
+  var counts = {phys:0, chem:0, bio:0, geo:0, cosmo:0}, total = 0;
   sections.forEach(function(sec){
     var n = sec.querySelectorAll('.card').length;
     counts[sec.dataset.cat] = n; total += n;
