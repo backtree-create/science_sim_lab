@@ -13,26 +13,27 @@
 <style>
   :root{
     --bg:#050810;
-    --panel:rgba(11,17,29,.82);
+    --panel:rgba(11,17,29,.84);
     --line:rgba(255,255,255,.10);
     --ink:#eef2f8;
     --sub:#93a3b8;
     --faint:#61728a;
     --accent:#38bdf8;
     --accent-2:#22d3ee;
+    --future:#fbbf24;
     --font-jp:'Zen Kaku Gothic New','Noto Sans JP',sans-serif;
     --font-mono:'JetBrains Mono',ui-monospace,monospace;
-    --font-lat:'Outfit',sans-serif;
     --ease:cubic-bezier(.22,.61,.36,1);
   }
+  /* 未来モードではアクセントを琥珀色に切り替える */
+  body.future{--accent:var(--future);--accent-2:#fcd34d;}
+
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
   body{
     background:var(--bg);color:var(--ink);
-    font-family:var(--font-jp);
-    font-feature-settings:"palt" 1;
-    -webkit-font-smoothing:antialiased;
-    overflow:hidden;
+    font-family:var(--font-jp);font-feature-settings:"palt" 1;
+    -webkit-font-smoothing:antialiased;overflow:hidden;
     user-select:none;-webkit-user-select:none;
   }
   #webgl{position:absolute;inset:0;z-index:1;touch-action:none;}
@@ -46,14 +47,10 @@
   }
 
   /* ---------- ヘッダ ---------- */
-  header{
-    position:absolute;top:18px;left:18px;z-index:10;
-    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-  }
+  header{position:absolute;top:18px;left:18px;z-index:10;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
   .badge{
     font-family:var(--font-mono);font-size:10.5px;font-weight:500;letter-spacing:.16em;
-    color:var(--accent);border:1px solid rgba(56,189,248,.45);
-    background:rgba(56,189,248,.10);
+    color:var(--accent);border:1px solid currentColor;background:rgba(56,189,248,.10);background:color-mix(in srgb, var(--accent) 12%, transparent);
     padding:6px 11px;border-radius:6px;
   }
   header h1{font-size:1.05rem;font-weight:900;letter-spacing:-.01em;}
@@ -62,47 +59,46 @@
     letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin-top:3px;
   }
   .back{
-    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;
-    color:var(--sub);text-decoration:none;
-    padding:8px 14px;border-radius:100px;
-    border:1px solid var(--line);background:rgba(11,17,29,.7);
-    transition:.2s var(--ease);
+    font-family:var(--font-mono);font-size:11.5px;letter-spacing:.06em;color:var(--sub);
+    text-decoration:none;padding:8px 14px;border-radius:100px;
+    border:1px solid var(--line);background:rgba(11,17,29,.7);transition:.2s var(--ease);
   }
   .back:hover{color:var(--accent);border-color:var(--accent);transform:translateX(-2px);}
 
   /* ---------- 年代表示 ---------- */
-  .chrono{
-    position:absolute;top:18px;right:18px;z-index:10;
-    padding:12px 20px;border-radius:14px;text-align:right;min-width:190px;
-  }
+  .chrono{position:absolute;top:18px;right:18px;z-index:10;padding:12px 20px;border-radius:14px;text-align:right;min-width:198px;}
   .chrono .k{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.2em;color:var(--faint);}
   .chrono .v{
-    font-family:var(--font-mono);font-size:1.75rem;font-weight:700;
-    color:var(--accent);line-height:1.15;font-variant-numeric:tabular-nums;
-    text-shadow:0 0 24px rgba(56,189,248,.35);
+    font-family:var(--font-mono);font-size:1.7rem;font-weight:700;color:var(--accent);
+    line-height:1.15;font-variant-numeric:tabular-nums;text-shadow:0 0 24px currentColor;
   }
   .chrono .period{font-size:11.5px;color:var(--sub);margin-top:3px;font-weight:500;}
+  .chrono .predict{
+    display:none;margin-top:8px;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.14em;
+    color:#04121c;background:var(--future);padding:3px 9px;border-radius:100px;
+  }
+  body.future .chrono .predict{display:inline-block;}
   .chrono .src{
     margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
-    font-family:var(--font-mono);font-size:8.5px;line-height:1.7;color:var(--faint);
-    letter-spacing:.02em;
+    font-family:var(--font-mono);font-size:8.5px;line-height:1.7;color:var(--faint);letter-spacing:.02em;
   }
 
   /* ---------- 解説 ---------- */
-  .info{
-    position:absolute;left:18px;bottom:164px;z-index:10;
-    width:min(330px,calc(100vw - 36px));
-    padding:14px 18px;border-radius:14px;
+  .info{position:absolute;left:18px;bottom:190px;z-index:10;width:min(346px,calc(100vw - 36px));padding:14px 18px;border-radius:14px;}
+  .info .era{
+    display:inline-block;font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;
+    padding:3px 8px;border-radius:4px;color:#0b1220;font-weight:700;margin-bottom:8px;
   }
   .info .t{font-size:.92rem;font-weight:700;color:var(--accent);margin-bottom:5px;}
-  .info .d{font-size:.79rem;color:var(--sub);line-height:1.65;}
+  .info .d{font-size:.79rem;color:var(--sub);line-height:1.7;}
+  .info .warn{
+    display:none;margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
+    font-size:.72rem;line-height:1.65;color:var(--future);
+  }
+  body.future .info .warn{display:block;}
 
   /* ---------- 凡例 ---------- */
-  .legend{
-    position:absolute;right:18px;bottom:164px;z-index:10;
-    padding:12px 14px;border-radius:14px;
-    display:flex;flex-direction:column;gap:7px;
-  }
+  .legend{position:absolute;right:18px;bottom:190px;z-index:10;padding:12px 14px;border-radius:14px;display:flex;flex-direction:column;gap:7px;}
   .legend .h{font-family:var(--font-mono);font-size:9px;letter-spacing:.16em;color:var(--faint);margin-bottom:2px;}
   .legend .row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--sub);}
   .legend i{width:9px;height:9px;border-radius:2px;flex:none;}
@@ -110,106 +106,111 @@
   /* ---------- 下部ドック ---------- */
   .dock{
     position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:10;
-    width:calc(100% - 36px);max-width:940px;
-    border-radius:18px;padding:14px 20px;
-    display:flex;flex-direction:column;gap:12px;
+    width:calc(100% - 36px);max-width:1000px;border-radius:18px;padding:14px 20px;
+    display:flex;flex-direction:column;gap:11px;
   }
-  .row1{display:flex;align-items:center;gap:16px;}
+  .row1{display:flex;align-items:center;gap:14px;}
   .play{
     width:42px;height:42px;flex:none;border:none;border-radius:50%;
-    background:var(--accent);color:#04121c;font-size:15px;font-weight:700;
-    cursor:pointer;display:flex;align-items:center;justify-content:center;
-    transition:.2s var(--ease);touch-action:manipulation;
-    box-shadow:0 4px 18px -4px rgba(56,189,248,.8);
+    background:var(--accent);color:#04121c;font-size:15px;font-weight:700;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:transform .2s var(--ease);
+    touch-action:manipulation;box-shadow:0 4px 18px -4px currentColor;
   }
   .play:hover{transform:scale(1.07);background:var(--accent-2);}
-  .track{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0;}
+  .track{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;position:relative;}
+
+  /* 地質時代の帯 */
+  .eras{
+    height:9px;border-radius:3px;overflow:hidden;position:relative;
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .eras .tick{
+    position:absolute;top:-3px;width:1px;height:15px;background:rgba(255,255,255,.55);
+    pointer-events:none;
+  }
+  .eras .now{
+    position:absolute;top:-5px;width:2px;height:19px;background:#fff;
+    box-shadow:0 0 8px rgba(255,255,255,.9);pointer-events:none;
+  }
   input[type=range]{
     -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;
-    background:linear-gradient(90deg,#1e3a5f,#0e7490);
-    outline:none;cursor:pointer;touch-action:manipulation;
+    background:rgba(255,255,255,.10);outline:none;cursor:pointer;touch-action:manipulation;
   }
   input[type=range]::-webkit-slider-thumb{
     -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
-    background:#fff;border:3px solid var(--accent);cursor:pointer;
-    box-shadow:0 0 12px rgba(56,189,248,.6);
+    background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 0 12px currentColor;
   }
   input[type=range]::-moz-range-thumb{
-    width:18px;height:18px;border-radius:50%;
-    background:#fff;border:3px solid var(--accent);cursor:pointer;
+    width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;
   }
-  .scale{
-    display:flex;justify-content:space-between;
-    font-family:var(--font-mono);font-size:9px;color:var(--faint);letter-spacing:.06em;
-  }
-  .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;}
+  .scale{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:9px;color:var(--faint);letter-spacing:.05em;}
+
+  .row2{display:flex;align-items:center;gap:10px;}
+  .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;}
   .chips::-webkit-scrollbar{display:none;}
   .chip{
-    font-family:var(--font-jp);font-size:11.5px;font-weight:500;
-    background:rgba(255,255,255,.05);border:1px solid var(--line);
-    color:var(--sub);padding:7px 13px;border-radius:9px;cursor:pointer;
-    white-space:nowrap;transition:.18s var(--ease);touch-action:manipulation;
+    font-family:var(--font-jp);font-size:11px;font-weight:500;
+    background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--sub);
+    padding:6px 11px;border-radius:8px;cursor:pointer;white-space:nowrap;
+    transition:.18s var(--ease);touch-action:manipulation;
   }
   .chip:hover{background:rgba(255,255,255,.11);color:var(--ink);}
-  .chip.active{background:rgba(56,189,248,.18);border-color:var(--accent);color:var(--accent);font-weight:700;}
-  .chip b{font-family:var(--font-mono);font-weight:500;font-size:10px;opacity:.75;margin-right:5px;}
+  .chip.active{background:rgba(56,189,248,.18);background:color-mix(in srgb, var(--accent) 18%, transparent);border-color:var(--accent);color:var(--accent);font-weight:700;}
+  .chip b{font-family:var(--font-mono);font-weight:500;font-size:9.5px;opacity:.72;margin-right:5px;}
+  .chip.fut{border-style:dashed;}
 
-  /* ---------- 操作ヒント / 出典 ---------- */
+  .toggle{
+    flex:none;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.04em;
+    background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--sub);
+    padding:8px 13px;border-radius:8px;cursor:pointer;white-space:nowrap;
+    transition:.18s var(--ease);touch-action:manipulation;
+  }
+  .toggle:hover{color:var(--ink);}
+  .toggle.on{background:rgba(56,189,248,.18);background:color-mix(in srgb, var(--accent) 18%, transparent);border-color:var(--accent);color:var(--accent);}
+
+  /* ---------- ヒント ---------- */
   .hint{
     position:absolute;left:18px;top:78px;z-index:10;
     font-family:var(--font-mono);font-size:10.5px;color:var(--faint);
-    background:rgba(5,8,16,.55);padding:5px 11px;border-radius:100px;
-    pointer-events:none;
+    background:rgba(5,8,16,.55);padding:5px 11px;border-radius:100px;pointer-events:none;
   }
 
   /* ---------- ローディング ---------- */
   #loader{
-    position:absolute;inset:0;z-index:50;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
-    background:var(--bg);transition:opacity .5s var(--ease);
+    position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;background:var(--bg);
+    transition:opacity .5s var(--ease);
   }
   #loader.done{opacity:0;pointer-events:none;}
-  .spinner{
-    width:38px;height:38px;border-radius:50%;
-    border:2px solid rgba(56,189,248,.18);border-top-color:var(--accent);
-    animation:spin .9s linear infinite;
-  }
+  .spinner{width:38px;height:38px;border-radius:50%;border:2px solid rgba(56,189,248,.18);border-top-color:var(--accent);animation:spin .9s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   #loadText{font-family:var(--font-mono);font-size:11px;color:var(--sub);letter-spacing:.1em;}
-  #loadErr{
-    display:none;max-width:min(460px,90vw);text-align:center;
-    font-size:12.5px;line-height:1.8;color:#fca5a5;
-  }
+  #loadErr{display:none;max-width:min(460px,90vw);text-align:center;font-size:12.5px;line-height:1.8;color:#fca5a5;}
 
-  @media (max-width:900px){
-    .legend{display:none;}
-    .chrono .src{display:none;}
-  }
+  @media (max-width:1000px){.legend{display:none;}.chrono .src{display:none;}}
   @media (max-width:600px){
-    /* 右上の年代パネルに重ならないよう、ヘッダの幅を抑える */
     header{top:12px;left:12px;gap:8px;max-width:calc(100vw - 158px);}
     .badge{display:none;}
     header h1{font-size:.92rem;}
     header h1 small{display:none;}
     .hint{display:none;}
     .chrono{top:12px;right:12px;padding:9px 13px;min-width:0;}
-    .chrono .v{font-size:1.18rem;}
+    .chrono .v{font-size:1.15rem;}
     .chrono .period{font-size:10px;}
-    .info{left:12px;right:12px;width:auto;bottom:178px;padding:11px 14px;}
+    .info{left:12px;right:12px;width:auto;bottom:196px;padding:11px 14px;}
     .info .d{font-size:.74rem;}
-    .dock{bottom:12px;width:calc(100% - 24px);padding:12px 14px;gap:10px;}
-    .row1{gap:12px;}
+    .dock{bottom:12px;width:calc(100% - 24px);padding:12px 14px;gap:9px;}
+    .row1{gap:11px;}
+    .toggle{padding:8px 10px;font-size:10px;}
   }
   @media (pointer:coarse){
     .play{width:46px;height:46px;}
-    .chip{min-height:42px;display:flex;align-items:center;}
+    .chip,.toggle{min-height:40px;display:flex;align-items:center;}
     input[type=range]{height:9px;}
     input[type=range]::-webkit-slider-thumb{width:26px;height:26px;}
     input[type=range]::-moz-range-thumb{width:26px;height:26px;}
   }
-  @media (prefers-reduced-motion:reduce){
-    *{transition-duration:.01ms !important;}
-  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;}}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -232,14 +233,19 @@
   <div class="k">GEOLOGIC TIME</div>
   <div class="v" id="chronoVal">0 Ma</div>
   <div class="period" id="chronoPeriod">現在</div>
+  <div class="predict">PREDICTION</div>
   <div class="src">
     DATA: GPlates Web Service<br>(EarthByte, Univ. of Sydney)<br>ROTATION MODEL: MÜLLER et al. 2022
   </div>
 </div>
 
 <div class="info glass">
+  <span class="era" id="infoEra">現在</span>
   <div class="t" id="infoTitle">現在（0 Ma）</div>
-  <div class="d" id="infoDesc">現在の海岸線の配置です。スライダーを左へ動かすと、同じ海岸線が地質時代のどこにあったかを再現します。</div>
+  <div class="d" id="infoDesc">現在の海岸線の配置です。スライダーを左へ動かすと過去、右へ動かすと未来の予測に移ります。</div>
+  <div class="warn" id="infoWarn">
+    ※ここから先は「現在のプレートの動きがそのまま続いたら」という外挿です。実際にはプレートの境界そのものが移り変わるため、その通りにはなりません。
+  </div>
 </div>
 
 <div class="legend glass" id="legend">
@@ -250,13 +256,17 @@
   <div class="row1">
     <button class="play" id="playBtn" aria-label="再生">▶</button>
     <div class="track">
-      <input type="range" id="timeSlider" min="0" max="250" step="1" value="250">
+      <div class="eras" id="eras"></div>
+      <input type="range" id="timeSlider" min="0" max="400" step="0.5" value="0">
       <div class="scale">
-        <span>2億5000万年前</span><span>1億5000万年前</span><span>5000万年前</span><span>現在</span>
+        <span>3億年前</span><span>2億年前</span><span>1億年前</span><span>現在</span><span>1億年後</span>
       </div>
     </div>
   </div>
-  <div class="chips" id="chips"></div>
+  <div class="row2">
+    <div class="chips" id="chips"></div>
+    <button class="toggle" id="arrowBtn" title="矢印の向き＝動く方向、長さ＝速さ">→ 動く向きと速さ</button>
+  </div>
 </div>
 
 <div id="loader">
@@ -270,40 +280,75 @@
 const DEG = Math.PI / 180;
 const GLOBE_R = 10;
 const LAND_R  = 10.06;
-const GRID_DEG = 4;          // この角度以下に分割してから球面に載せる
-const AUTOSPIN = 0.35;
+const GRID_DEG = 4;
+const AUTOSPIN = 0.3;
+
+const AGE_MIN = -100;   // 未来 1 億年後
+const STAGE   = 10;     // 直近 10Ma の動きを未来へ外挿する
 
 /* ============================================================
-   地質時代（国際年代層序表に基づく主要な境界）
+   地質時代（国際年代層序表 ICS の境界年代と配色）
    ============================================================ */
 const PERIODS = [
-  { from: 251.9, to: 201.4, name: '三畳紀' },
-  { from: 201.4, to: 145.0, name: 'ジュラ紀' },
-  { from: 145.0, to:  66.0, name: '白亜紀' },
-  { from:  66.0, to:  23.0, name: '古第三紀' },
-  { from:  23.0, to:   2.6, name: '新第三紀' },
-  { from:   2.6, to:   0.0, name: '第四紀' }
+  { from: 358.9, to: 298.9, name: '石炭紀',   color: '#67a599' },
+  { from: 298.9, to: 251.9, name: 'ペルム紀', color: '#f04028' },
+  { from: 251.9, to: 201.4, name: '三畳紀',   color: '#812b92' },
+  { from: 201.4, to: 145.0, name: 'ジュラ紀', color: '#34b2c9' },
+  { from: 145.0, to:  66.0, name: '白亜紀',   color: '#7fc64e' },
+  { from:  66.0, to:  23.0, name: '古第三紀', color: '#fd9a52' },
+  { from:  23.0, to:   2.6, name: '新第三紀', color: '#ffe619' },
+  { from:   2.6, to:   0.0, name: '第四紀',   color: '#f9f97f' }
 ];
 function periodOf(age) {
-  for (const p of PERIODS) if (age <= p.from && age > p.to) return p.name;
-  return age <= 0.01 ? '現在' : '';
+  if (age < 0) return { name: '未来（予測）', color: '#fbbf24' };
+  for (const p of PERIODS) if (age <= p.from && age > p.to) return p;
+  return { name: '現在', color: '#f9f97f' };
 }
 
-const EPOCHS = [
-  { age: 250, label: 'パンゲア',      title: '約2億5000万年前 ― 超大陸パンゲア',
-    desc: 'ほぼ全ての大陸が一つに集まっていた時代。南米の東岸とアフリカの西岸がぴたりと接しているのが確かめられます。周りは超海洋パンサラッサ。' },
-  { age: 200, label: '分裂開始',      title: '約2億年前 ― パンゲアの分裂がはじまる',
-    desc: '北のローラシアと南のゴンドワナの間に裂け目が入りはじめます。両者の間に広がった海がテチス海です。' },
-  { age: 150, label: '大西洋誕生',    title: '約1億5000万年前 ― 大西洋のはじまり',
-    desc: '北アメリカとアフリカ・ヨーロッパの間が開き、北大西洋が誕生。南のゴンドワナもまもなく分かれはじめます。' },
-  { age: 100, label: 'ゴンドワナ分裂', title: '約1億年前 ― ゴンドワナの分裂',
-    desc: '南アメリカとアフリカが完全に離れ、南大西洋が拡大。インドはまだ南半球にあり、そこから猛スピードで北上を始めます。' },
-  { age:  66, label: '恐竜絶滅',      title: '約6600万年前 ― 白亜紀の終わり',
-    desc: '大型恐竜が絶滅した時代。大西洋は大きく開き、インドはインド洋のまん中を北へ進んでいる途中です。' },
-  { age:  30, label: 'インド衝突',    title: '約3000万年前 ― インドとユーラシアの衝突',
-    desc: 'インドがユーラシアに衝突し、押し合った地層が持ち上がってヒマラヤ山脈ができはじめます。' },
-  { age:   0, label: '現在',          title: '現在（0 Ma）',
-    desc: '現在の海岸線の配置です。スライダーを左へ動かすと、同じ海岸線が地質時代のどこにあったかを再現します。' }
+/* ============================================================
+   出来事（過去は実際の地質イベント、未来は外挿から言えること）
+   ============================================================ */
+const EVENTS = [
+  { age: 300, chip: 'パンゲア完成', title: '約3億年前 ― 超大陸パンゲアの完成',
+    desc: '北のローラシアと南のゴンドワナが衝突し終え、地球上のほとんどの陸地がひとつにつながりました。周りを取り巻くのは超海洋パンサラッサだけです。' },
+  { age: 250, chip: '史上最大の絶滅', title: '約2億5200万年前 ― ペルム紀末の大量絶滅',
+    desc: 'パンゲアがもっとも完成された姿にあった時代。海の生物の9割以上が姿を消した、地球史上最大の絶滅が起きました。' },
+  { age: 230, chip: '恐竜の出現', title: '約2億3000万年前 ― 三畳紀・恐竜の登場',
+    desc: 'まだパンゲアはひとつのまま。陸続きだったため、初期の恐竜は世界中のほぼ同じ場所で似た化石として見つかります。' },
+  { age: 200, chip: '分裂開始', title: '約2億年前 ― パンゲアの分裂がはじまる',
+    desc: '北アメリカとアフリカの間に巨大な割れ目が入り、中央大西洋が開きはじめます。パンゲアは北のローラシアと南のゴンドワナに分かれていきます。' },
+  { age: 170, chip: 'テチス海', title: '約1億7000万年前 ― テチス海の拡大',
+    desc: 'ローラシアとゴンドワナの間に東西に長い海（テチス海）が広がりました。この海の堆積物が、のちにヒマラヤの地層になります。' },
+  { age: 150, chip: '北大西洋', title: '約1億5000万年前 ― 北大西洋が開く',
+    desc: '北アメリカがヨーロッパから離れはじめ、北大西洋が誕生。ゴンドワナも東西に割れる準備に入ります。' },
+  { age: 130, chip: '南大西洋', title: '約1億3000万年前 ― 南大西洋が開きはじめる',
+    desc: '南アメリカとアフリカの間に裂け目が入ります。今も両大陸の海岸線がジグソーパズルのように合うのは、このときまで一体だったからです。' },
+  { age: 110, chip: 'ゴンドワナ分裂', title: '約1億1000万年前 ― ゴンドワナの分裂が進む',
+    desc: '南大西洋が南北につながり、アフリカと南アメリカが完全に分かれました。インドとマダガスカルはまだ南極のそばにあります。' },
+  { age:  90, chip: 'インド北上開始', title: '約9000万年前 ― インドがマダガスカルから分離',
+    desc: 'インド亜大陸がマダガスカルから切り離され、年間15cmを超える猛スピードで北へ動きはじめます。これは現在の平均の3倍の速さです。' },
+  { age:  66, chip: '恐竜絶滅', title: '約6600万年前 ― 白亜紀の終わり',
+    desc: '巨大隕石の衝突で恐竜が絶滅した時代。このころインドはインド洋の真ん中を北上中で、大量の溶岩（デカン高原）を噴き出していました。' },
+  { age:  50, chip: 'ヒマラヤ形成', title: '約5000万年前 ― インドがユーラシアに衝突',
+    desc: 'ついにインドがユーラシアにぶつかり、間にあったテチス海の地層が押し上げられてヒマラヤ山脈ができはじめます。エベレストの山頂付近から海の生物の化石が出るのはこのためです。' },
+  { age:  34, chip: '南極の氷床', title: '約3400万年前 ― 南極が氷にとざされる',
+    desc: 'オーストラリアと南アメリカが南極から離れ、南極大陸のまわりを一周する海流ができました。暖かい海水が届かなくなり、南極は厚い氷床に覆われます。' },
+  { age:  20, chip: '紅海が開く', title: '約2000万年前 ― 紅海とアフリカ大地溝帯',
+    desc: 'アラビア半島がアフリカから割れて離れはじめ、その裂け目に海水が入って紅海ができました。東アフリカ大地溝帯も同じ動きの一部です。' },
+  { age:  15, chip: '日本海', title: '約1500万年前 ― 日本海の拡大',
+    desc: 'ユーラシア大陸のふちが観音開きのように割れて日本海が広がり、日本列島が今の位置と形に近づきました。' },
+  { age:   3, chip: 'パナマ地峡', title: '約300万年前 ― 南北アメリカがつながる',
+    desc: 'パナマ地峡ができて南北アメリカが陸続きになりました。太平洋と大西洋の海水の行き来が止まり、世界の海流と気候が大きく変わります。' },
+  { age:   0, chip: '現在', title: '現在（0 Ma）',
+    desc: '現在の海岸線の配置です。大西洋は今も年に2〜3cmずつ広がり、インドは年5cmでユーラシアを押し続けています。' },
+  { age: -20, chip: '2000万年後', title: '約2000万年後 ― 東アフリカが割れる',
+    desc: '東アフリカ大地溝帯の裂け目が広がり、ソマリア半島側がアフリカ本体から離れはじめます。紅海はさらに開いて外洋とつながります。' },
+  { age: -50, chip: '5000万年後', title: '約5000万年後 ― 地中海が閉じ、オーストラリアが北上',
+    desc: 'アフリカがヨーロッパへ約500km近づき、地中海は大きく狭まってアルプスのような山脈ができます。オーストラリアは赤道を越えるところまで北上し、東南アジアに迫ります。' },
+  { age: -75, chip: '7500万年後', title: '約7500万年後 ― 大西洋がさらに拡大',
+    desc: '大西洋は現在より数千km広くなり、そのぶん太平洋が縮みます。カリフォルニア半島側の陸地は北へすべり続けます。' },
+  { age: -100, chip: '1億年後', title: '約1億年後 ― 現在の動きの延長線',
+    desc: 'このまま動きが続けば、オーストラリアはアジアと一体化し、サンフランシスコのあたりはアラスカ沖まで移動します。ただしこれは「今の速さと向きが変わらなければ」という仮定の上の姿です。' }
 ];
 
 const CONTINENTS = {
@@ -316,7 +361,6 @@ const CONTINENTS = {
   antarctica:   { name: '南極',       color: 0xdbe4ee }
 };
 
-/* 現在の重心位置から「今どの大陸か」を判定する（色分けのためのラベル付け） */
 function continentOf(lon, lat) {
   let L = lon;
   while (L > 180) L -= 360;
@@ -326,10 +370,10 @@ function continentOf(lon, lat) {
       (L >= 129 && L <= 156 && lat <= 0 && lat >= -12) ||
       (L >= 163 && L <= 180 && lat <= -32 && lat >= -50)) return 'oceania';
   if (L >= 60 && L <= 92 && lat >= 5 && lat <= 36) return 'india';
-  if (L >= 32 && L <= 60 && lat >= 12 && lat <= 32) return 'africa';   // アラビア半島
+  if (L >= 32 && L <= 60 && lat >= 12 && lat <= 32) return 'africa';
   if (L >= -20 && L <= 52 && lat >= -36 && lat <= 37) return 'africa';
   if (L >= -85 && L <= -33 && lat >= -57 && lat <= 13) return 'southAmerica';
-  if (L >= -75 && L <= -10 && lat >= 58 && lat <= 85) return 'northAmerica'; // グリーンランド
+  if (L >= -75 && L <= -10 && lat >= 58 && lat <= 85) return 'northAmerica';
   if (L >= -172 && L <= -52 && lat >= 7 && lat <= 84) return 'northAmerica';
   return 'eurasia';
 }
@@ -338,17 +382,16 @@ function continentOf(lon, lat) {
    状態
    ============================================================ */
 let scene, camera, renderer, controls;
-let data, nTimes, nPlates;
-let coords, offsets, ringPlate, rotTable;
-let plateNodes = [];       // { indices:[プレート添字...], object3D }
-let plateOfNode = [];      // ノード -> 代表プレート添字
-let nodeOfPlate = [];      // プレート添字 -> ノード
-let currentAge = 250;
+let data, nTimes, nNodes;
+let coords, offsets, ringNode, rotTable;
+let nodes = [];            // { object3D, anchor:Vector3(単位), weight }
+let arrowMesh = null, showArrows = false;
+let currentAge = 300;
 let isPlaying = false;
 let lastFrame = 0;
 
 /* ============================================================
-   デコード
+   デコード・回転
    ============================================================ */
 function decode(b64, Type) {
   const bin = atob(b64);
@@ -356,31 +399,44 @@ function decode(b64, Type) {
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new Type(bytes.buffer);
 }
-function poleAt(ti, pi) {
-  const o = (ti * nPlates + pi) * 3;
+function poleAt(ti, n) {
+  const o = (ti * nNodes + n) * 3;
   return [rotTable[o] / data.rotScale, rotTable[o+1] / data.rotScale, rotTable[o+2] / data.rotScale];
 }
-/* 有限回転極 → クォータニオン */
-function quatFromPole(plon, plat, ang, out) {
+function axisFromPole(plon, plat) {
   const cl = Math.cos(plat * DEG);
-  // GPlates の緯度経度は Y-up の three.js 座標系では (x, y, z) = (cosφcosλ, sinφ, -cosφsinλ)
-  const ax = cl * Math.cos(plon * DEG);
-  const ay = Math.sin(plat * DEG);
-  const az = -cl * Math.sin(plon * DEG);
-  out.setFromAxisAngle(new THREE.Vector3(ax, ay, az), ang * DEG);
-  return out;
+  return new THREE.Vector3(cl * Math.cos(plon * DEG), Math.sin(plat * DEG), -cl * Math.sin(plon * DEG));
 }
 function lonLatToVec3(lon, lat, r) {
   const cl = Math.cos(lat * DEG);
-  return new THREE.Vector3(
-    r * cl * Math.cos(lon * DEG),
-    r * Math.sin(lat * DEG),
-    -r * cl * Math.sin(lon * DEG)
-  );
+  return new THREE.Vector3(r * cl * Math.cos(lon * DEG), r * Math.sin(lat * DEG), -r * cl * Math.sin(lon * DEG));
+}
+
+const _ax = new THREE.Vector3(), _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
+/* 年代 age（負なら未来）における node の回転を out に入れる */
+function rotationFor(age, n, out) {
+  if (age >= 0) {
+    const x = Math.min(data.tMax, age) / data.tStep;
+    const i0 = Math.min(nTimes - 1, Math.floor(x));
+    const i1 = Math.min(nTimes - 1, i0 + 1);
+    const f = x - i0;
+    const p0 = poleAt(i0, n);
+    out.setFromAxisAngle(axisFromPole(p0[0], p0[1]), p0[2] * DEG);
+    if (i1 !== i0 && f > 0) {
+      const p1 = poleAt(i1, n);
+      _qb.setFromAxisAngle(axisFromPole(p1[0], p1[1]), p1[2] * DEG);
+      out.slerp(_qb, f);
+    }
+  } else {
+    // 未来：直近 STAGE Ma の有限回転を逆向きに引き延ばす
+    const s = poleAt(STAGE / data.tStep, n);
+    out.setFromAxisAngle(axisFromPole(s[0], s[1]), -s[2] * DEG * (-age / STAGE));
+  }
+  return out;
 }
 
 /* ============================================================
-   ポリゴンを格子で刻んでから三角形化（球面に密着させるため）
+   ポリゴンを格子で刻んでから三角形化
    ============================================================ */
 function clipToRect(poly, x0, y0, x1, y1) {
   const clipEdge = (pts, inside, intersect) => {
@@ -388,12 +444,8 @@ function clipToRect(poly, x0, y0, x1, y1) {
     for (let i = 0; i < pts.length; i++) {
       const cur = pts[i], prv = pts[(i + pts.length - 1) % pts.length];
       const ci = inside(cur), pi = inside(prv);
-      if (ci) {
-        if (!pi) out.push(intersect(prv, cur));
-        out.push(cur);
-      } else if (pi) {
-        out.push(intersect(prv, cur));
-      }
+      if (ci) { if (!pi) out.push(intersect(prv, cur)); out.push(cur); }
+      else if (pi) out.push(intersect(prv, cur));
     }
     return out;
   };
@@ -408,148 +460,105 @@ function clipToRect(poly, x0, y0, x1, y1) {
 }
 
 /* ============================================================
-   ジオメトリ構築
+   地球本体
    ============================================================ */
 function buildGlobe() {
-  // --- 海洋（地球本体） ---
-  const oceanMat = new THREE.MeshStandardMaterial({
-    color: 0x0d3b63, roughness: .62, metalness: .12
-  });
-  const ocean = new THREE.Mesh(new THREE.SphereGeometry(GLOBE_R, 96, 64), oceanMat);
+  const ocean = new THREE.Mesh(
+    new THREE.SphereGeometry(GLOBE_R, 96, 64),
+    new THREE.MeshStandardMaterial({ color: 0x0d3b63, roughness: .62, metalness: .12 })
+  );
   scene.add(ocean);
 
-  // --- 緯線・経線 ---
   const gridPts = [];
-  for (let lat = -80; lat <= 80; lat += 20) {
-    for (let lon = 0; lon < 360; lon += 3) {
+  for (let lat = -80; lat <= 80; lat += 20)
+    for (let lon = 0; lon < 360; lon += 3)
       gridPts.push(lonLatToVec3(lon, lat, GLOBE_R + .015), lonLatToVec3(lon + 3, lat, GLOBE_R + .015));
-    }
-  }
-  for (let lon = 0; lon < 360; lon += 20) {
-    for (let lat = -87; lat < 87; lat += 3) {
+  for (let lon = 0; lon < 360; lon += 20)
+    for (let lat = -87; lat < 87; lat += 3)
       gridPts.push(lonLatToVec3(lon, lat, GLOBE_R + .015), lonLatToVec3(lon, lat + 3, GLOBE_R + .015));
-    }
-  }
-  const gridGeo = new THREE.BufferGeometry().setFromPoints(gridPts);
-  scene.add(new THREE.LineSegments(gridGeo,
+  scene.add(new THREE.LineSegments(
+    new THREE.BufferGeometry().setFromPoints(gridPts),
     new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: .10 })));
 
-  // --- 赤道を少しだけ強調 ---
   const eqPts = [];
   for (let lon = 0; lon <= 360; lon += 2) eqPts.push(lonLatToVec3(lon, 0, GLOBE_R + .02));
   scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(eqPts),
     new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: .30 })));
 
-  // --- 大気のリム光 ---
-  const atmoMat = new THREE.ShaderMaterial({
+  const atmo = new THREE.ShaderMaterial({
     uniforms: { uColor: { value: new THREE.Color(0x38bdf8) } },
-    vertexShader: `
-      varying vec3 vN; varying vec3 vP;
-      void main(){
-        vN = normalize(normalMatrix * normal);
-        vec4 mv = modelViewMatrix * vec4(position,1.0);
-        vP = mv.xyz;
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: `
-      uniform vec3 uColor; varying vec3 vN; varying vec3 vP;
-      void main(){
-        float f = pow(1.0 - abs(dot(normalize(vN), normalize(-vP))), 3.0);
-        gl_FragColor = vec4(uColor, f * 0.55);
-      }`,
+    vertexShader: `varying vec3 vN; varying vec3 vP;
+      void main(){ vN = normalize(normalMatrix * normal);
+        vec4 mv = modelViewMatrix * vec4(position,1.0); vP = mv.xyz;
+        gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform vec3 uColor; varying vec3 vN; varying vec3 vP;
+      void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(-vP))), 3.0);
+        gl_FragColor = vec4(uColor, f * 0.55); }`,
     transparent: true, side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending
   });
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(GLOBE_R * 1.055, 64, 48), atmoMat));
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(GLOBE_R * 1.055, 64, 48), atmo));
 
-  // --- 星空 ---
-  const n = 2200;
-  const sp = new Float32Array(n * 3), ss = new Float32Array(n);
+  const n = 2200, sp = new Float32Array(n * 3), ss = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = 190 + Math.random() * 160;
     const s = Math.sqrt(1 - u * u);
     sp[i*3] = r * s * Math.cos(th); sp[i*3+1] = r * u; sp[i*3+2] = r * s * Math.sin(th);
     ss[i] = Math.random() < .08 ? 1.9 : (.35 + Math.random() * .8);
   }
-  const starGeo = new THREE.BufferGeometry();
-  starGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  starGeo.setAttribute('size', new THREE.BufferAttribute(ss, 1));
-  const starMat = new THREE.ShaderMaterial({
-    uniforms: {},
-    vertexShader: `
-      attribute float size; varying float vS;
-      void main(){
-        vS = size;
-        vec4 mv = modelViewMatrix * vec4(position,1.0);
-        gl_PointSize = size * (300.0 / -mv.z);
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: `
-      varying float vS;
-      void main(){
-        float d = length(gl_PointCoord - vec2(0.5));
-        if (d > 0.5) discard;
-        float a = smoothstep(0.5, 0.0, d) * clamp(vS * 0.55, 0.25, 1.0);
-        gl_FragColor = vec4(0.86, 0.92, 1.0, a);
-      }`,
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  sg.setAttribute('size', new THREE.BufferAttribute(ss, 1));
+  scene.add(new THREE.Points(sg, new THREE.ShaderMaterial({
+    vertexShader: `attribute float size; varying float vS;
+      void main(){ vS = size; vec4 mv = modelViewMatrix * vec4(position,1.0);
+        gl_PointSize = size * (300.0 / -mv.z); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying float vS;
+      void main(){ float d = length(gl_PointCoord - vec2(0.5)); if (d > 0.5) discard;
+        gl_FragColor = vec4(0.86, 0.92, 1.0, smoothstep(0.5,0.0,d) * clamp(vS*0.55,0.25,1.0)); }`,
     transparent: true, depthWrite: false
-  });
-  scene.add(new THREE.Points(starGeo, starMat));
+  })));
 }
 
+/* ============================================================
+   大陸メッシュ
+   ============================================================ */
 function buildContinents() {
-  // --- 同じ回転をするプレートをひとまとめにして描画負荷を下げる ---
-  const keyOf = (pi) => {
-    let k = '';
-    for (let t = 0; t < nTimes; t++) {
-      const o = (t * nPlates + pi) * 3;
-      k += rotTable[o] + ',' + rotTable[o+1] + ',' + rotTable[o+2] + ';';
-    }
-    return k;
-  };
-  const byKey = new Map();
-  nodeOfPlate = new Array(nPlates);
-  for (let pi = 0; pi < nPlates; pi++) {
-    const k = keyOf(pi);
-    if (!byKey.has(k)) { byKey.set(k, plateNodes.length); plateNodes.push({ pos: [], col: [], line: [], rep: pi }); plateOfNode.push(pi); }
-    nodeOfPlate[pi] = byKey.get(k);
-  }
+  const buf = [];
+  for (let i = 0; i < nNodes; i++) buf.push({ pos: [], col: [], line: [], sx: 0, sy: 0, sz: 0, w: 0 });
 
-  const tmpV = new THREE.Vector3();
   for (let r = 0; r < data.nRings; r++) {
     const a = offsets[r], b = offsets[r + 1];
     if (b - a < 3) continue;
-    const node = plateNodes[nodeOfPlate[ringPlate[r]]];
+    const nb = buf[ringNode[r]];
 
-    // 頂点を取り出す
     const pts = [];
     let cLon = 0, cLat = 0;
     for (let i = a; i < b; i++) {
       const lon = coords[i*2] / data.scale, lat = coords[i*2+1] / data.scale;
-      pts.push([lon, lat]);
-      cLon += lon; cLat += lat;
+      pts.push([lon, lat]); cLon += lon; cLat += lat;
     }
     cLon /= pts.length; cLat /= pts.length;
-    const cont = CONTINENTS[continentOf(cLon, cLat)];
-    const col = new THREE.Color(cont.color);
+    const col = new THREE.Color(CONTINENTS[continentOf(cLon, cLat)].color);
 
-    // 海岸線（アウトライン）
+    // 矢印の付け根を決めるための重み付き重心
+    const cv = lonLatToVec3(cLon, cLat, 1);
+    nb.sx += cv.x * pts.length; nb.sy += cv.y * pts.length; nb.sz += cv.z * pts.length;
+    nb.w += pts.length;
+
     for (let i = 0; i < pts.length; i++) {
       const p = pts[i], q = pts[(i + 1) % pts.length];
       const v1 = lonLatToVec3(p[0], p[1], LAND_R + .012);
       const v2 = lonLatToVec3(q[0], q[1], LAND_R + .012);
-      node.line.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+      nb.line.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
     }
 
-    // 格子で刻む
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const p of pts) {
       if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
       if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
     }
-    const gx0 = Math.floor(minX / GRID_DEG), gx1 = Math.floor(maxX / GRID_DEG);
-    const gy0 = Math.floor(minY / GRID_DEG), gy1 = Math.floor(maxY / GRID_DEG);
-    for (let gx = gx0; gx <= gx1; gx++) {
-      for (let gy = gy0; gy <= gy1; gy++) {
+    for (let gx = Math.floor(minX / GRID_DEG); gx <= Math.floor(maxX / GRID_DEG); gx++) {
+      for (let gy = Math.floor(minY / GRID_DEG); gy <= Math.floor(maxY / GRID_DEG); gy++) {
         const cell = clipToRect(pts, gx * GRID_DEG, gy * GRID_DEG, (gx + 1) * GRID_DEG, (gy + 1) * GRID_DEG);
         if (!cell || cell.length < 3) continue;
         const flat = [];
@@ -558,67 +567,154 @@ function buildContinents() {
         for (let k = 0; k < tri.length; k++) {
           const p = cell[tri[k]];
           const v = lonLatToVec3(p[0], p[1], LAND_R);
-          node.pos.push(v.x, v.y, v.z);
-          node.col.push(col.r, col.g, col.b);
+          nb.pos.push(v.x, v.y, v.z);
+          nb.col.push(col.r, col.g, col.b);
         }
       }
     }
   }
 
-  // --- Object3D 化 ---
-  let totalTri = 0;
-  for (const node of plateNodes) {
+  let tri = 0;
+  for (let i = 0; i < nNodes; i++) {
+    const nb = buf[i];
     const obj = new THREE.Group();
-    if (node.pos.length) {
+    if (nb.pos.length) {
       const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(node.pos, 3));
-      g.setAttribute('color', new THREE.Float32BufferAttribute(node.col, 3));
+      g.setAttribute('position', new THREE.Float32BufferAttribute(nb.pos, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(nb.col, 3));
       g.computeVertexNormals();
-      const m = new THREE.MeshStandardMaterial({
-        vertexColors: true, roughness: .78, metalness: .04,
-        side: THREE.DoubleSide, flatShading: false
-      });
-      obj.add(new THREE.Mesh(g, m));
-      totalTri += node.pos.length / 9;
+      obj.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+        vertexColors: true, roughness: .78, metalness: .04, side: THREE.DoubleSide
+      })));
+      tri += nb.pos.length / 9;
     }
-    if (node.line.length) {
+    if (nb.line.length) {
       const lg = new THREE.BufferGeometry();
-      lg.setAttribute('position', new THREE.Float32BufferAttribute(node.line, 3));
+      lg.setAttribute('position', new THREE.Float32BufferAttribute(nb.line, 3));
       obj.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({
         color: 0x0b1220, transparent: true, opacity: .55
       })));
     }
-    node.object3D = obj;
     scene.add(obj);
-    node.pos = node.col = node.line = null;
+    const anchor = nb.w ? new THREE.Vector3(nb.sx, nb.sy, nb.sz).normalize() : null;
+    nodes.push({ object3D: obj, anchor, weight: nb.w });
   }
-  return totalTri;
+  return tri;
+}
+
+/* ============================================================
+   プレートの動く向きを示す矢印
+   ============================================================ */
+const ARROW_MIN_W = 110;     // これ以上の海岸線を持つノードだけ矢印を出す（主要な陸塊にしぼる）
+const ARROW_GAIN  = 34;      // 500万年ぶんの移動を見える長さに引き伸ばす倍率
+const ARROW_DT    = 5;       // 何百万年ぶんの移動を矢印にするか
+
+/* 1本の矢印（軸2枚＋矢じり1枚）を pos に積む */
+function pushArrow(pos, p1, dir, side, L, halfShaft, halfHead, R) {
+  const shaft = L * 0.70;
+  const A = p1.clone().multiplyScalar(R);
+  const B = p1.clone().addScaledVector(dir, shaft).normalize().multiplyScalar(R);
+  const T = p1.clone().addScaledVector(dir, L).normalize().multiplyScalar(R);
+  const sS = side.clone().multiplyScalar(halfShaft);
+  const sH = side.clone().multiplyScalar(halfHead);
+  const a1 = A.clone().add(sS), a2 = A.clone().sub(sS);
+  const b1 = B.clone().add(sS), b2 = B.clone().sub(sS);
+  pushTri(pos, a1, b1, b2); pushTri(pos, a1, b2, a2);
+  pushTri(pos, B.clone().add(sH), T, B.clone().sub(sH));
+}
+
+function buildArrows(age) {
+  if (arrowMesh) {
+    scene.remove(arrowMesh);
+    arrowMesh.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); });
+    arrowMesh = null;
+  }
+  if (!showArrows) return;
+
+  const qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
+  const outline = [], fill = [];
+  const up = new THREE.Vector3();
+
+  for (let i = 0; i < nNodes; i++) {
+    const nd = nodes[i];
+    if (!nd.anchor || nd.weight < ARROW_MIN_W) continue;
+
+    rotationFor(age, i, qa);
+    rotationFor(age - ARROW_DT, i, qb);      // ARROW_DT 百万年あと
+    const p1 = nd.anchor.clone().applyQuaternion(qa);
+    const p2 = nd.anchor.clone().applyQuaternion(qb);
+    const move = p2.clone().sub(p1);
+    if (move.length() * ARROW_GAIN < 0.18) continue;   // ほぼ動いていないプレートは省く
+
+    const L = Math.min(2.9, move.length() * ARROW_GAIN);
+    const dir = move.clone().normalize();
+    up.copy(p1);
+    const side = new THREE.Vector3().crossVectors(up, dir).normalize();
+
+    pushArrow(outline, p1, dir, side, L * 1.06, 0.24, 0.60, LAND_R + 0.14);
+    pushArrow(fill,    p1, dir, side, L,        0.14, 0.42, LAND_R + 0.20);
+  }
+  if (!fill.length) return;
+
+  arrowMesh = new THREE.Group();
+  const mk = (arr, color, op) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+    return new THREE.Mesh(g, new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: op, side: THREE.DoubleSide, depthWrite: false
+    }));
+  };
+  arrowMesh.add(mk(outline, 0x0a1220, .78));   // 縁取り（どんな大陸色の上でも見える）
+  arrowMesh.add(mk(fill,    0xffffff, .96));
+  scene.add(arrowMesh);
+}
+function pushTri(arr, a, b, c) {
+  arr.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
 }
 
 /* ============================================================
    時刻の反映
    ============================================================ */
-const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
+const _q = new THREE.Quaternion();
 function applyAge(age) {
-  const x = Math.max(0, Math.min(data.tMax, age)) / data.tStep;
-  const i0 = Math.min(nTimes - 1, Math.floor(x));
-  const i1 = Math.min(nTimes - 1, i0 + 1);
-  const f = x - i0;
-  for (const node of plateNodes) {
-    const pi = node.rep;
-    const p0 = poleAt(i0, pi), p1 = poleAt(i1, pi);
-    quatFromPole(p0[0], p0[1], p0[2], _q1);
-    if (i1 !== i0 && f > 0) {
-      quatFromPole(p1[0], p1[1], p1[2], _q2);
-      _q1.slerp(_q2, f);
-    }
-    node.object3D.quaternion.copy(_q1);
+  for (let i = 0; i < nNodes; i++) {
+    rotationFor(age, i, _q);
+    nodes[i].object3D.quaternion.copy(_q);
   }
 }
 
 /* ============================================================
    UI
    ============================================================ */
+const sliderToAge = v => data.tMax - v;
+const ageToSlider = a => data.tMax - a;
+
+function buildEras() {
+  const el = document.getElementById('eras');
+  const span = data.tMax - AGE_MIN;
+  const stops = [];
+  const pos = a => (100 * (data.tMax - a) / span);
+  for (const p of PERIODS) {
+    const from = Math.min(p.from, data.tMax), to = Math.max(p.to, 0);
+    if (from <= to) continue;
+    stops.push(`${p.color} ${pos(from).toFixed(2)}% ${pos(to).toFixed(2)}%`);
+  }
+  stops.push(`rgba(251,191,36,.30) ${pos(0).toFixed(2)}% 100%`);
+  el.style.background = `linear-gradient(90deg, ${stops.join(', ')})`;
+
+  for (const e of EVENTS) {
+    const t = document.createElement('span');
+    t.className = 'tick';
+    t.style.left = pos(e.age).toFixed(2) + '%';
+    el.appendChild(t);
+  }
+  const now = document.createElement('span');
+  now.className = 'now';
+  now.id = 'nowTick';
+  now.style.left = pos(0).toFixed(2) + '%';
+  el.appendChild(now);
+}
+
 function buildLegend() {
   const el = document.getElementById('legend');
   for (const k of Object.keys(CONTINENTS)) {
@@ -631,48 +727,58 @@ function buildLegend() {
 }
 function buildChips() {
   const el = document.getElementById('chips');
-  EPOCHS.forEach((e) => {
+  EVENTS.forEach(e => {
     const b = document.createElement('button');
-    b.className = 'chip';
-    b.innerHTML = `<b>${e.age === 0 ? '0' : e.age}Ma</b>${e.label}`;
-    b.addEventListener('click', () => { isPlaying = false; syncPlayBtn(); setAge(e.age); });
+    b.className = 'chip' + (e.age < 0 ? ' fut' : '');
+    b.innerHTML = `<b>${e.age > 0 ? e.age + 'Ma' : (e.age === 0 ? '0' : '+' + (-e.age))}</b>${e.chip}`;
+    b.addEventListener('click', () => { isPlaying = false; syncPlay(); setAge(e.age); });
     el.appendChild(b);
   });
 }
-function formatAge(age) {
-  if (age < 0.5) return '0 Ma';
-  return age.toFixed(0) + ' Ma';
-}
+
 function formatJp(age) {
-  if (age < 0.5) return '現在';
-  const man = Math.round(age * 100);
+  if (Math.abs(age) < 0.5) return '現在';
+  const man = Math.round(Math.abs(age) * 100);
+  const suffix = age > 0 ? '年前' : '年後';
   if (man >= 10000) {
     const oku = Math.floor(man / 10000), rest = man % 10000;
-    return rest === 0 ? `${oku}億年前` : `${oku}億${rest}万年前`;
+    return (rest === 0 ? `${oku}億` : `${oku}億${rest}万`) + suffix;
   }
-  return `${man}万年前`;
+  return `${man}万` + suffix;
 }
+
 function setAge(age, fromSlider) {
-  currentAge = Math.max(0, Math.min(data.tMax, age));
-  if (!fromSlider) document.getElementById('timeSlider').value = String(data.tMax - currentAge);
+  currentAge = Math.max(AGE_MIN, Math.min(data.tMax, age));
+  if (!fromSlider) document.getElementById('timeSlider').value = String(ageToSlider(currentAge));
   applyAge(currentAge);
+  buildArrows(currentAge);
 
-  document.getElementById('chronoVal').textContent = formatAge(currentAge);
+  const future = currentAge < -0.001;
+  document.body.classList.toggle('future', future);
+
+  const per = periodOf(currentAge);
+  document.getElementById('chronoVal').textContent =
+    (Math.abs(currentAge) < 0.5) ? '0 Ma' : (future ? '+' : '') + Math.abs(currentAge).toFixed(0) + ' Ma';
   document.getElementById('chronoPeriod').textContent =
-    currentAge < 0.5 ? '現在' : `${periodOf(currentAge)}　${formatJp(currentAge)}`;
+    Math.abs(currentAge) < 0.5 ? '現在' : `${per.name}　${formatJp(currentAge)}`;
 
-  // 最も近いエポックの解説を出す
-  let best = EPOCHS[EPOCHS.length - 1], bd = Infinity;
-  EPOCHS.forEach(e => { const d = Math.abs(e.age - currentAge); if (d < bd) { bd = d; best = e; } });
+  const era = document.getElementById('infoEra');
+  era.textContent = per.name;
+  era.style.background = per.color;
+
+  // いちばん近い出来事を選ぶ
+  let best = EVENTS[0], bd = Infinity;
+  for (const e of EVENTS) { const d = Math.abs(e.age - currentAge); if (d < bd) { bd = d; best = e; } }
   document.getElementById('infoTitle').textContent = best.title;
   document.getElementById('infoDesc').textContent = best.desc;
   document.querySelectorAll('#chips .chip').forEach((c, i) => {
-    c.classList.toggle('active', EPOCHS[i] === best && bd < 18);
+    c.classList.toggle('active', EVENTS[i] === best && bd < 12);
   });
+
+  const tick = document.getElementById('nowTick');
+  if (tick) tick.style.left = (100 * (data.tMax - currentAge) / (data.tMax - AGE_MIN)).toFixed(2) + '%';
 }
-function syncPlayBtn() {
-  document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶';
-}
+function syncPlay() { document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶'; }
 
 /* ============================================================
    起動
@@ -720,10 +826,9 @@ function animate(now) {
   requestAnimationFrame(animate);
   const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
   lastFrame = now;
-
   if (isPlaying) {
-    let a = currentAge - dt * 12;      // 1秒あたり1200万年
-    if (a <= 0) { a = 0; isPlaying = false; syncPlayBtn(); }
+    let a = currentAge - dt * 14;      // 1秒あたり1400万年
+    if (a <= AGE_MIN) { a = AGE_MIN; isPlaying = false; syncPlay(); }
     setAge(a);
   }
   controls.update();
@@ -733,36 +838,45 @@ function animate(now) {
 async function start() {
   const loadText = document.getElementById('loadText');
   try {
-    if (typeof THREE === 'undefined' || typeof earcut === 'undefined') {
+    if (typeof THREE === 'undefined' || typeof earcut === 'undefined')
       throw new Error('3D ライブラリの読み込みに失敗しました（ネットワークをご確認ください）');
-    }
+
     loadText.textContent = '海岸線・プレート運動データを読み込み中…';
     const res = await fetch('paleo_data.json');
     if (!res.ok) throw new Error('paleo_data.json を読み込めませんでした (' + res.status + ')');
     data = await res.json();
 
-    coords    = decode(data.coords, Int16Array);
-    offsets   = decode(data.offsets, Uint16Array);
-    ringPlate = decode(data.ringPlate, Uint16Array);
-    rotTable  = decode(data.rot, Int16Array);
-    nPlates   = data.plates.length;
-    nTimes    = Math.round(data.tMax / data.tStep) + 1;
+    coords   = decode(data.coords, Int16Array);
+    offsets  = decode(data.offsets, Uint16Array);
+    ringNode = decode(data.ringNode, Uint16Array);
+    rotTable = decode(data.rot, Int16Array);
+    nNodes   = data.nNodes;
+    nTimes   = Math.round(data.tMax / data.tStep) + 1;
 
     loadText.textContent = '地球儀を組み立て中…';
     initThree();
     buildGlobe();
     const tri = buildContinents();
-    console.log(`PALEOGLOBE: rings=${data.nRings} plates=${nPlates} nodes=${plateNodes.length} triangles=${Math.round(tri)}`);
+    console.log(`PALEOGLOBE: rings=${data.nRings} nodes=${nNodes} times=${nTimes} triangles=${Math.round(tri)}`);
 
+    document.getElementById('timeSlider').min = '0';
+    document.getElementById('timeSlider').max = String(data.tMax - AGE_MIN);
+    buildEras();
     buildLegend();
     buildChips();
-    document.getElementById('timeSlider').addEventListener('input', (e) => {
-      isPlaying = false; syncPlayBtn();
-      setAge(data.tMax - parseFloat(e.target.value), true);
+
+    document.getElementById('timeSlider').addEventListener('input', e => {
+      isPlaying = false; syncPlay();
+      setAge(sliderToAge(parseFloat(e.target.value)), true);
     });
     document.getElementById('playBtn').addEventListener('click', () => {
-      if (!isPlaying && currentAge <= 0.5) setAge(data.tMax);
-      isPlaying = !isPlaying; syncPlayBtn();
+      if (!isPlaying && currentAge <= AGE_MIN + 0.5) setAge(data.tMax);
+      isPlaying = !isPlaying; syncPlay();
+    });
+    document.getElementById('arrowBtn').addEventListener('click', e => {
+      showArrows = !showArrows;
+      e.currentTarget.classList.toggle('on', showArrows);
+      buildArrows(currentAge);
     });
 
     setAge(data.tMax);
