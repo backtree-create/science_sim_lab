@@ -1383,7 +1383,8 @@ mods.induce = (function(){
   var coilMesh, magMesh, coilFlow = new FlowLines(), magFlow = new FlowLines();
   var coilN, coilS, reactArrow, moveArrow;
   var st = { speed:1, N:200, flip:false, auto:true,
-             pos:0.10, vel:0, phi:0, emf:0, hist:[], phiHist:[], peakE:1e-4, peakP:1e-9 };
+             pos:0.10, vel:0, phi:0, emf:0, hist:[], phiHist:[], peakE:1e-4, peakP:1e-9,
+             dragY:null, flowSp:0 };
   var COIL_R = 0.026, MHALF = 0.032, MR = 0.009, M = 2.4e5;
   var COIL_AREA = Math.PI*COIL_R*COIL_R;
   var magSegCache = null;
@@ -1517,18 +1518,22 @@ mods.induce = (function(){
     setAuto: function(v){ st.auto = v; },
     onDrag: function(name, p){
       if (name !== 'mag') return;
-      var ny = Math.max(0.042, Math.min(0.20, p.y));
-      st.vel = (ny - st.pos)*60; st.pos = ny;
+      /* ここでは行き先を覚えるだけ。速さは毎フレーム位置の変化から求める。
+         ポインタの通知は間隔がまちまちなので、ここで速さを出すとがたつく。 */
+      st.dragY = Math.max(0.042, Math.min(0.20, p.y));
       st.auto = false; document.getElementById('indAuto').checked = false;
     },
+    onDrop: function(){ st.dragY = null; },
     update: function(dt){
-      if (st.auto && !dragTarget){
-        var w = 1.5*st.speed;
-        st.pos = 0.098 + 0.052*Math.sin(clock*w);
-        st.vel = 0.052*w*Math.cos(clock*w);
-      } else if (!dragTarget){
-        st.vel *= 0.82;
-      }
+      /* 行き先を決めてから、実際に動いた分で速さを出す。
+         こうすると自動でも手動でも同じ計算になり、手を止めればすぐ0になる。 */
+      var target = st.pos;
+      if (st.auto && !dragTarget) target = 0.098 + 0.052*Math.sin(clock*1.5*st.speed);
+      else if (dragTarget && st.dragY !== null) target = st.dragY;
+      var raw = (target - st.pos) / Math.max(dt, 1/240);
+      st.vel += (raw - st.vel) * 0.30;          /* なまして、がたつきを取る */
+      if (Math.abs(st.vel) < 1e-4) st.vel = 0;
+      st.pos = target;
       magMesh.position.y = st.pos;
       magFlow.group.position.y = st.pos;
       magFlow.speed = 1; magFlow.update(dt);
@@ -1540,7 +1545,9 @@ mods.induce = (function(){
       st.emf = -st.N * ((p2-p1)/(2*d)) * st.vel;
 
       /* コイルを流れる誘導電流 */
-      coilFlow.speed = Math.max(-3, Math.min(3, st.emf*260));
+      /* 粒の速さもなまして、こまかい揺れが出ないようにする */
+      st.flowSp += (Math.max(-3, Math.min(3, st.emf*260)) - st.flowSp) * 0.25;
+      coilFlow.speed = st.flowSp;
       coilFlow.update(dt);
 
       var moving = Math.abs(st.vel) > 0.003;
@@ -1552,26 +1559,30 @@ mods.induce = (function(){
          磁石の極や動く向きを場合分けせずに、計算した磁束から直接決める。 */
       var dPhidt = ((p2 - p1)/(2*d)) * st.vel;
       var coilTopIsN = dPhidt < 0;
-      coilN.visible = coilS.visible = moving;
-      if (moving){
+      /* 折り返しで一瞬消えて戻る、というちらつきを出さないため、
+         表示・非表示を切り替えず、動きの大きさに応じてなめらかに濃さを変える。 */
+      var fade = Math.min(1, Math.abs(st.vel)/0.020);
+      coilN.visible = coilS.visible = fade > 0.02;
+      coilN.material.opacity = coilS.material.opacity = fade;
+      if (coilN.visible){
         coilN.position.set(0, coilTopIsN ?  0.030 : -0.030, 0);
         coilS.position.set(0, coilTopIsN ? -0.030 :  0.030, 0);
       }
       /* 磁石が受ける力は、いつも動きをさまたげる向き */
-      reactArrow.visible = moveArrow.visible = moving;
-      if (moving){
-        var len = Math.min(2.2, Math.abs(st.emf)*260 + 0.5);
+      reactArrow.visible = moveArrow.visible = fade > 0.02;
+      if (reactArrow.visible){
+        var len = Math.min(2.2, Math.abs(st.emf)*260 + 0.25) * fade;
         reactArrow.position.set(0.020, st.pos, 0);
         orientArrow(reactArrow, new THREE.Vector3(0, approaching ? 1 : -1, 0), len);
         moveArrow.position.set(-0.020, st.pos, 0);
-        orientArrow(moveArrow, new THREE.Vector3(0, approaching ? -1 : 1, 0), 1.0);
+        orientArrow(moveArrow, new THREE.Vector3(0, approaching ? -1 : 1, 0), fade);
       }
 
       /* グラフ */
       st.hist.push(st.emf); if (st.hist.length > 200) st.hist.shift();
       st.phiHist.push(st.phi); if (st.phiHist.length > 200) st.phiHist.shift();
-      st.peakE = Math.max(st.peakE*0.997, Math.abs(st.emf), 1e-4);
-      st.peakP = Math.max(st.peakP*0.997, Math.abs(st.phi), 1e-9);
+      st.peakE = Math.max(st.peakE*0.9995, Math.abs(st.emf), 1e-4);
+      st.peakP = Math.max(st.peakP*0.9995, Math.abs(st.phi), 1e-9);
       drawGraph();
 
       document.getElementById('indV').textContent = fmtV(st.emf);
