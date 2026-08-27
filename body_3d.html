@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>中2理科：からだのつくりと働き 3Dシミュレーター</title>
+<meta name="theme-color" content="#0d131e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<style>
+  body.instrument{--accent:#4fd1c5;}
+  .layout{grid-template-columns:1.5fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+
+  .stage{padding:0;position:relative;height:620px;}
+  @media (max-width:900px){.stage{height:500px;}}
+  @media (max-width:600px){.stage{height:420px;}}
+  #view{position:absolute;inset:0;border-radius:var(--r-md);overflow:hidden;
+    background:radial-gradient(120% 100% at 50% 6%, #17202e 0%, #0d131e 55%, #070b12 100%);
+    cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;}
+  #view:active{cursor:grabbing;}
+  #view canvas{display:block;}
+
+  .hud{
+    position:absolute;top:12px;left:12px;z-index:2;
+    font-family:var(--font-mono);font-size:10.5px;color:#8fa0b8;
+    background:rgba(7,11,18,.72);border:1px solid rgba(255,255,255,.09);
+    border-radius:100px;padding:6px 13px;pointer-events:none;
+  }
+  .credit{
+    position:absolute;bottom:9px;right:12px;z-index:2;
+    font-family:var(--font-mono);font-size:8.5px;line-height:1.55;color:#5a6a83;
+    text-align:right;pointer-events:none;
+  }
+  .flowkey{position:absolute;bottom:9px;left:12px;z-index:2;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none;max-width:60%;}
+  .flowkey span{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:var(--font-mono);font-size:10.5px;color:#c3cede;
+    background:rgba(7,11,18,.8);border:1px solid rgba(255,255,255,.09);
+    border-radius:100px;padding:5px 11px 5px 8px;
+  }
+  .flowkey i{width:9px;height:9px;border-radius:50%;flex:none;}
+
+  .organs{display:flex;flex-direction:column;gap:5px;}
+  .organs button{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    font-family:var(--font-body);font-size:13.5px;
+    background:var(--bg-panel-2);border:1px solid var(--border);color:var(--text-dim);
+    padding:9px 12px;border-radius:var(--r-sm);cursor:pointer;
+    transition:background .15s var(--ease),border-color .15s var(--ease);
+    touch-action:manipulation;
+  }
+  .organs button:hover{border-color:var(--border-strong);background:#1d2532;color:var(--text);}
+  .organs button.on{background:#1f2b3a;border-color:currentColor;font-weight:700;}
+  .organs button i{width:12px;height:12px;border-radius:3px;flex:none;}
+  .organs button em{margin-left:auto;font-style:normal;font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);letter-spacing:.06em;}
+
+  .detail{
+    background:var(--bg-inset);border:1px solid var(--border);
+    border-left:3px solid var(--accent);border-radius:0 var(--r-md) var(--r-md) 0;
+    padding:14px 16px;margin-top:14px;min-height:96px;
+  }
+  .detail h4{
+    font-family:var(--font-display);font-size:15px;font-weight:900;color:var(--text);
+    margin-bottom:7px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  }
+  .detail h4 i{width:12px;height:12px;border-radius:3px;flex:none;}
+  .detail h4 em{font-style:normal;font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);letter-spacing:.08em;}
+  .detail p{font-size:13px;line-height:1.9;color:var(--text-dim);}
+  .detail p + p{margin-top:9px;}
+  .detail b{color:var(--text);font-weight:700;}
+
+  .stepbar{
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);
+    background:var(--bg-panel-2);border:1px solid var(--border);
+    border-radius:var(--r-pill);padding:9px 16px;margin-top:14px;
+    text-align:center;min-height:38px;
+  }
+  .stepbar b{color:var(--accent);font-weight:500;}
+
+  #loader{
+    position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;background:#0d131e;
+    transition:opacity .45s var(--ease);
+  }
+  #loader.done{opacity:0;pointer-events:none;}
+  .spin{width:34px;height:34px;border-radius:50%;border:2px solid rgba(79,209,197,.18);
+    border-top-color:#4fd1c5;animation:sp .9s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #loadTxt{font-family:var(--font-mono);font-size:11px;color:#8fa0b8;letter-spacing:.08em;}
+</style>
+</head>
+<body class="instrument">
+
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">中2 ／ 動物の体のつくりと働き</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Human Body · Real Anatomical Data</span>
+  <h1>からだのつくりと働き 3D</h1>
+  <p>実際に計測された人体データ（BodyParts3D）の臓器を、そのままの形と位置で立体表示します。消化・呼吸・循環を切り替えると、そのはたらきに関わる器官だけが色づき、食物・空気・血液が本物の臓器の中を通っていきます。</p>
+</div>
+
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="stage">
+      <div id="view">
+        <div class="hud">ドラッグ：回す ／ ホイール：拡大縮小 ／ 臓器をクリックで解説</div>
+        <div class="flowkey" id="flowKey"></div>
+        <div class="credit">BodyParts3D © ライフサイエンス統合データベースセンター<br>licensed under CC 表示 4.0 国際</div>
+        <div id="loader"><div class="spin"></div><div id="loadTxt">臓器データを読み込み中…</div></div>
+      </div>
+    </div>
+    <div class="stepbar" id="stepBar">—</div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>はたらきを選ぶ</h2>
+
+    <div class="tabs" style="display:flex;width:100%;margin-bottom:18px;">
+      <button class="tab mode-tab active" data-mode="digestion">消化と吸収</button>
+      <button class="tab mode-tab" data-mode="respiration">呼吸</button>
+      <button class="tab mode-tab" data-mode="circulation">血液の循環</button>
+    </div>
+
+    <h3>器官（3Dを直接クリックしてもOK）</h3>
+    <div class="organs" id="organList"></div>
+
+    <div class="detail" id="detail"></div>
+
+    <hr class="divider">
+
+    <h3>表示の調整</h3>
+    <div class="controls">
+      <div class="control">
+        <label for="speed">流れの速さ<span class="val" id="speedVal">1.0x</span></label>
+        <input type="range" id="speed" min="0" max="2.5" step="0.1" value="1.0">
+      </div>
+      <div class="checkrow">
+        <label><input type="checkbox" id="showOther" checked> ほかの臓器も薄く残す</label>
+        <label><input type="checkbox" id="autoSpin"> ゆっくり回す</label>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="hint" id="modeHint"></div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   配色の方針
+   ・はたらいている系統だけを彩色し、それ以外は灰色に沈める
+   ・同じ系統の中では色相を大きく離し、隣り合う臓器を見分けられるようにする
+   ・消化管（1本の管）は口から順に色を濃くしていき、助ける腺は寒色にして役割を分ける
+   ============================================================ */
+var PALETTE = {
+  esophagus:'#ffd9a0', stomach:'#ff9f40', smallIntestine:'#ff6b3d', largeIntestine:'#bb3c85',
+  liver:'#4d9de0', gallbladder:'#22c1c3', pancreas:'#9b7ede',
+  trachea:'#e8f6ff', lungRight:'#3ec1f3', lungLeft:'#3ec1f3', diaphragm:'#cf7fe0',
+  heart:'#e05263', kidneyRight:'#5fbf8f', kidneyLeft:'#5fbf8f'
+};
+var GHOST = 0x38445c;
+
+var FLOW = {
+  food:0xffe27a, nutrient:0xff8a3d, absorbed:0x4fd1c5,
+  airIn:0xdff3ff, airOut:0x8798ad,
+  arterial:0xff2d1f, venous:0x2f7bff
+};
+
+/* ============================================================
+   器官の解説（中2「動物の体のつくりと働き」）
+   ============================================================ */
+var ORGANS = {
+  esophagus:{ en:'ESOPHAGUS',
+    p:['口と胃をつなぐ管です。ここでは消化は行いません。まわりの筋肉が波打つように動く<b>ぜん動運動</b>で、食物を胃へ送ります。']},
+  stomach:{ en:'STOMACH',
+    p:['<b>胃液</b>を出します。胃液にふくまれる消化酵素<b>ペプシン</b>が、タンパク質を分解します。',
+       '胃液は強い酸性で、食物といっしょに入った細菌を殺すはたらきもあります。']},
+  liver:{ en:'LIVER',
+    p:['<b>胆汁</b>をつくります。胆汁は消化酵素をふくみませんが、脂肪を細かい粒にして消化を助けます。',
+       '小腸で吸収された養分は、まず肝臓に送られます。ブドウ糖の一部はグリコーゲンに変えてたくわえ、有害なアンモニアは<b>尿素</b>に変えます。']},
+  gallbladder:{ en:'GALLBLADDER',
+    p:['肝臓でつくられた<b>胆汁をたくわえておく</b>袋です。食物が入ってくると、たくわえた胆汁を小腸（十二指腸）に出します。']},
+  pancreas:{ en:'PANCREAS',
+    p:['<b>すい液</b>を小腸に出します。すい液は<b>デンプン・タンパク質・脂肪のすべて</b>にはたらく消化酵素をふくみ、消化液の中でもっとも守備範囲が広いのが特徴です。']},
+  smallIntestine:{ en:'SMALL INTESTINE',
+    p:['消化の仕上げと<b>吸収</b>を行います。内側のかべにある無数の<b>柔毛（じゅうもう）</b>が、吸収する表面積を大きくしています。',
+       '<b>ブドウ糖</b>と<b>アミノ酸</b>は柔毛の毛細血管に入って肝臓へ。<b>脂肪酸とモノグリセリド</b>は柔毛で再び脂肪になって<b>リンパ管</b>に入ります。']},
+  largeIntestine:{ en:'LARGE INTESTINE',
+    p:['おもに<b>水分を吸収</b>します。消化されずに残ったものは便となり、体外へ出されます。']},
+  trachea:{ en:'TRACHEA',
+    p:['鼻や口から入った空気の通り道です。気管は左右の<b>気管支</b>に分かれ、肺の中でさらに細かく枝分かれして、先端の<b>肺胞</b>につながります。']},
+  lungRight:{ en:'LUNG',
+    p:['肺は小さな袋<b>肺胞</b>の集まりです。数億個あるといわれ、空気と血液がふれあう表面積をきわめて大きくしています。',
+       '肺胞をとりまく毛細血管で<b>酸素が血液に取りこまれ</b>、<b>二酸化炭素が血液から出されます</b>。ここで静脈血が動脈血に変わります。',
+       '右肺は3つ、左肺は2つのかたまり（肺葉）に分かれています。左肺が小さいのは、心臓が左に寄っているためです。回して確かめてみましょう。']},
+  lungLeft:{ en:'LUNG', sameAs:'lungRight' },
+  diaphragm:{ en:'DIAPHRAGM',
+    p:['肺には筋肉がなく、自分でふくらむことはできません。<b>横隔膜が下がり、ろっ骨が上がる</b>と胸の空間が広がり、その結果として空気が肺に流れこみます。',
+       '息をはくときは逆に、横隔膜が上がって胸の空間がせまくなります。']},
+  heart:{ en:'HEART',
+    p:['血液を送り出すポンプです。<b>右心房・右心室・左心房・左心室</b>の4つの部屋に分かれ、逆流を防ぐ弁がついています。',
+       '右心室は<b>肺へ</b>、左心室は<b>全身へ</b>血液を送ります。遠くまで送る左心室のかべがいちばん厚くなっています。']},
+  kidneyRight:{ en:'KIDNEY',
+    p:['血液から<b>尿素</b>などの不要物をこしとって尿をつくります。つくられた尿はぼうこうにためられてから排出されます。']},
+  kidneyLeft:{ en:'KIDNEY', sameAs:'kidneyRight' }
+};
+
+var MODES = {
+  digestion:{
+    label:'消化と吸収',
+    organs:['esophagus','stomach','liver','gallbladder','pancreas','smallIntestine','largeIntestine'],
+    key:[['#ffe27a','食物'],['#ff8a3d','分解された養分'],['#4fd1c5','吸収されて血液へ']],
+    hint:'<span class="hint-title">追いかけるポイント</span><ul>'
+      + '<li>食物は<strong>口 → 食道 → 胃 → 小腸 → 大腸</strong>という1本の管（消化管）を通ります。粒の色が進むにつれて変わります。</li>'
+      + '<li>デンプンは<strong>ブドウ糖</strong>、タンパク質は<strong>アミノ酸</strong>、脂肪は<strong>脂肪酸とモノグリセリド</strong>にまで分解されて、はじめて吸収できます。</li>'
+      + '<li>肝臓・胆のう・すい臓は管の外にあり、<strong>消化液を出して助ける</strong>役です。青系の色をつけてあります。</li></ul>'},
+  respiration:{
+    label:'呼吸',
+    organs:['trachea','lungRight','lungLeft','diaphragm'],
+    key:[['#dff3ff','吸う空気'],['#8798ad','はく息']],
+    hint:'<span class="hint-title">追いかけるポイント</span><ul>'
+      + '<li>横隔膜（むらさき）の上下に注目。<strong>下がると胸の空間が広がり</strong>、その結果として空気が入ってきます。</li>'
+      + '<li>気管 → 気管支 → <strong>肺胞</strong>と枝分かれし、肺胞のまわりの毛細血管で気体が交換されます。</li>'
+      + '<li>右肺は3つ、左肺は2つのかたまりに分かれています。左が小さいのは心臓が左に寄っているからです。</li></ul>'},
+  circulation:{
+    label:'血液の循環',
+    organs:['heart','lungRight','lungLeft','liver','smallIntestine','kidneyRight','kidneyLeft'],
+    key:[['#ff2d1f','動脈血（酸素が多い）'],['#2f7bff','静脈血（二酸化炭素が多い）']],
+    hint:'<span class="hint-title">追いかけるポイント</span><ul>'
+      + '<li>血液は<strong>1つの輪</strong>になってめぐります。心臓 → 肺 → 心臓 → 全身 → 心臓の順です。</li>'
+      + '<li>粒の色に注目。<strong>肺を通ると赤（動脈血）</strong>に、<strong>全身をめぐると青（静脈血）</strong>に変わります。</li>'
+      + '<li>だから<strong>肺動脈には静脈血</strong>、<strong>肺静脈には動脈血</strong>が流れます。ここが試験でよく問われます。</li></ul>'}
+};
+
+/* ============================================================
+   状態
+   ============================================================ */
+var scene, camera, renderer, controls, raycaster, pointer, root;
+var meshes = {}, centres = {}, boxes = {}, NAMES = {};
+var particles = [], paths = {};
+var mode = 'digestion', selected = null, speed = 1, breath = 0, fitDist = 0;
+var SCALE = 0.05;      /* mm → シーン単位 */
+
+function decode(b64, T){
+  var bin = atob(b64), u = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new T(u.buffer);
+}
+
+/* ============================================================
+   実データから臓器メッシュを組み立てる
+   元データは Z が上・+X が体の左。three.js の Y 上へ倒す。
+   ============================================================ */
+function buildOrgans(data){
+  root = new THREE.Group();
+  root.rotation.x = -Math.PI / 2;
+  scene.add(root);
+
+  var mn = data.bboxMin, sz = data.bboxSize;
+  var mid = [mn[0] + sz[0] / 2, mn[1] + sz[1] / 2, mn[2] + sz[2] / 2];
+
+  for (var key in data.organs){
+    var o = data.organs[key];
+    NAMES[key] = o.name;
+
+    var q = decode(o.pos, Int16Array);
+    var pos = new Float32Array(q.length);
+    for (var i = 0; i < q.length; i++){
+      var ax = i % 3;
+      pos[i] = ((((q[i] + 32768) / 65535) * sz[ax] + mn[ax]) - mid[ax]) * SCALE;
+    }
+    var idx = decode(o.idx, o.i32 ? Uint32Array : Uint16Array);
+
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    geo.computeVertexNormals();
+    geo.computeBoundingBox();
+
+    var mat = new THREE.MeshStandardMaterial({
+      color: PALETTE[key] || '#9aa7ba', roughness:.6, metalness:.02,
+      transparent:true, opacity:1, side:THREE.DoubleSide
+    });
+    var m = new THREE.Mesh(geo, mat);
+    m.userData.organ = key;
+    m.userData.base = new THREE.Color(PALETTE[key] || '#9aa7ba');
+    root.add(m);
+    meshes[key] = m;
+
+    boxes[key] = geo.boundingBox;
+    centres[key] = geo.boundingBox.getCenter(new THREE.Vector3());
+  }
+}
+
+/* 臓器の実際の頂点から、その内部を巡る経路をつくる。
+   体を上から見たときの角度でリング状に区切り、区画ごとの平均位置をつなぐ。
+   平均をとると向かい合うかべが打ち消し合い、経路が臓器の内側を通る。 */
+function binRing(key, n){
+  var p = meshes[key].geometry.attributes.position.array;
+  var c = centres[key], bins = [], i;
+  for (i = 0; i < n; i++) bins.push([0, 0, 0, 0]);
+  for (i = 0; i < p.length; i += 3){
+    var a = Math.atan2(p[i+1] - c.y, p[i] - c.x);
+    var b = Math.min(n - 1, Math.floor((a + Math.PI) / (2 * Math.PI) * n));
+    bins[b][0] += p[i]; bins[b][1] += p[i+1]; bins[b][2] += p[i+2]; bins[b][3]++;
+  }
+  var out = [];
+  for (i = 0; i < n; i++){
+    if (!bins[i][3]) continue;
+    var x = bins[i][0] / bins[i][3], y = bins[i][1] / bins[i][3], z = bins[i][2] / bins[i][3];
+    out.push(new THREE.Vector3(c.x + (x - c.x) * 0.8, c.y + (y - c.y) * 0.8, z));
+  }
+  return out;
+}
+
+/* リングを、直前の位置にいちばん近いところから始まる順路に組み替える */
+function ringPath(key, n, from, riseFirst){
+  var ring = binRing(key, n);
+  var s = 0, best = Infinity;
+  for (var i = 0; i < ring.length; i++){
+    var d = ring[i].distanceTo(from);
+    if (d < best){ best = d; s = i; }
+  }
+  var fwd = ring.slice(s).concat(ring.slice(0, s));
+  if (!riseFirst) return fwd;
+  /* 大腸は上行 → 横行 → 下行。いちばん高い位置に前半で達する向きを選ぶ */
+  var rev = [fwd[0]].concat(fwd.slice(1).reverse());
+  function peak(a){
+    var bi = 0, m = -Infinity;
+    for (var i = 0; i < a.length; i++) if (a[i].z > m){ m = a[i].z; bi = i; }
+    return bi / a.length;
+  }
+  return peak(fwd) <= peak(rev) ? fwd : rev;
+}
+function topOf(k){ return new THREE.Vector3(centres[k].x, centres[k].y, boxes[k].max.z); }
+function botOf(k){ return new THREE.Vector3(centres[k].x, centres[k].y, boxes[k].min.z); }
+
+function buildPaths(){
+  /* --- 消化管：食道 → 胃 → 小腸 → 大腸 --- */
+  var si = ringPath('smallIntestine', 16, botOf('stomach'), false);
+  var li = ringPath('largeIntestine', 12, si[si.length - 1], true);
+  paths.digestion = new THREE.CatmullRomCurve3(
+    [topOf('esophagus'), centres.esophagus.clone(), botOf('esophagus'),
+     topOf('stomach'), centres.stomach.clone(), botOf('stomach')]
+    .concat(si).concat(li).concat([botOf('largeIntestine')]));
+
+  /* --- 呼吸：気管から左右の肺へ --- */
+  paths.air = ['lungLeft', 'lungRight'].map(function(lung){
+    return new THREE.CatmullRomCurve3([
+      topOf('trachea'), centres.trachea.clone(), botOf('trachea'),
+      centres[lung].clone().lerp(centres.trachea, 0.45),
+      centres[lung].clone()
+    ]);
+  });
+
+  /* --- 循環：心臓 → 肺 → 心臓 → 全身 → 心臓 の1つの輪 --- */
+  var h = centres.heart;
+  var head = new THREE.Vector3(h.x, h.y, boxes.trachea.max.z + 1.8);
+  var foot = new THREE.Vector3(h.x, h.y, boxes.largeIntestine.min.z - 1.4);
+  var body = [[centres.lungLeft, head], [centres.lungRight, foot],
+              [centres.lungLeft, foot], [centres.lungRight, head]];
+  paths.blood = body.map(function(pair){
+    var lung = pair[0], far = pair[1];
+    return new THREE.CatmullRomCurve3([
+      h.clone().add(new THREE.Vector3(-0.5, 0, -0.5)),                 /* 右心房・右心室 */
+      lung.clone().lerp(h, 0.5), lung.clone(),                          /* 肺動脈 → 肺   */
+      lung.clone().lerp(h, 0.55),
+      h.clone().add(new THREE.Vector3(0.5, 0, -0.2)),                   /* 肺静脈 → 左心房 */
+      h.clone().add(new THREE.Vector3(0.6, 0, 0.3)),                    /* 左心室 */
+      far.clone().lerp(h, 0.45), far.clone(),                           /* 大動脈 → 全身 */
+      far.clone().lerp(h, 0.55),
+      h.clone().add(new THREE.Vector3(-0.5, 0, -0.5))                   /* 大静脈 → 右心房 */
+    ], true);
+  });
+}
+
+/* 消化の段階表示は、経路と臓器の実際の位置関係から自動で決める */
+function buildSteps(){
+  var seq = ['esophagus','stomach','smallIntestine','largeIntestine'];
+  var text = {
+    esophagus:'<b>食道</b>　ぜん動運動で胃へ送られる',
+    stomach:'<b>胃</b>　胃液のペプシンがタンパク質を分解',
+    smallIntestine:'<b>小腸</b>　消化の仕上げ。柔毛から養分を吸収',
+    largeIntestine:'<b>大腸</b>　水分を吸収し、残りが便になる'
+  };
+  var N = 240, ends = {}, i, s;
+  for (i = 0; i <= N; i++){
+    var p = paths.digestion.getPointAt(i / N), best = null, bd = Infinity;
+    for (s = 0; s < seq.length; s++){
+      var k = seq[s];
+      var d = boxes[k].distanceToPoint(p) + 0.02 * centres[k].distanceTo(p);
+      if (d < bd){ bd = d; best = k; }
+    }
+    ends[best] = i / N;                       /* その臓器にいた最後の位置 */
+  }
+  var out = [], prev = 0;
+  for (s = 0; s < seq.length; s++){
+    var k = seq[s], e = ends[k];
+    if (e === undefined || e <= prev) continue;
+    if (k === 'smallIntestine'){               /* 小腸の入口が十二指腸 */
+      var duo = prev + (e - prev) * 0.22;
+      out.push([duo, '<b>十二指腸</b>　すい液と胆汁が出される']);
+      prev = duo;
+    }
+    out.push([e, text[k]]);
+    prev = e;
+  }
+  if (out.length) out[out.length - 1][0] = 2;  /* 最後は終端まで */
+  STEPS.digestion = out;
+}
+
+/* 経路上のどこが動脈血・静脈血か（肺動脈＝静脈血、肺静脈＝動脈血） */
+function bloodKind(u){ return (u < 0.20 || u >= 0.70) ? 'venous' : 'arterial'; }
+
+/* ============================================================
+   流れの粒
+   ============================================================ */
+function clearParticles(){
+  for (var i = 0; i < particles.length; i++) root.remove(particles[i].mesh);
+  particles = [];
+}
+function spawn(){
+  clearParticles();
+  var geo = new THREE.SphereGeometry(0.4, 12, 10);
+  function add(curve, u, kind, color){
+    var m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: color }));
+    root.add(m);
+    particles.push({ mesh:m, curve:curve, u:u, kind:kind });
+  }
+  var i, c;
+  if (mode === 'digestion'){
+    for (i = 0; i < 16; i++) add(paths.digestion, i / 16, 'food', FLOW.food);
+  } else if (mode === 'respiration'){
+    for (c = 0; c < paths.air.length; c++)
+      for (i = 0; i < 8; i++) add(paths.air[c], i / 8, 'air', FLOW.airIn);
+  } else {
+    for (c = 0; c < paths.blood.length; c++)
+      for (i = 0; i < 12; i++) add(paths.blood[c], (i / 12 + c * 0.04) % 1, 'blood', FLOW.venous);
+  }
+}
+
+var _v = new THREE.Vector3();
+function moveParticles(dt){
+  var exhaling = Math.cos(breath) <= 0;
+  for (var i = 0; i < particles.length; i++){
+    var p = particles[i];
+    if (p.kind === 'air'){
+      p.u = 0.5 + 0.47 * Math.sin(breath + p.u * 1.8);
+      p.mesh.material.color.setHex(exhaling ? FLOW.airOut : FLOW.airIn);
+    } else if (p.kind === 'blood'){
+      p.u = (p.u + 0.075 * dt * speed) % 1;
+      p.mesh.material.color.setHex(FLOW[bloodKind(p.u)]);
+    } else {
+      p.u = (p.u + 0.038 * dt * speed) % 1;
+      p.mesh.material.color.setHex(p.u < 0.30 ? FLOW.food : (p.u < 0.68 ? FLOW.nutrient : FLOW.absorbed));
+    }
+    p.curve.getPointAt(Math.max(0, Math.min(1, p.u)), _v);
+    p.mesh.position.copy(_v);
+  }
+}
+
+/* ============================================================
+   モードと選択
+   ============================================================ */
+function canon(k){ return (ORGANS[k] && ORGANS[k].sameAs) ? ORGANS[k].sameAs : k; }
+
+function applyMode(){
+  var list = MODES[mode].organs;
+  var showOther = document.getElementById('showOther').checked;
+  for (var key in meshes){
+    var active = list.indexOf(key) >= 0;
+    var m = meshes[key], mat = m.material;
+    if (active){
+      var picked = selected && canon(key) === selected;
+      mat.color.copy(m.userData.base);
+      mat.opacity = (!selected || picked) ? 0.97 : 0.34;
+      mat.emissive.setHex(picked ? 0x1d3a35 : 0x000000);
+      mat.depthWrite = true;
+      m.visible = true;
+    } else {
+      mat.color.setHex(GHOST);
+      mat.opacity = 0.15;
+      mat.emissive.setHex(0x000000);
+      mat.depthWrite = false;
+      m.visible = showOther;
+    }
+  }
+}
+
+function buildOrganList(){
+  var el = document.getElementById('organList');
+  el.innerHTML = '';
+  var seen = {};
+  MODES[mode].organs.forEach(function(k){
+    var c = canon(k);
+    if (seen[c] || !ORGANS[c]) return;
+    seen[c] = 1;
+    var b = document.createElement('button');
+    b.dataset.organ = c;
+    b.style.color = PALETTE[c];
+    b.innerHTML = '<i style="background:' + PALETTE[c] + '"></i>'
+                + '<span style="color:var(--text)">' + (NAMES[c] || c) + '</span>'
+                + '<em>' + ORGANS[c].en + '</em>';
+    b.addEventListener('click', function(){ select(c); });
+    el.appendChild(b);
+  });
+}
+
+function select(key){
+  key = key ? canon(key) : null;
+  selected = (selected === key) ? null : key;
+
+  var btns = document.querySelectorAll('#organList button');
+  for (var i = 0; i < btns.length; i++)
+    btns[i].classList.toggle('on', btns[i].dataset.organ === selected);
+
+  var d = document.getElementById('detail');
+  if (!selected){
+    d.innerHTML = '<h4>' + MODES[mode].label + '</h4>'
+      + '<p>器官を選ぶと、そこで何が起きているかを表示します。3Dの臓器を直接クリックしてもかまいません。</p>';
+  } else {
+    var o = ORGANS[selected];
+    d.innerHTML = '<h4><i style="background:' + PALETTE[selected] + '"></i>'
+      + (NAMES[selected] || selected) + ' <em>' + o.en + '</em></h4>'
+      + o.p.map(function(t){ return '<p>' + t + '</p>'; }).join('');
+  }
+  applyMode();
+}
+
+function setMode(m){
+  mode = m;
+  selected = null;
+  var tabs = document.querySelectorAll('.mode-tab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle('active', tabs[i].dataset.mode === m);
+  document.getElementById('modeHint').innerHTML = MODES[m].hint;
+  document.getElementById('flowKey').innerHTML = MODES[m].key.map(function(k){
+    return '<span><i style="background:' + k[0] + '"></i>' + k[1] + '</span>';
+  }).join('');
+  /* 呼吸以外に切り替えたら肺と横隔膜を元に戻す */
+  if (m !== 'respiration'){
+    ['lungLeft','lungRight'].forEach(function(k){ if (meshes[k]) meshes[k].scale.setScalar(1); });
+    if (meshes.diaphragm) meshes.diaphragm.position.z = 0;
+  }
+  buildOrganList();
+  select(null);
+  spawn();
+}
+
+/* ============================================================
+   three.js まわり
+   ============================================================ */
+function initThree(){
+  var view = document.getElementById('view');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(40, view.clientWidth / view.clientHeight, 0.1, 500);
+  camera.position.set(4, 3, 42);
+
+  renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  renderer.setSize(view.clientWidth, view.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+  view.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.minDistance = 14;
+  controls.maxDistance = 90;
+  controls.enablePan = false;
+  controls.autoRotateSpeed = 0.8;
+  controls.target.set(0, 0, 0);
+
+  scene.add(new THREE.HemisphereLight(0xdce9ff, 0x18202e, 0.9));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+  var k = new THREE.DirectionalLight(0xffffff, 0.9); k.position.set(12, 16, 20); scene.add(k);
+  var f = new THREE.DirectionalLight(0x6f8fc0, 0.5); f.position.set(-14, -6, -14); scene.add(f);
+
+  raycaster = new THREE.Raycaster();
+  pointer = new THREE.Vector2();
+  renderer.domElement.addEventListener('click', onClick);
+  window.addEventListener('resize', onResize);
+}
+
+function onClick(e){
+  var r = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  var targets = MODES[mode].organs.map(function(k){ return meshes[k]; }).filter(Boolean);
+  var hit = raycaster.intersectObjects(targets, false)[0];
+  select(hit ? hit.object.userData.organ : null);
+}
+
+/* 実データの大きさに合わせて画面に収める（体格や画面比に依存しない） */
+function fitCamera(keepAngle){
+  var box = new THREE.Box3().setFromObject(root);
+  var c = box.getCenter(new THREE.Vector3());
+  var sz = box.getSize(new THREE.Vector3());
+  var t = Math.tan(camera.fov * Math.PI / 360);
+  var d = Math.max(sz.y / 2 / t, Math.max(sz.x, sz.z) / 2 / t / camera.aspect) * 1.18 + sz.z / 2;
+
+  controls.minDistance = d * 0.32;
+  controls.maxDistance = d * 2.4;
+
+  if (keepAngle && fitDist){
+    /* 見ている向きと、どれだけ寄せているかの度合いを保ったまま画面比に合わせ直す */
+    var off = camera.position.clone().sub(controls.target);
+    var zoom = off.length() / fitDist;
+    off.normalize().multiplyScalar(
+      Math.min(controls.maxDistance, Math.max(controls.minDistance, d * zoom)));
+    camera.position.copy(c).add(off);
+  } else {
+    camera.position.set(c.x + d * 0.10, c.y + d * 0.06, c.z + d);
+  }
+  fitDist = d;
+  controls.target.copy(c);
+  controls.update();
+}
+
+function onResize(){
+  var view = document.getElementById('view');
+  if (!view.clientWidth) return;
+  camera.aspect = view.clientWidth / view.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(view.clientWidth, view.clientHeight);
+  if (root) fitCamera(true);
+}
+
+var STEPS = {
+  digestion:[[0.09,'<b>食道</b>　ぜん動運動で胃へ送られる'],
+             [0.22,'<b>胃</b>　胃液のペプシンがタンパク質を分解'],
+             [0.30,'<b>十二指腸</b>　すい液と胆汁が出される'],
+             [0.68,'<b>小腸</b>　消化の仕上げ。柔毛から養分を吸収'],
+             [2,   '<b>大腸</b>　水分を吸収し、残りが便になる']],
+  circulation:[[0.20,'<b>肺循環</b>　右心室 → 肺動脈（静脈血）→ 肺'],
+               [0.40,'<b>肺で酸素を受け取る</b>　肺静脈（動脈血）→ 左心房'],
+               [0.70,'<b>体循環</b>　左心室 → 大動脈（動脈血）→ 全身'],
+               [2,   '<b>全身で酸素をわたす</b>　大静脈（静脈血）→ 右心房']]
+};
+function stepText(list, u){
+  for (var i = 0; i < list.length; i++) if (u < list[i][0]) return list[i][1];
+  return list[list.length - 1][1];
+}
+
+var last = 0;
+function animate(now){
+  requestAnimationFrame(animate);
+  var dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+  last = now;
+
+  var bar = document.getElementById('stepBar');
+  if (mode === 'respiration'){
+    breath += dt * 1.3 * speed;
+    var s = 1 + Math.sin(breath) * 0.055;
+    if (meshes.lungLeft)  meshes.lungLeft.scale.setScalar(s);
+    if (meshes.lungRight) meshes.lungRight.scale.setScalar(s);
+    if (meshes.diaphragm) meshes.diaphragm.position.z = -Math.sin(breath) * 0.9;
+    bar.innerHTML = Math.cos(breath) > 0
+      ? '<b>息を吸う</b>　横隔膜が下がり、胸の空間が広がって空気が入る'
+      : '<b>息をはく</b>　横隔膜が上がり、胸の空間がせまくなって空気が出る';
+  } else {
+    bar.innerHTML = stepText(STEPS[mode], particles.length ? particles[0].u : 0);
+  }
+
+  moveParticles(dt);
+  controls.autoRotate = document.getElementById('autoSpin').checked;
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+/* ============================================================
+   起動
+   ============================================================ */
+function fail(txt, msg){
+  var sp = document.querySelector('#loader .spin');
+  if (sp) sp.style.display = 'none';
+  txt.style.color = '#fca5a5';
+  txt.textContent = msg;
+}
+
+function start(){
+  var txt = document.getElementById('loadTxt');
+  if (typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined'){
+    fail(txt, '3Dライブラリを読み込めませんでした');
+    return;
+  }
+  fetch('body_data.json').then(function(res){
+    if (!res.ok) throw new Error('body_data.json を読み込めませんでした (' + res.status + ')');
+    return res.json();
+  }).then(function(data){
+    txt.textContent = '臓器を組み立て中…';
+    initThree();
+    buildOrgans(data);
+    buildPaths();
+    buildSteps();
+    fitCamera(false);
+
+    var tabs = document.querySelectorAll('.mode-tab');
+    for (var i = 0; i < tabs.length; i++){
+      (function(b){ b.addEventListener('click', function(){ setMode(b.dataset.mode); }); })(tabs[i]);
+    }
+    document.getElementById('speed').addEventListener('input', function(e){
+      speed = +e.target.value;
+      document.getElementById('speedVal').textContent = speed.toFixed(1) + 'x';
+    });
+    document.getElementById('showOther').addEventListener('change', applyMode);
+
+    setMode('digestion');
+    requestAnimationFrame(animate);
+    document.getElementById('loader').classList.add('done');
+    window.__ready = true;
+    console.log('BODY3D ready: organs=' + Object.keys(meshes).length);
+  }).catch(function(err){
+    console.error(err);
+    fail(txt, '読み込みエラー：' + err.message);
+  });
+}
+window.addEventListener('load', start);
+</script>
+
+</body>
+</html>
