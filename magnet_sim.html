@@ -482,12 +482,18 @@ FlowLines.prototype.build = function(traces, opt){
     pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
     var pm = new THREE.PointsMaterial({
       size: opt.size || 0.0045, vertexColors:true, transparent:true, opacity:0.95,
-      sizeAttenuation:true, depthWrite:false });
+      sizeAttenuation:true, depthWrite:false,
+      /* 導線の中を流れる電流は、管にさえぎられると見えないので手前に描く */
+      depthTest: !opt.onTop });
     this.pointsObj = new THREE.Points(pg, pm);
+    this.pointsObj.renderOrder = opt.onTop ? 6 : 0;
     this.group.add(this.pointsObj);
   }
   this.baseColor = new THREE.Color(opt.partColor || 0x8fdcff);
-  this.hotColor = new THREE.Color(opt.hotColor || 0xffffff);
+  /* flat＝強さで色を変えない（電流のように大きさが一定のもの用） */
+  this.flat = !!opt.flat;
+  this.hotColor = new THREE.Color(opt.flat ? (opt.partColor || 0x8fdcff)
+                                           : (opt.hotColor || 0xffffff));
   this.update(0);
 };
 var _pa = new THREE.Vector3(), _pb = new THREE.Vector3();
@@ -511,7 +517,7 @@ FlowLines.prototype.update = function(dt){
     pos[o3+1] = a.y + (b2.y - a.y)*f;
     pos[o3+2] = a.z + (b2.z - a.z)*f;
     /* 磁界が強いほど速く、明るく */
-    var rel = Math.min(1, Math.pow((L.mags[lo] || 1e-12) * invMax, 0.35));
+    var rel = this.flat ? 1 : Math.min(1, Math.pow((L.mags[lo] || 1e-12) * invMax, 0.35));
     col[o3]   = br + (hr - br)*rel;
     col[o3+1] = bg + (hg - bg)*rel;
     col[o3+2] = bbl + (hb - bbl)*rel;
@@ -1013,20 +1019,35 @@ mods.current = (function(){
        電流をマイナスにすると流れが逆になる（速さの符号で表す）。 */
     var cp = currentPath(), cm = cp.map(function(){ return 1; });
     curFlow.build([{ pts:cp, mags:cm }], { showLines:false,
-      partColor:0xffd166, hotColor:0xfff3c4, size:0.0052,
+      partColor:0xffe14d, flat:true, onTop:true, size:0.0072,
       density: st.arr === 'wire' ? 110 : 150 });
 
-    /* まっすぐな導線には、向きを示す矢印も添える */
+    /* 電流の向きを示す矢印。導線の太さより大きくしないと管に埋もれてしまう */
     if (curArrows){ g.remove(curArrows); curArrows = null; }
+    curArrows = new THREE.Group();
     if (st.arr === 'wire'){
-      curArrows = new THREE.Group();
-      [-0.075, 0, 0.075].forEach(function(y){
-        var a = makeArrow(0xffd166, 0.022, 0.0016);
+      [-0.078, -0.026, 0.026, 0.078].forEach(function(y){
+        var a = makeArrow(0xffe14d, 0.026, 0.0030);
         a.position.set(0, y, 0);
+        a.userData.dir = new THREE.Vector3(0, 1, 0);
         curArrows.add(a);
       });
-      g.add(curArrows);
+    } else {
+      /* 円形コイル・コイルは、輪の上に接線向きの矢印を置く */
+      var R = st.arr === 'loop' ? 0.030 : 0.024;
+      var ys = st.arr === 'loop' ? [0] : [-0.045, -0.015, 0.015, 0.045];
+      ys.forEach(function(yy, k){
+        for (var q = 0; q < (st.arr === 'loop' ? 4 : 2); q++){
+          var tt = (q/(st.arr === 'loop' ? 4 : 2) + k*0.13) * 2*Math.PI;
+          var a = makeArrow(0xffe14d, 0.020, 0.0026);
+          a.position.set(R*Math.sin(tt), yy, R*Math.cos(tt));
+          a.userData.dir = new THREE.Vector3(Math.cos(tt), 0, -Math.sin(tt));
+          curArrows.add(a);
+        }
+      });
     }
+    curArrows.children.forEach(function(a){ a.renderOrder = 5; });
+    g.add(curArrows);
 
     flow.build(traces, { showLines:true, lineColor:0x2f6fae,
       partColor:0x7fd4ff, hotColor:0xffffff, size:0.004, density:70 });
@@ -1059,7 +1080,7 @@ mods.current = (function(){
       rebuild(); rebuildNeedles();
       pickables = [probe];
       setHud('<b>ドラッグ</b>：黄色い点を動かす　<b>何もない所</b>：視点を回す<br>導線の中の<b>黄色い粒が電流</b>。マイナスにすると電流も磁界も逆になります');
-      setBadge([['#ffd166','電流'],['#7fd4ff','磁界の流れ'],['#fbbf24','調べる点']]);
+      setBadge([['#ffe14d','電流'],['#7fd4ff','磁界の流れ'],['#fbbf24','調べる点']]);
       document.getElementById('graph').classList.remove('on');
     },
     exit: function(){ root.remove(g); },
@@ -1079,7 +1100,7 @@ mods.current = (function(){
       if (curArrows){
         curArrows.visible = Math.abs(st.I) > 0.01;
         curArrows.children.forEach(function(a){
-          orientArrow(a, new THREE.Vector3(0, isign, 0), 1);
+          orientArrow(a, a.userData.dir.clone().multiplyScalar(isign), 1);
         });
       }
       var b = F(probe.position.x, probe.position.y, probe.position.z, new THREE.Vector3());
@@ -1175,7 +1196,7 @@ mods.force = (function(){
     var pts = [], mags = [];
     for (var k = 0; k <= 20; k++){ pts.push(new THREE.Vector3(-0.08 + 0.16*k/20, 0, 0)); mags.push(1); }
     wireFlow.build([{ pts:pts, mags:mags }], { showLines:false,
-      partColor:0xffd166, hotColor:0xfff3c4, size:0.005, density:220 });
+      partColor:0xffe14d, flat:true, onTop:true, size:0.0075, density:220 });
     wire.add(wireFlow.group);
   }
   function buildCoil(){
@@ -1218,7 +1239,7 @@ mods.force = (function(){
       cp.push(new THREE.Vector3(a.x+(b.x-a.x)*f, a.y+(b.y-a.y)*f, 0)); cm2.push(1);
     }
     wireFlow.build([{ pts:cp, mags:cm2 }], { showLines:false,
-      partColor:0xffd166, hotColor:0xfff3c4, size:0.0048, density:80 });
+      partColor:0xffe14d, flat:true, onTop:true, size:0.0072, density:80 });
     coil.add(wireFlow.group);
     /* ブラシ（回らない接点）。整流子の割れ目がここを通るたびに電流の向きが入れかわる */
     if (brushes) g.remove(brushes);
@@ -1254,7 +1275,7 @@ mods.force = (function(){
       setHud(st.arr === 'motor'
         ? '<b>コイルをつかんで回せます</b>　<b>何もない所</b>：視点を回す<br>整流子を外すと、回り続けなくなります'
         : '<b>視点を回して</b>、電流・磁界・力が3つとも直角なことを確かめよう');
-      setBadge([['#6fb6ff','磁界 N→S'],['#ffd166','電流'],['#4ade80','力']]);
+      setBadge([['#6fb6ff','磁界 N→S'],['#ffe14d','電流'],['#4ade80','力']]);
       document.getElementById('graph').classList.remove('on');
       document.getElementById('frcLbl').textContent = st.arr === 'motor' ? '回転の速さ' : '力の向き';
     },
@@ -1406,7 +1427,7 @@ mods.induce = (function(){
     g.add(coilMesh);
     var mags = pts.map(function(){ return 1; });
     coilFlow.build([{ pts:pts, mags:mags }], { showLines:false,
-      partColor:0xffd166, hotColor:0xfff3c4, size:0.0048, density:110 });
+      partColor:0xffe14d, flat:true, onTop:true, size:0.0072, density:110 });
     coilMesh.add(coilFlow.group);
 
     /* 誘導電流がつくる磁界の極。レンツの法則で向きが決まる */
@@ -1486,7 +1507,7 @@ mods.induce = (function(){
       st.hist = []; st.phiHist = [];
       pickables = magMesh ? [magMesh] : [];
       setHud('<b>磁石をつかんで上下に動かす</b>と電流が流れます<br>止めると流れは消えます。速く動かすほど大きい');
-      setBadge([['#ffd166','誘導電流'],['#7fd4ff','磁石の磁界'],['#ff6b5a','磁石が受ける力']]);
+      setBadge([['#ffe14d','誘導電流'],['#7fd4ff','磁石の磁界'],['#ff6b5a','磁石が受ける力']]);
       document.getElementById('graph').classList.add('on');
     },
     exit: function(){ root.remove(g); document.getElementById('graph').classList.remove('on'); },
