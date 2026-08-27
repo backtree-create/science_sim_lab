@@ -178,6 +178,13 @@ var PALETTE = {
 };
 var GHOST = 0x38445c;
 
+/* 中を流れが通る臓器と、そのときの不透明度 */
+var SEE_THROUGH = {
+  digestion:   { esophagus:0.72, stomach:0.72, smallIntestine:0.72, largeIntestine:0.72 },
+  respiration: { lungRight:0.42, lungLeft:0.42, trachea:0.6 },
+  circulation: { heart:0.5, lungRight:0.5, lungLeft:0.5 }
+};
+
 var FLOW = {
   food:0xffe27a, nutrient:0xff8a3d, absorbed:0x4fd1c5,
   airIn:0xdff3ff, airOut:0x8798ad,
@@ -262,6 +269,7 @@ var meshes = {}, centres = {}, boxes = {}, NAMES = {};
 var particles = [], paths = {};
 var mode = 'digestion', selected = null, speed = 1, breath = 0, fitDist = 0;
 var SCALE = 0.05;      /* mm → シーン単位 */
+var AIR_STROKE = 0.45; /* ひと呼吸で空気の列が進む割合 */
 
 function decode(b64, T){
   var bin = atob(b64), u = new Uint8Array(bin.length);
@@ -332,6 +340,14 @@ function binRing(key, n){
     var x = bins[i][0] / bins[i][3], y = bins[i][1] / bins[i][3], z = bins[i][2] / bins[i][3];
     out.push(new THREE.Vector3(c.x + (x - c.x) * 0.8, c.y + (y - c.y) * 0.8, z));
   }
+  /* 隣どうしをならして、粒が前後にがくつくのを防ぐ（輪なので端はつなげる） */
+  for (var pass = 0; pass < 2; pass++){
+    var src = out.map(function(v){ return v.clone(); });
+    for (i = 0; i < out.length; i++){
+      var a = src[(i - 1 + src.length) % src.length], b = src[i], d = src[(i + 1) % src.length];
+      out[i].set((a.x + 2*b.x + d.x)/4, (a.y + 2*b.y + d.y)/4, (a.z + 2*b.z + d.z)/4);
+    }
+  }
   return out;
 }
 
@@ -364,7 +380,7 @@ function buildPaths(){
   paths.digestion = new THREE.CatmullRomCurve3(
     [topOf('esophagus'), centres.esophagus.clone(), botOf('esophagus'),
      topOf('stomach'), centres.stomach.clone(), botOf('stomach')]
-    .concat(si).concat(li).concat([botOf('largeIntestine')]));
+    .concat(si).concat(li).concat([botOf('largeIntestine')]), false, 'centripetal');
 
   /* --- 呼吸：気管から左右の肺へ --- */
   paths.air = ['lungLeft', 'lungRight'].map(function(lung){
@@ -375,25 +391,57 @@ function buildPaths(){
     ]);
   });
 
-  /* --- 循環：心臓 → 肺 → 心臓 → 全身 → 心臓 の1つの輪 --- */
+  /* --- 循環：心臓 → 肺 → 心臓 → 全身 → 心臓 の1つの輪 ---
+     行きと帰りを横にずらして通す（動脈と静脈が並んで走るのと同じ）。
+     重なった制御点があると、そこで粒が止まってしまうので必ず離す。 */
   var h = centres.heart;
   var head = new THREE.Vector3(h.x, h.y, boxes.trachea.max.z + 1.8);
   var foot = new THREE.Vector3(h.x, h.y, boxes.largeIntestine.min.z - 1.4);
-  var body = [[centres.lungLeft, head], [centres.lungRight, foot],
-              [centres.lungLeft, foot], [centres.lungRight, head]];
-  paths.blood = body.map(function(pair){
+  var UP = new THREE.Vector3(0, 0, 1);
+
+  /* 心臓から目的地までを、脇にふくらませた弧で結ぶ */
+  function arc(from, to, side, n){
+    var dir = to.clone().sub(from);
+    var off = new THREE.Vector3().crossVectors(dir, UP).normalize().multiplyScalar(side);
+    var out = [];
+    for (var i = 1; i < n; i++){
+      var t = i / n;
+      out.push(from.clone().lerp(to, t).addScaledVector(off, Math.sin(t * Math.PI)));
+    }
+    return out;
+  }
+
+  var pairs = [[centres.lungLeft, head], [centres.lungRight, foot],
+               [centres.lungLeft, foot], [centres.lungRight, head]];
+  paths.blood = pairs.map(function(pair){
     var lung = pair[0], far = pair[1];
-    return new THREE.CatmullRomCurve3([
-      h.clone().add(new THREE.Vector3(-0.5, 0, -0.5)),                 /* 右心房・右心室 */
-      lung.clone().lerp(h, 0.5), lung.clone(),                          /* 肺動脈 → 肺   */
-      lung.clone().lerp(h, 0.55),
-      h.clone().add(new THREE.Vector3(0.5, 0, -0.2)),                   /* 肺静脈 → 左心房 */
-      h.clone().add(new THREE.Vector3(0.6, 0, 0.3)),                    /* 左心室 */
-      far.clone().lerp(h, 0.45), far.clone(),                           /* 大動脈 → 全身 */
-      far.clone().lerp(h, 0.55),
-      h.clone().add(new THREE.Vector3(-0.5, 0, -0.5))                   /* 大静脈 → 右心房 */
-    ], true);
+    var rv = h.clone().add(new THREE.Vector3(-0.6, -0.3,  0.5));   /* 右心室（肺へ出る） */
+    var la = h.clone().add(new THREE.Vector3( 0.7, -0.3, -0.1));   /* 左心房（肺から戻る） */
+    var lv = h.clone().add(new THREE.Vector3( 0.7,  0.3,  0.4));   /* 左心室（全身へ出る） */
+    var ra = h.clone().add(new THREE.Vector3(-0.6,  0.3, -0.5));   /* 右心房（全身から戻る） */
+    var pts = [rv]
+      .concat(arc(rv, lung,  1.2, 4)).concat([lung])               /* 肺動脈 → 肺 */
+      .concat(arc(lung, la, 1.2, 4)).concat([la, lv])              /* 肺静脈 → 左心房・左心室 */
+      .concat(arc(lv, far,   1.6, 5)).concat([far])                /* 大動脈 → 全身 */
+      .concat(arc(far, ra,  1.6, 5)).concat([ra]);                 /* 大静脈 → 右心房 */
+    var curve = new THREE.CatmullRomCurve3(pts, true, 'centripetal');
+    /* 肺と全身を通過する位置を実際の弧長から求める（ここで血液が入れかわる） */
+    curve.uLung = nearestU(curve, lung);
+    curve.uFar  = nearestU(curve, far);
+    return curve;
   });
+}
+
+/* 曲線上でいちばん近い位置の u を返す */
+function nearestU(curve, target){
+  var best = 0, bd = Infinity, v = new THREE.Vector3();
+  for (var i = 0; i <= 400; i++){
+    var u = i / 400;
+    curve.getPointAt(u, v);
+    var d = v.distanceToSquared(target);
+    if (d < bd){ bd = d; best = u; }
+  }
+  return best;
 }
 
 /* 消化の段階表示は、経路と臓器の実際の位置関係から自動で決める */
@@ -431,8 +479,12 @@ function buildSteps(){
   STEPS.digestion = out;
 }
 
-/* 経路上のどこが動脈血・静脈血か（肺動脈＝静脈血、肺静脈＝動脈血） */
-function bloodKind(u){ return (u < 0.20 || u >= 0.70) ? 'venous' : 'arterial'; }
+/* 経路上のどこが動脈血・静脈血か。
+   肺を出てから全身に着くまでが動脈血、それ以外は静脈血。
+   → 肺動脈には静脈血、肺静脈には動脈血が流れることが色でわかる。 */
+function bloodKind(curve, u){
+  return (u > curve.uLung && u <= curve.uFar) ? 'arterial' : 'venous';
+}
 
 /* ============================================================
    流れの粒
@@ -445,16 +497,19 @@ function spawn(){
   clearParticles();
   var geo = new THREE.SphereGeometry(0.4, 12, 10);
   function add(curve, u, kind, color){
-    var m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: color }));
+    var m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: color, transparent: true, opacity: 1, depthWrite: false }));
+    m.renderOrder = 3;
     root.add(m);
-    particles.push({ mesh:m, curve:curve, u:u, kind:kind });
+    particles.push({ mesh:m, curve:curve, u:u, u0:u, kind:kind });
   }
   var i, c;
   if (mode === 'digestion'){
     for (i = 0; i < 16; i++) add(paths.digestion, i / 16, 'food', FLOW.food);
   } else if (mode === 'respiration'){
+    /* 息を吸ったときに進む分（AIR_STROKE）を残して並べる */
     for (c = 0; c < paths.air.length; c++)
-      for (i = 0; i < 8; i++) add(paths.air[c], i / 8, 'air', FLOW.airIn);
+      for (i = 0; i < 9; i++) add(paths.air[c], (i / 8) * (1 - AIR_STROKE), 'air', FLOW.airIn);
   } else {
     for (c = 0; c < paths.blood.length; c++)
       for (i = 0; i < 12; i++) add(paths.blood[c], (i / 12 + c * 0.04) % 1, 'blood', FLOW.venous);
@@ -467,14 +522,17 @@ function moveParticles(dt){
   for (var i = 0; i < particles.length; i++){
     var p = particles[i];
     if (p.kind === 'air'){
-      p.u = 0.5 + 0.47 * Math.sin(breath + p.u * 1.8);
+      /* 息を吸うと列全体が奥へ進み、はくと戻る。並び（u0）は保つ */
+      p.u = p.u0 + AIR_STROKE * (0.5 - 0.5 * Math.cos(breath));
       p.mesh.material.color.setHex(exhaling ? FLOW.airOut : FLOW.airIn);
     } else if (p.kind === 'blood'){
       p.u = (p.u + 0.075 * dt * speed) % 1;
-      p.mesh.material.color.setHex(FLOW[bloodKind(p.u)]);
+      p.mesh.material.color.setHex(FLOW[bloodKind(p.curve, p.u)]);
     } else {
       p.u = (p.u + 0.038 * dt * speed) % 1;
       p.mesh.material.color.setHex(p.u < 0.30 ? FLOW.food : (p.u < 0.68 ? FLOW.nutrient : FLOW.absorbed));
+      /* 消化管は1本道なので、端では消えて口からまた現れるようにする */
+      p.mesh.material.opacity = Math.min(1, Math.min(p.u, 1 - p.u) / 0.05);
     }
     p.curve.getPointAt(Math.max(0, Math.min(1, p.u)), _v);
     p.mesh.position.copy(_v);
@@ -495,15 +553,14 @@ function applyMode(){
     if (active){
       var picked = selected && canon(key) === selected;
       var isLung = (key === 'lungLeft' || key === 'lungRight');
+      /* 中を流れが通る臓器はすかす（呼吸の肺＝気管支が見える／循環の心臓と肺＝血液が見える） */
+      var see = SEE_THROUGH[mode] && SEE_THROUGH[mode][key];
       mat.color.copy(m.userData.base);
-      /* 呼吸では肺をすかせて、中の気管支が見えるようにする */
-      var full = (isLung && mode === 'respiration')
-        ? (selected === 'bronchiRight' ? 0.22 : (picked ? 0.62 : 0.42))
-        : 0.97;
+      var full = see ? (selected === 'bronchiRight' ? 0.20 : (picked ? see + 0.2 : see)) : 0.97;
       mat.opacity = (!selected || picked || isLung) ? full : 0.34;
       mat.emissive.setHex(picked ? 0x1d3a35 : 0x000000);
-      mat.depthWrite = !(isLung && mode === 'respiration');
-      m.renderOrder = (isLung && mode === 'respiration') ? 2 : 0;
+      mat.depthWrite = !see;
+      m.renderOrder = see ? 2 : 0;
       m.visible = true;
     } else {
       mat.color.setHex(GHOST);
