@@ -107,7 +107,7 @@
 <div class="sim-header">
   <span class="eyebrow">Human Body · Real Anatomical Data</span>
   <h1>からだのつくりと働き 3D</h1>
-  <p>実際に計測された人体データ（BodyParts3D）の臓器を、そのままの形と位置で立体表示します。消化・呼吸・循環を切り替えると、そのはたらきに関わる器官だけが色づき、食物・空気・血液が本物の臓器の中を通っていきます。</p>
+  <p>実際に計測された人体データの臓器を、そのままの形と位置で立体表示します（内臓は BodyParts3D、肺は Visible Human）。消化・呼吸・循環を切り替えると、そのはたらきに関わる器官だけが色づき、食物・空気・血液が本物の臓器の中を通っていきます。呼吸では肺をすかして、中の気管支まで見えます。</p>
 </div>
 
 <div class="layout">
@@ -117,7 +117,8 @@
       <div id="view">
         <div class="hud">ドラッグ：回す ／ ホイール：拡大縮小 ／ 臓器をクリックで解説</div>
         <div class="flowkey" id="flowKey"></div>
-        <div class="credit">BodyParts3D © ライフサイエンス統合データベースセンター<br>licensed under CC 表示 4.0 国際</div>
+        <div class="credit">BodyParts3D © ライフサイエンス統合データベースセンター（CC 表示 4.0 国際）<br>
+          肺: Respiratory System (Lungs) – Visible Human Male, Kristen Browne, NIH 3D (CC BY 4.0)</div>
         <div id="loader"><div class="spin"></div><div id="loadTxt">臓器データを読み込み中…</div></div>
       </div>
     </div>
@@ -172,6 +173,7 @@ var PALETTE = {
   esophagus:'#ffd9a0', stomach:'#ff9f40', smallIntestine:'#ff6b3d', largeIntestine:'#bb3c85',
   liver:'#4d9de0', gallbladder:'#22c1c3', pancreas:'#9b7ede',
   trachea:'#e8f6ff', lungRight:'#3ec1f3', lungLeft:'#3ec1f3', diaphragm:'#cf7fe0',
+  bronchiRight:'#ffe08a', bronchiLeft:'#ffe08a',
   heart:'#e05263', kidneyRight:'#5fbf8f', kidneyLeft:'#5fbf8f'
 };
 var GHOST = 0x38445c;
@@ -205,10 +207,14 @@ var ORGANS = {
     p:['おもに<b>水分を吸収</b>します。消化されずに残ったものは便となり、体外へ出されます。']},
   trachea:{ en:'TRACHEA',
     p:['鼻や口から入った空気の通り道です。気管は左右の<b>気管支</b>に分かれ、肺の中でさらに細かく枝分かれして、先端の<b>肺胞</b>につながります。']},
+  bronchiRight:{ en:'BRONCHI',
+    p:['肺の中で<b>気管支</b>が細かく枝分かれしていくようすです。この形も実際に計測されたデータで、枝の先端に<b>肺胞</b>がついています。',
+       '肺を半分すけた状態で表示しているので、外の形と中の枝を同時に見ることができます。いっしょに描かれている太い枝は<b>肺動脈・肺静脈</b>で、肺胞のまわりまで血液を運びます。']},
+  bronchiLeft:{ en:'BRONCHI', sameAs:'bronchiRight' },
   lungRight:{ en:'LUNG',
     p:['肺は小さな袋<b>肺胞</b>の集まりです。数億個あるといわれ、空気と血液がふれあう表面積をきわめて大きくしています。',
        '肺胞をとりまく毛細血管で<b>酸素が血液に取りこまれ</b>、<b>二酸化炭素が血液から出されます</b>。ここで静脈血が動脈血に変わります。',
-       '右肺は3つ、左肺は2つのかたまり（肺葉）に分かれています。左肺が小さいのは、心臓が左に寄っているためです。回して確かめてみましょう。']},
+       'このモデルでは<b>右肺のほうが大きく</b>、左肺の内側は心臓の形にくぼんでいます。心臓が体の左寄りにあるためです。']},
   lungLeft:{ en:'LUNG', sameAs:'lungRight' },
   diaphragm:{ en:'DIAPHRAGM',
     p:['肺には筋肉がなく、自分でふくらむことはできません。<b>横隔膜が下がり、ろっ骨が上がる</b>と胸の空間が広がり、その結果として空気が肺に流れこみます。',
@@ -232,12 +238,12 @@ var MODES = {
       + '<li>肝臓・胆のう・すい臓は管の外にあり、<strong>消化液を出して助ける</strong>役です。青系の色をつけてあります。</li></ul>'},
   respiration:{
     label:'呼吸',
-    organs:['trachea','lungRight','lungLeft','diaphragm'],
-    key:[['#dff3ff','吸う空気'],['#8798ad','はく息']],
+    organs:['trachea','bronchiRight','bronchiLeft','lungRight','lungLeft','diaphragm'],
+    key:[['#dff3ff','吸う空気'],['#8798ad','はく息'],['#ffe08a','気管支']],
     hint:'<span class="hint-title">追いかけるポイント</span><ul>'
       + '<li>横隔膜（むらさき）の上下に注目。<strong>下がると胸の空間が広がり</strong>、その結果として空気が入ってきます。</li>'
-      + '<li>気管 → 気管支 → <strong>肺胞</strong>と枝分かれし、肺胞のまわりの毛細血管で気体が交換されます。</li>'
-      + '<li>右肺は3つ、左肺は2つのかたまりに分かれています。左が小さいのは心臓が左に寄っているからです。</li></ul>'},
+      + '<li>肺をすかして表示しています。中の黄色い枝が<strong>気管支</strong>。気管 → 気管支 → 細気管支と分かれ、先端の<strong>肺胞</strong>で気体が交換されます。</li>'
+      + '<li>左肺が右肺より小さく、内側がくぼんでいます。ここに<strong>心臓</strong>が収まります（心切痕）。回して確かめましょう。</li></ul>'},
   circulation:{
     label:'血液の循環',
     organs:['heart','lungRight','lungLeft','liver','smallIntestine','kidneyRight','kidneyLeft'],
@@ -488,10 +494,16 @@ function applyMode(){
     var m = meshes[key], mat = m.material;
     if (active){
       var picked = selected && canon(key) === selected;
+      var isLung = (key === 'lungLeft' || key === 'lungRight');
       mat.color.copy(m.userData.base);
-      mat.opacity = (!selected || picked) ? 0.97 : 0.34;
+      /* 呼吸では肺をすかせて、中の気管支が見えるようにする */
+      var full = (isLung && mode === 'respiration')
+        ? (selected === 'bronchiRight' ? 0.22 : (picked ? 0.62 : 0.42))
+        : 0.97;
+      mat.opacity = (!selected || picked || isLung) ? full : 0.34;
       mat.emissive.setHex(picked ? 0x1d3a35 : 0x000000);
-      mat.depthWrite = true;
+      mat.depthWrite = !(isLung && mode === 'respiration');
+      m.renderOrder = (isLung && mode === 'respiration') ? 2 : 0;
       m.visible = true;
     } else {
       mat.color.setHex(GHOST);
@@ -554,7 +566,11 @@ function setMode(m){
   }).join('');
   /* 呼吸以外に切り替えたら肺と横隔膜を元に戻す */
   if (m !== 'respiration'){
-    ['lungLeft','lungRight'].forEach(function(k){ if (meshes[k]) meshes[k].scale.setScalar(1); });
+    ['lungLeft','lungRight','bronchiLeft','bronchiRight'].forEach(function(k){
+      if (!meshes[k]) return;
+      meshes[k].scale.setScalar(1);
+      meshes[k].position.set(0, 0, 0);
+    });
     if (meshes.diaphragm) meshes.diaphragm.position.z = 0;
   }
   buildOrganList();
@@ -669,8 +685,12 @@ function animate(now){
   if (mode === 'respiration'){
     breath += dt * 1.3 * speed;
     var s = 1 + Math.sin(breath) * 0.055;
-    if (meshes.lungLeft)  meshes.lungLeft.scale.setScalar(s);
-    if (meshes.lungRight) meshes.lungRight.scale.setScalar(s);
+    /* それぞれの肺の中心を軸にふくらませる（位置がずれないように） */
+    ['lungLeft','lungRight','bronchiLeft','bronchiRight'].forEach(function(k){
+      if (!meshes[k]) return;
+      meshes[k].scale.setScalar(s);
+      meshes[k].position.copy(centres[k]).multiplyScalar(1 - s);
+    });
     if (meshes.diaphragm) meshes.diaphragm.position.z = -Math.sin(breath) * 0.9;
     bar.innerHTML = Math.cos(breath) > 0
       ? '<b>息を吸う</b>　横隔膜が下がり、胸の空間が広がって空気が入る'
@@ -708,6 +728,7 @@ function start(){
     txt.textContent = '臓器を組み立て中…';
     initThree();
     buildOrgans(data);
+    NAMES.bronchiRight = '気管支と肺の血管';
     buildPaths();
     buildSteps();
     fitCamera(false);
