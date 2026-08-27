@@ -28,7 +28,7 @@
   .genopick{display:flex;flex-direction:column;gap:8px;}
   .genorow{display:flex;align-items:center;gap:10px;}
   .genorow .who{
-    font-family:var(--font-mono);font-size:11px;color:var(--text-faint);
+    font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
     width:44px;flex:none;
   }
   .seg{display:flex;gap:4px;flex:1;background:var(--bg-inset);border:1px solid var(--border);border-radius:var(--r-sm);padding:3px;}
@@ -41,7 +41,7 @@
   .seg button:hover{color:var(--text);}
   .seg button.on{background:#fff;color:var(--accent);font-weight:700;box-shadow:var(--sh-1);}
   .phen{
-    font-size:11.5px;color:var(--text-faint);width:70px;flex:none;text-align:right;
+    font-size:11.5px;color:var(--text-dim);width:70px;flex:none;text-align:right;
   }
 
   /* 格子表 */
@@ -77,7 +77,7 @@
     background:var(--bg-panel-2);border:1px solid var(--border);border-radius:var(--r-sm);
     padding:10px 12px;
   }
-  .kv .k{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);margin-bottom:4px;}
+  .kv .k{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;color:var(--text-dim);margin-bottom:4px;}
   .kv .v{font-family:var(--font-mono);font-size:15px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;}
   .kv .v.sub{font-size:12.5px;font-weight:500;color:var(--text-dim);}
 
@@ -232,31 +232,34 @@
 /* ============================================================
    形質のデータ（メンデル 1866年の論文に記載された実測値つき）
    ============================================================ */
+/* 顕性と潜性の色は、明度差を大きく取って区別できるようにしている
+   （どの形質も 3:1 以上のコントラスト比。色覚特性があっても明暗で読み分けられる） */
 const TRAITS = {
   seed: {
     name: '種子の形', gene: 'R',
-    dom: { label: '丸',   color: '#d9a441', edge: '#9a6f1f' },
-    rec: { label: 'しわ', color: '#b8894a', edge: '#7d5722' },
+    dom: { label: '丸',   color: '#e8a51c', edge: '#8a5a10', ink: '#3a2405' },
+    rec: { label: 'しわ', color: '#5b3a1a', edge: '#2e1c0b', ink: '#ffffff' },
     mendel: { dom: 5474, rec: 1850, domName: '丸', recName: 'しわ' },
     draw: 'seed'
   },
   cotyledon: {
     name: '子葉の色', gene: 'Y',
-    dom: { label: '黄色', color: '#e8c944', edge: '#a58a12' },
-    rec: { label: '緑色', color: '#5aa04e', edge: '#356b2c' },
+    dom: { label: '黄色', color: '#edc21f', edge: '#8f7205', ink: '#3a2f02' },
+    rec: { label: '緑色', color: '#1f7a3a', edge: '#0e4520', ink: '#ffffff' },
     mendel: { dom: 6022, rec: 2001, domName: '黄色', recName: '緑色' },
     draw: 'cotyledon'
   },
   height: {
     name: '草丈', gene: 'T',
-    dom: { label: '高い', color: '#3f9e5a', edge: '#256b39' },
-    rec: { label: '低い', color: '#8fc27a', edge: '#4e8244' },
+    dom: { label: '高い', color: '#1c7a4a', edge: '#0d3f26', ink: '#ffffff' },
+    rec: { label: '低い', color: '#c3e5a8', edge: '#6a9a4c', ink: '#22400f' },
     mendel: { dom: 787, rec: 277, domName: '高い', recName: '低い' },
     draw: 'height'
   }
 };
 
-const MAX_POP = 10000;
+// 1個体あたりのマスが小さくなりすぎないよう、上限を抑えている
+const MAX_POP = 6000;
 
 let traitKey = 'seed';
 let parents = ['AA', 'aa'];
@@ -355,15 +358,30 @@ function resetAll() {
 /* ============================================================
    個体の絵
    ============================================================ */
+/* 小さいマスでは「色の面積」で比が読めるよう、丸ではなく角丸のタイルで敷き詰める */
+function drawTile(x, y, s, genotype, t) {
+  const p = isDom(genotype) ? t.dom : t.rec;
+  const w = s * 0.92, r = Math.min(3, w * 0.22);
+  const x0 = x - w / 2, y0 = y - w / 2;
+  ctx.beginPath();
+  ctx.moveTo(x0 + r, y0);
+  ctx.arcTo(x0 + w, y0, x0 + w, y0 + w, r);
+  ctx.arcTo(x0 + w, y0 + w, x0, y0 + w, r);
+  ctx.arcTo(x0, y0 + w, x0, y0, r);
+  ctx.arcTo(x0, y0, x0 + w, y0, r);
+  ctx.closePath();
+  ctx.fillStyle = p.color;
+  ctx.fill();
+  if (w >= 5) {                       // 明るい色が背景に溶けないよう縁を付ける
+    ctx.strokeStyle = p.edge;
+    ctx.lineWidth = Math.min(1.2, w * 0.14);
+    ctx.stroke();
+  }
+}
+
 function drawIndividual(x, y, s, genotype, t, detailed) {
   const p = isDom(genotype) ? t.dom : t.rec;
-  if (!detailed) {
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(x, y, s * 0.42, 0, Math.PI * 2);
-    ctx.fill();
-    return;
-  }
+  if (!detailed) { drawTile(x, y, s, genotype, t); return; }
   ctx.save();
   ctx.translate(x, y);
   ctx.lineJoin = 'round';
@@ -433,8 +451,8 @@ function render() {
     ctx.font = '600 15px ' + MONO;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText(parents[i], px, py + 40);
-    ctx.fillStyle = C_FAINT;
-    ctx.font = '400 12px ' + MONO;
+    ctx.fillStyle = C_DIM;
+    ctx.font = "500 12.5px " + MONO;
     ctx.fillText(isDom(parents[i]) ? t.dom.label : t.rec.label, px, py + 60);
   });
   ctx.fillStyle = C_DIM;
@@ -456,13 +474,34 @@ function render() {
     ctx.fillText('生殖細胞 ' + g.join(' / '), px, 156);
   });
 
+  // ---- 色の凡例（どの色がどの形質か） ----
+  const keyY = 176;
+  let kx = 22;
+  [t.dom, t.rec].forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.strokeStyle = p.edge; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.rect(kx, keyY - 6, 13, 13); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C_INK;
+    ctx.font = '500 12.5px ' + MONO;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(p.label, kx + 20, keyY + 1);
+    kx += 26 + ctx.measureText(p.label).width + 20;
+  });
+
   // ---- 子の集団 ----
-  const top = 178, pad = 22;
+  const top = 198, pad = 22;
   const gw = BASE_W - pad * 2, gh = BASE_H - top - 14;
   const n = population.length;
 
+  // 明るいタイルが白地に溶けないよう、集団の下に地色を敷く
+  ctx.fillStyle = '#eef1f7';
+  ctx.strokeStyle = C_LINE; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.rect(pad - 6, top - 6, gw + 12, gh + 12);
+  ctx.fill(); ctx.stroke();
+
   if (n === 0) {
-    ctx.fillStyle = C_FAINT;
+    ctx.fillStyle = C_DIM;
     ctx.font = '400 13px ' + MONO;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('「＋1個体」を押すと、子が1つずつ生まれます', BASE_W / 2, top + gh / 2);
@@ -476,7 +515,7 @@ function render() {
       cols = Math.max(1, Math.floor(gw / cell));
       rows = Math.ceil(n / cols);
     }
-    const detailed = cell >= 22;
+    const detailed = cell >= 30;   // 大きいときだけ実物らしい絵、それ以外はタイル
     const ox = pad + (gw - cols * cell) / 2;
     for (let i = 0; i < n; i++) {
       const c = i % cols, r = Math.floor(i / cols);
@@ -561,10 +600,14 @@ function updateUI() {
   const dom = population.filter(isDom).length;
   const rec = n - dom;
 
-  document.getElementById('rbDom').style.width = (n ? dom / n * 100 : 0) + '%';
-  document.getElementById('rbRec').style.width = (n ? rec / n * 100 : 0) + '%';
-  document.getElementById('rbDom').textContent = dom ? `${t.dom.label} ${dom}` : '';
-  document.getElementById('rbRec').textContent = rec ? `${t.rec.label} ${rec}` : '';
+  // 比率バーもキャンバスと同じ色にして、色の意味を1つに保つ
+  const bd = document.getElementById('rbDom'), br = document.getElementById('rbRec');
+  bd.style.width = (n ? dom / n * 100 : 0) + '%';
+  br.style.width = (n ? rec / n * 100 : 0) + '%';
+  bd.style.background = t.dom.color; bd.style.color = t.dom.ink;
+  br.style.background = t.rec.color; br.style.color = t.rec.ink;
+  bd.textContent = dom ? `${t.dom.label} ${dom}` : '';
+  br.textContent = rec ? `${t.rec.label} ${rec}` : '';
 
   document.getElementById('kTotal').textContent = n + (n >= MAX_POP ? '（上限）' : '');
   document.getElementById('kRatio').textContent = ratioText(dom, rec);
@@ -616,7 +659,8 @@ function buildPunnett() {
     html += `<tr><th>${a}</th>`;
     g1.forEach(b => {
       const g = combine(a, b);
-      html += `<td class="${isDom(g) ? 'dom' : 'rec'}">${g}</td>`;
+      const p = isDom(g) ? t.dom : t.rec;
+      html += `<td style="background:${p.color};color:${p.ink};border-color:${p.edge}">${g}</td>`;
     });
     html += '</tr>';
   });
