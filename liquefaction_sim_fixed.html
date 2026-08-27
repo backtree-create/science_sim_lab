@@ -1,312 +1,178 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>液状化現象メカニズム・シミュレーター【地盤固定修正版】</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-  
-  <style>
-    :root {
-      --bg-dark: #0f172a;
-      --panel-bg: rgba(30, 41, 59, 0.85);
-      --panel-border: rgba(255, 255, 255, 0.12);
-      --accent-blue: #38bdf8;
-      --accent-amber: #f59e0b;
-      --accent-red: #ef4444;
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>液状化現象メカニズム・シミュレーター</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body.instrument{--accent:#38bdf8;}
+  .layout{grid-template-columns:1.65fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+  .stage{padding:0;position:relative;}
+  #simCanvas{
+    display:block;width:100%;height:auto;aspect-ratio:2/1;
+    touch-action:manipulation;
+  }
 
-    body {
-      -webkit-tap-highlight-color: transparent;
-      background-color: var(--bg-dark);
-      color: var(--text-primary);
-      font-family: 'Inter', -apple-system, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
+  /* 間隙水圧ゲージ（キャンバス上のオーバーレイ） */
+  .gauge{
+    position:absolute;top:14px;right:14px;z-index:2;width:190px;
+    background:rgba(9,13,20,.82);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--border);border-radius:var(--r-md);
+    padding:11px 13px;
+  }
+  .gauge .lab{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;
+    color:var(--text-faint);margin-bottom:7px;
+  }
+  .gauge .lab b{color:var(--accent);font-weight:500;font-size:12.5px;font-variant-numeric:tabular-nums;}
+  .gauge .bar{
+    height:9px;border-radius:var(--r-pill);background:var(--bg-inset);overflow:hidden;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.6);
+  }
+  .gauge .fill{
+    height:100%;width:0%;border-radius:var(--r-pill);
+    background:linear-gradient(90deg,#38bdf8,#fbbf24 55%,#ef4444);
+    transition:width .12s linear;
+  }
 
-    header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
+  /* 状態解説 */
+  .status-box{
+    margin-top:14px;
+    background:var(--bg-panel-2);
+    border:1px solid var(--border);
+    border-left:3px solid var(--accent);
+    border-radius:0 var(--r-md) var(--r-md) 0;
+    padding:13px 16px;
+    font-size:13px;line-height:1.85;color:var(--text-dim);
+    transition:border-color .3s var(--ease);
+  }
+  .status-box strong{color:var(--text);font-weight:700;}
 
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--accent-blue);
-      margin-bottom: 6px;
-    }
+  /* 操作 */
+  .btn-group{display:flex;gap:10px;}
+  .btn-group button{flex:1;}
+  .btn-quake{
+    font-family:var(--font-mono);font-size:12.5px;font-weight:700;letter-spacing:.03em;
+    background:#e0483f;color:#fff;border:1px solid transparent;border-radius:var(--r-sm);
+    padding:12px 16px;cursor:pointer;transition:.16s var(--ease);touch-action:manipulation;
+    box-shadow:0 2px 12px -3px rgba(224,72,63,.75);
+  }
+  .btn-quake:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .btn-quake.active{animation:quakepulse .45s infinite alternate;}
+  @keyframes quakepulse{from{transform:translateX(-1.5px);}to{transform:translateX(1.5px);}}
+  .btn-reset{
+    font-family:var(--font-mono);font-size:12.5px;letter-spacing:.03em;
+    background:var(--bg-panel-2);color:var(--text);border:1px solid var(--border);
+    border-radius:var(--r-sm);padding:12px 16px;cursor:pointer;
+    transition:.16s var(--ease);touch-action:manipulation;
+  }
+  .btn-reset:hover{border-color:var(--border-strong);background:#1c2430;}
 
-    p.subtitle {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
+  .soil-note{
+    font-family:var(--font-mono);font-size:11px;color:var(--text-faint);
+    background:var(--bg-inset);border:1px solid var(--border);
+    border-radius:var(--r-sm);padding:10px 12px;line-height:1.7;
+  }
+  .soil-note b{color:var(--text-dim);font-weight:500;}
 
-    .main-container {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      width: 100%;
-      max-width: 850px;
-    }
-
-    .canvas-card {
-      background: var(--panel-bg);
-      border: 1px solid var(--panel-border);
-      border-radius: 16px;
-      padding: 16px;
-      position: relative;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    canvas {
-      background: #020617;
-      border-radius: 12px;
-      width: 100%;
-      /* 内部解像度800x400の縦横比を維持（スマホ縦持ちでの引き伸ばし歪みを防止） */
-      height: auto;
-      aspect-ratio: 2 / 1;
-      display: block;
-      touch-action: manipulation;
-    }
-
-    .gauge-container {
-      position: absolute;
-      top: 30px;
-      right: 30px;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(8px);
-      border: 1px solid var(--panel-border);
-      padding: 10px 14px;
-      border-radius: 10px;
-      width: 180px;
-    }
-
-    .gauge-label {
-      font-size: 0.7rem;
-      color: var(--text-secondary);
-      font-weight: 600;
-      margin-bottom: 4px;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .gauge-bar-bg {
-      width: 100%;
-      height: 10px;
-      background: #334155;
-      border-radius: 5px;
-      overflow: hidden;
-    }
-
-    .gauge-bar-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #38bdf8, #ef4444);
-      transition: width 0.1s linear;
-    }
-
-    .status-box {
-      margin-top: 12px;
-      width: 100%;
-      background: rgba(15, 23, 42, 0.6);
-      border-left: 4px solid var(--accent-blue);
-      padding: 10px 14px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      line-height: 1.5;
-      color: var(--text-primary);
-    }
-
-    .controls-card {
-      background: var(--panel-bg);
-      border: 1px solid var(--panel-border);
-      border-radius: 16px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .control-group {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .btn-group {
-      display: flex;
-      gap: 10px;
-      width: 100%;
-    }
-
-    button {
-      flex: 1;
-      touch-action: manipulation;
-      padding: 12px 20px;
-      border-radius: 10px;
-      border: none;
-      font-weight: 700;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .btn-quake {
-      background: var(--accent-red);
-      color: #fff;
-    }
-    .btn-quake:hover { background: #dc2626; }
-    .btn-quake.active {
-      animation: pulse 0.5s infinite alternate;
-    }
-
-    .btn-reset {
-      background: #475569;
-      color: #fff;
-    }
-    .btn-reset:hover { background: #64748b; }
-
-    .slider-box {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-width: 200px;
-    }
-
-    .slider-box label {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      display: flex;
-      justify-content: space-between;
-    }
-
-    input[type="range"] {
-      width: 100%;
-      accent-color: var(--accent-blue);
-    }
-
-    @keyframes pulse {
-      from { transform: scale(1); }
-      to { transform: scale(1.02); }
-    }
-
-    /* 小さい画面：ゲージがキャンバスを覆いすぎないように縮小 */
-    @media (max-width: 600px) {
-      body { padding: 12px; }
-      .gauge-container {
-        width: 140px;
-        top: 24px;
-        right: 24px;
-        padding: 8px 10px;
-      }
-      .btn-group { flex-direction: column; }
-    }
-
-    /* タッチ端末向け：ボタンとスライダーのつまみを大きく */
-    @media (pointer: coarse) {
-      button { min-height: 44px; }
-      input[type="range"] {
-        -webkit-appearance: none;
-        appearance: none;
-        height: 30px;
-        background: transparent;
-      }
-      input[type="range"]::-webkit-slider-runnable-track {
-        height: 6px;
-        background: #334155;
-        border-radius: 3px;
-      }
-      input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        background: var(--accent-blue);
-        border: 2px solid #fff;
-        margin-top: -10px;
-      }
-      input[type="range"]::-moz-range-track {
-        height: 6px;
-        background: #334155;
-        border-radius: 3px;
-      }
-      input[type="range"]::-moz-range-thumb {
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        background: var(--accent-blue);
-        border: 2px solid #fff;
-      }
-    }
-  </style>
+  @media (max-width:600px){
+    /* 狭い画面では建物にかからないところまでゲージを小さくする */
+    .gauge{width:124px;top:9px;right:9px;padding:7px 9px;}
+    .gauge .lab{font-size:8px;margin-bottom:5px;}
+    .gauge .lab b{font-size:11px;}
+    .gauge .bar{height:7px;}
+  }
+  @media (pointer:coarse){
+    .btn-quake,.btn-reset{min-height:46px;}
+  }
+</style>
 </head>
-<body>
+<body class="instrument">
 
-  <header>
-    <h1>液状化現象 メカニズム・シミュレーター</h1>
-    <p class="subtitle">なぜ地震で「建物が沈み」「マンホールが浮き上がる」のか？粒子レベルで可視化</p>
-  </header>
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">16 ／ 液状化現象のメカニズム</span>
+</div>
 
-  <div class="main-container">
-    <div class="canvas-card">
+<div class="sim-header">
+  <span class="eyebrow">Soil Liquefaction · Pore Water Pressure</span>
+  <h1>液状化現象 メカニズム・シミュレーター</h1>
+  <p>なぜ地震で「建物が沈み」「マンホールが浮き上がる」のか？　砂粒子のレベルで可視化します。</p>
+</div>
+
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="stage">
       <canvas id="simCanvas" width="800" height="400"></canvas>
-
-      <div class="gauge-container">
-        <div class="gauge-label">
-          <span>間隙水圧 (水圧)</span>
-          <span id="pressureVal">0%</span>
-        </div>
-        <div class="gauge-bar-bg">
-          <div class="gauge-bar-fill" id="pressureBar"></div>
-        </div>
-      </div>
-
-      <div class="status-box" id="statusText">
-        【安定状態】砂粒子同士がしっかり噛み合い、骨組みを作って重い建物を支えています。
+      <div class="gauge">
+        <div class="lab"><span>間隙水圧（水圧）</span><b id="pressureVal">0%</b></div>
+        <div class="bar"><div class="fill" id="pressureBar"></div></div>
       </div>
     </div>
 
-    <div class="controls-card">
-      <div class="btn-group">
-        <button class="btn-quake" id="quakeBtn" onclick="toggleQuake()">震動を開始する (地震発生)</button>
-        <button class="btn-reset" onclick="resetSim()">地盤をリセット</button>
-      </div>
-
-      <div class="control-group">
-        <div class="slider-box">
-          <label>地震の強さ (加速度): <span id="intensityVal">中 (Medium)</span></label>
-          <input type="range" id="intensitySlider" min="1" max="3" value="2" oninput="updateIntensity(this.value)">
-        </div>
-        <div class="slider-box">
-          <label>地盤の土質: <span>飽和砂質土 (水で満たされた砂)</span></label>
-        </div>
-      </div>
+    <div class="status-box" id="statusText">
+      <strong>【1. 安定状態】</strong><br>砂粒子同士がしっかり噛み合い、骨組みを作って重い建物を支えています。
     </div>
   </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>コントロール</h2>
+
+    <div class="btn-group">
+      <button class="btn-quake" id="quakeBtn" onclick="toggleQuake()">震動を開始する (地震発生)</button>
+      <button class="btn-reset" onclick="resetSim()">地盤をリセット</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="controls">
+      <div class="control">
+        <label for="intensitySlider">地震の強さ（加速度）<span class="val" id="intensityVal">中 (Medium)</span></label>
+        <input type="range" id="intensitySlider" min="1" max="3" value="2" oninput="updateIntensity(this.value)">
+      </div>
+    </div>
+
+    <div class="soil-note" style="margin-top:16px">
+      <b>地盤の土質：</b>飽和砂質土（水で満たされた砂）
+    </div>
+
+    <hr class="divider">
+
+    <div class="hint">
+      <span class="hint-title">観察のポイント</span>
+      <ul>
+        <li>ゆれが続くほど<strong>間隙水圧</strong>が上がり、砂粒子の噛み合わせが外れていきます。</li>
+        <li>支える力を失うと、重い建物は<strong>沈み</strong>、軽いマンホールは<strong>浮き上がり</strong>ます。</li>
+        <li>水圧が限界に達すると、地表から水と砂が吹き出す<strong>噴砂</strong>が起こります。</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
 
 <script>
   const canvas = document.getElementById('simCanvas');
   const ctx = canvas.getContext('2d');
+
+  // 論理座標系は 800x400 のまま、高解像度画面では実解像度だけ上げる
+  const BASE_W = 800, BASE_H = 400;
+  function setupCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = BASE_W * dpr;
+    canvas.height = BASE_H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', setupCanvas);
 
   let isQuaking = false;
   let quakeIntensity = 2;
@@ -358,19 +224,27 @@
       }
 
       // 境界チェック (地盤内におさめる)
-      if (this.y > canvas.height - 15) this.y = canvas.height - 15;
+      if (this.y > BASE_H - 15) this.y = BASE_H - 15;
       if (this.y < GROUND_Y + 12) this.y = GROUND_Y + 12;
       if (this.x < 60) this.x = 60;
-      if (this.x > canvas.width - 60) this.x = canvas.width - 60;
+      if (this.x > BASE_W - 60) this.x = BASE_W - 60;
     }
 
     draw() {
+      // 水圧が高い（液状化）ほど粒子同士が離れて明るい発光色に変化
+      const hot = porePressure > 50;
+      const g = ctx.createRadialGradient(
+        this.x - this.r * 0.35, this.y - this.r * 0.4, this.r * 0.15,
+        this.x, this.y, this.r
+      );
+      if (hot) { g.addColorStop(0, '#ffe9a8'); g.addColorStop(.55, '#fbbf24'); g.addColorStop(1, '#c98708'); }
+      else      { g.addColorStop(0, '#f0b866'); g.addColorStop(.55, '#d97706'); g.addColorStop(1, '#8a4c07'); }
+
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-      // 水圧が高い（液状化）ほど粒子同士が離れて明るい発光色に変化
-      ctx.fillStyle = porePressure > 50 ? '#fbbf24' : '#d97706';
+      ctx.fillStyle = g;
       ctx.fill();
-      ctx.strokeStyle = '#78350f';
+      ctx.strokeStyle = hot ? 'rgba(120,53,15,.65)' : 'rgba(60,26,5,.7)';
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -394,8 +268,8 @@
     const rows = 7;
     const startX = 75;
     const startY = GROUND_Y + 20;
-    const spacingX = (canvas.width - 150) / cols;
-    const spacingY = (canvas.height - GROUND_Y - 40) / rows;
+    const spacingX = (BASE_W - 150) / cols;
+    const spacingY = (BASE_H - GROUND_Y - 40) / rows;
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -429,7 +303,7 @@
   }
 
   function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, BASE_W, BASE_H);
 
     let shakeX = 0;
     let shakeY = 0;
@@ -459,22 +333,37 @@
     ctx.save();
     ctx.translate(shakeX, shakeY);
 
-    // 地下水描画
+    // 地下水（水圧が上がるほど青みが増す）
     const waterAlpha = 0.15 + (porePressure / 100) * 0.35;
-    ctx.fillStyle = `rgba(56, 189, 248, ${waterAlpha})`;
-    ctx.fillRect(50, GROUND_Y, canvas.width - 100, canvas.height - GROUND_Y);
+    const wg = ctx.createLinearGradient(0, GROUND_Y, 0, BASE_H);
+    wg.addColorStop(0, `rgba(56,189,248,${waterAlpha * 1.15})`);
+    wg.addColorStop(1, `rgba(14,116,144,${waterAlpha * .75})`);
+    ctx.fillStyle = wg;
+    ctx.fillRect(50, GROUND_Y, BASE_W - 100, BASE_H - GROUND_Y);
 
-    // 空白領域
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, canvas.width, GROUND_Y);
+    // 地盤の外側（断面の枠外）を落ち着いた色で塗りつぶす
+    ctx.fillStyle = '#080c13';
+    ctx.fillRect(0, GROUND_Y, 50, BASE_H - GROUND_Y);
+    ctx.fillRect(BASE_W - 50, GROUND_Y, 50, BASE_H - GROUND_Y);
 
-    // 地表ライン
+    // 空（地表より上）
+    const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    sky.addColorStop(0, '#0a121d');
+    sky.addColorStop(1, '#111d2b');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, BASE_W, GROUND_Y);
+
+    // 地表ライン（うっすら光らせて水面／地表面らしく）
+    ctx.save();
+    ctx.shadowColor = 'rgba(56,189,248,.7)';
+    ctx.shadowBlur = 10;
     ctx.beginPath();
     ctx.moveTo(50, GROUND_Y);
-    ctx.lineTo(canvas.width - 50, GROUND_Y);
+    ctx.lineTo(BASE_W - 50, GROUND_Y);
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2;
     ctx.stroke();
+    ctx.restore();
 
     // 砂粒子の描画・物理更新
     particles.forEach(p => {
@@ -495,16 +384,31 @@
     ctx.translate(building.x + building.w / 2, building.y + building.h / 2);
     ctx.rotate(building.angle);
     
-    ctx.fillStyle = '#64748b';
+    const bg = ctx.createLinearGradient(-building.w / 2, 0, building.w / 2, 0);
+    bg.addColorStop(0, '#7d8a9c');
+    bg.addColorStop(.45, '#5c6878');
+    bg.addColorStop(1, '#414c5c');
+    ctx.fillStyle = bg;
     ctx.fillRect(-building.w / 2, -building.h / 2, building.w, building.h);
-    ctx.strokeStyle = '#94a3b8';
+    ctx.strokeStyle = '#9aa8ba';
     ctx.lineWidth = 2;
     ctx.strokeRect(-building.w / 2, -building.h / 2, building.w, building.h);
+    // 屋上のパラペット
+    ctx.fillStyle = '#93a1b3';
+    ctx.fillRect(-building.w / 2 - 3, -building.h / 2 - 5, building.w + 6, 5);
 
-    ctx.fillStyle = '#fef08a';
+    // 窓（灯りがともっている）
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 2; col++) {
-        ctx.fillRect(-35 + col * 40, -45 + row * 35, 25, 20);
+        const wx = -35 + col * 40, wy = -45 + row * 35;
+        ctx.save();
+        ctx.shadowColor = 'rgba(254,240,138,.55)';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(wx, wy, 25, 20);
+        ctx.restore();
+        ctx.fillStyle = 'rgba(120,100,20,.35)';
+        ctx.fillRect(wx, wy + 9, 25, 1.5);
       }
     }
     ctx.restore();
@@ -515,21 +419,35 @@
       if (manhole.y < GROUND_Y - 10) manhole.y = GROUND_Y - 10;
     }
 
-    // マンホール描画
+    // マンホール描画（鋳鉄のふたらしい金属光沢）
+    const mg = ctx.createRadialGradient(
+      manhole.x - manhole.r * .4, manhole.y - manhole.r * .45, manhole.r * .2,
+      manhole.x, manhole.y, manhole.r
+    );
+    mg.addColorStop(0, '#cdd7e4');
+    mg.addColorStop(.55, '#8d9aac');
+    mg.addColorStop(1, '#5b6878');
     ctx.beginPath();
     ctx.arc(manhole.x, manhole.y, manhole.r, 0, Math.PI * 2);
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = mg;
     ctx.fill();
-    ctx.strokeStyle = '#f8fafc';
+    ctx.strokeStyle = '#e8edf4';
     ctx.lineWidth = 3;
     ctx.stroke();
-    
+
+    ctx.beginPath();
+    ctx.arc(manhole.x, manhole.y, manhole.r * .62, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(40,52,68,.55)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
     ctx.beginPath();
     ctx.moveTo(manhole.x - 10, manhole.y);
     ctx.lineTo(manhole.x + 10, manhole.y);
     ctx.moveTo(manhole.x, manhole.y - 10);
     ctx.lineTo(manhole.x, manhole.y + 10);
-    ctx.strokeStyle = '#475569';
+    ctx.strokeStyle = '#3a4757';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     // 噴砂エフェクト
@@ -550,22 +468,52 @@
       b.vy += 0.15;
       b.life--;
 
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, b.life / 30));
+      ctx.shadowColor = 'rgba(245,158,11,.8)';
+      ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = '#fbbf24';
       ctx.fill();
+      ctx.restore();
 
       if (b.life <= 0) sandBoils.splice(i, 1);
     }
 
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 12px Inter';
-    ctx.fillText('重い建物 (支持力喪失で沈下)', building.x - 10, building.y - 10);
-    ctx.fillText('軽いマンホール (浮力で浮上)', manhole.x - 50, manhole.y - 20);
+    // 引き出し線つきのラベル（背景に埋もれないよう下地を敷く）
+    drawTag('重い建物（支持力を失って沈下）', building.x + building.w / 2, building.y - 14, 'center');
+    drawTag('軽いマンホール（浮力で浮上）', manhole.x, manhole.y - manhole.r - 12, 'center');
 
     ctx.restore();
 
     requestAnimationFrame(animate);
+  }
+
+  // キャンバス上のラベル
+  function drawTag(text, x, y, align) {
+    ctx.save();
+    ctx.font = '500 12px "JetBrains Mono", "Zen Kaku Gothic New", monospace';
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = 'middle';
+    const w = ctx.measureText(text).width;
+    const bx = align === 'center' ? x - w / 2 - 8 : x - 8;
+    ctx.fillStyle = 'rgba(8,12,19,.78)';
+    const r = 6, bw = w + 16, bh = 21, by = y - bh / 2;
+    ctx.beginPath();
+    ctx.moveTo(bx + r, by);
+    ctx.arcTo(bx + bw, by, bx + bw, by + bh, r);
+    ctx.arcTo(bx + bw, by + bh, bx, by + bh, r);
+    ctx.arcTo(bx, by + bh, bx, by, r);
+    ctx.arcTo(bx, by, bx + bw, by, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(154,168,186,.28)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#dbe4ef';
+    ctx.fillText(text, x, y);
+    ctx.restore();
   }
 
   function updateExplanation() {
@@ -586,6 +534,7 @@
   }
 
   window.onload = () => {
+    setupCanvas();
     init();
     animate();
   };

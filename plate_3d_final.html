@@ -1,151 +1,166 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>3D プレート境界地震＆地震波シミュレーター</title>
-  <style>
-    :root {
-      --bg-color: #f1f5f9;
-      --card-bg: #ffffff;
-      --border-color: #cbd5e1;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --accent-p: #0284c7;
-      --accent-s: #e11d48;
-      --accent-green: #16a34a;
-      --accent-orange: #ea580c;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>3D プレート境界地震＆地震波シミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{
+    --accent:var(--geo);--accent-soft:var(--geo-soft);
+    --accent-p:#0b7fbf;   /* P波 */
+    --accent-s:#d33f5c;   /* S波 */
+  }
+  .container{max-width:1200px;margin:0 auto;padding:26px 28px 64px;}
+  @media (max-width:600px){.container{padding:20px 16px 52px;}}
 
-    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-    body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; text-align: center; -webkit-tap-highlight-color: transparent; }
-    
-    .container { max-width: 1200px; margin: 0 auto; }
+  /* 3Dステージ */
+  #canvas-container{
+    width:100%;height:520px;
+    border-radius:var(--r-md);position:relative;overflow:hidden;
+    background:radial-gradient(130% 120% at 50% -10%, #f2f7fd 0%, #e3ebf5 55%, #d5dfec 100%);
+    border:1px solid var(--border);
+    box-shadow:inset 0 1px 0 #fff, inset 0 -30px 60px -40px rgba(17,23,38,.45);
+    cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
+  }
+  #canvas-container:active{cursor:grabbing;}
+  #canvas-container canvas{display:block;}
+  .overlay-guide{
+    position:absolute;top:12px;left:12px;z-index:2;
+    font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim);
+    background:rgba(255,255,255,.82);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    padding:7px 13px;border-radius:100px;border:1px solid var(--border);
+    pointer-events:none;
+  }
 
-    header { margin-bottom: 16px; }
-    h1 { margin: 0; font-size: 1.75rem; font-weight: 800; color: #1e293b; }
-    p.subtitle { margin: 6px 0 0; color: var(--text-muted); font-size: 0.9rem; }
+  /* 手順ボタン */
+  .action-bar{display:flex;justify-content:center;gap:10px;margin:18px 0;flex-wrap:wrap;}
+  .btn{
+    font-family:var(--font-mono);font-size:12.5px;letter-spacing:.03em;
+    padding:12px 20px;border:1px solid transparent;border-radius:var(--r-sm);
+    cursor:pointer;transition:.16s var(--ease);touch-action:manipulation;
+    display:inline-flex;align-items:center;gap:8px;font-weight:700;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn:active{transform:translateY(0);}
+  .btn-strain{background:#c2410c;color:#fff;box-shadow:0 2px 12px -3px rgba(194,65,12,.7);}
+  .btn-earthquake{background:var(--geo);color:#fff;box-shadow:0 2px 12px -3px rgba(217,119,6,.7);}
+  .btn-earthquake:disabled{
+    background:var(--bg-panel-2);color:var(--text-faint);border-color:var(--border);
+    cursor:not-allowed;transform:none;box-shadow:none;
+  }
+  .btn-reset{background:var(--bg-panel-2);color:var(--text);border-color:var(--border);font-weight:500;}
+  .btn-reset:hover{border-color:var(--border-strong);background:#fff;}
 
-    /* 3Dキャンバス領域 */
-    #canvas-container {
-      width: 100%; height: 500px;
-      background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
-      border-radius: 16px; position: relative; overflow: hidden;
-      border: 2px solid var(--border-color);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-      cursor: grab;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    #canvas-container:active { cursor: grabbing; }
+  /* 設定パネル */
+  .config-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;margin-bottom:18px;}
+  .panel-card{
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:18px;text-align:left;box-shadow:var(--sh-2);
+  }
+  .panel-title{
+    font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:.02em;
+    color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px;
+  }
+  .control-group{margin-bottom:14px;}
+  .control-group:last-child{margin-bottom:0;}
+  .control-label{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);margin-bottom:8px;
+  }
+  .control-value{
+    color:var(--accent);font-weight:500;font-variant-numeric:tabular-nums;
+    background:var(--accent-soft);border:1px solid rgba(217,119,6,.28);
+    padding:2px 9px;border-radius:var(--r-pill);white-space:nowrap;
+  }
 
-    .overlay-guide {
-      position: absolute; top: 12px; left: 12px;
-      background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(4px);
-      padding: 8px 14px; border-radius: 8px; font-size: 0.8rem;
-      color: var(--text-main); text-align: left; border: 1px solid var(--border-color);
-      pointer-events: none; font-weight: 600;
-    }
+  /* モニターカード */
+  .monitor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px;margin-bottom:18px;}
+  .monitor-card{
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:18px;text-align:left;box-shadow:var(--sh-2);position:relative;overflow:hidden;
+  }
+  .monitor-card::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;}
+  .card-a::before{background:linear-gradient(90deg,var(--accent-p),#7dd3fc);}
+  .card-b::before{background:linear-gradient(90deg,var(--accent-s),#fda4af);}
 
-    /* アクションバー */
-    .action-bar { display: flex; justify-content: center; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
-    .btn {
-      padding: 12px 24px; font-size: 0.95rem; font-weight: 700; border: none; border-radius: 30px;
-      cursor: pointer; transition: all 0.2s;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      touch-action: manipulation;
-    }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
-    .btn:active { transform: translateY(0); }
-    
-    .btn-strain { background: #dc2626; color: #fff; }
-    .btn-earthquake { background: #d97706; color: #fff; }
-    .btn-earthquake:disabled { background: #94a3b8; opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-    .btn-reset { background: #475569; color: #fff; }
+  .station-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;}
+  .station-name{font-family:var(--font-display);font-weight:900;font-size:1.02rem;}
+  .card-a .station-name{color:var(--accent-p);}
+  .card-b .station-name{color:var(--accent-s);}
+  .station-dist{font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint);font-variant-numeric:tabular-nums;}
 
-    /* 設定パネル */
-    .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px; }
-    
-    .panel-card {
-      background: var(--card-bg); border-radius: 12px; padding: 16px; text-align: left;
-      border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    }
-    .panel-title { font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .status-badge{
+    font-family:var(--font-mono);font-size:11.5px;padding:5px 12px;border-radius:var(--r-pill);
+    background:var(--bg-panel-2);border:1px solid var(--border);
+    display:inline-block;margin-bottom:12px;color:var(--text-dim);
+  }
 
-    .control-group { margin-bottom: 12px; }
-    .control-group:last-child { margin-bottom: 0; }
-    .control-label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
-    .control-value { color: var(--text-main); font-weight: 700; }
-    
-    input[type=range] {
-      width: 100%; height: 8px; border-radius: 4px; background: #e2e8f0;
-      outline: none; -webkit-appearance: none; cursor: pointer;
-    }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
-      background: #2563eb; cursor: pointer; transition: transform 0.1s;
-    }
+  .progress-bar-bg{
+    background:var(--bg-inset);border-radius:var(--r-pill);height:10px;width:100%;
+    overflow:hidden;position:relative;margin-bottom:14px;
+    box-shadow:inset 0 1px 3px rgba(17,23,38,.14);
+  }
+  .progress-p{background:var(--accent-p);height:100%;width:0%;position:absolute;transition:width .05s linear;}
+  .progress-s{background:var(--accent-s);height:100%;width:0%;position:absolute;transition:width .05s linear;}
 
-    /* モニターカード */
-    .monitor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 20px; }
-    .monitor-card {
-      background: var(--card-bg); border-radius: 12px; padding: 16px; text-align: left;
-      border: 2px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      position: relative;
-    }
-    .card-a { border-top: 6px solid var(--accent-p); }
-    .card-b { border-top: 6px solid var(--accent-s); }
+  .metrics-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .metric-box{
+    background:var(--bg-panel-2);padding:11px;border-radius:var(--r-sm);
+    border:1px solid var(--border);text-align:center;
+  }
+  .metric-label{
+    font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--text-faint);margin-bottom:5px;
+  }
+  .metric-val{
+    font-family:var(--font-mono);font-size:1.15rem;font-weight:600;color:var(--text);
+    font-variant-numeric:tabular-nums;
+  }
+  .shindo-tag{font-size:1.28rem;font-weight:700;color:var(--geo);}
 
-    .station-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-    .station-name { font-weight: 800; font-size: 1.1rem; }
-    .card-a .station-name { color: var(--accent-p); }
-    .card-b .station-name { color: var(--accent-s); }
-    .station-dist { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+  .hint-panel{
+    background:var(--accent-soft);
+    background:linear-gradient(180deg,var(--accent-soft),#fff);
+    border:1px solid rgba(217,119,6,.22);
+    border-left:3px solid var(--accent);
+    border-radius:0 var(--r-md) var(--r-md) 0;
+    padding:16px 18px;text-align:left;font-size:13px;line-height:1.95;color:var(--text-dim);
+  }
+  .hint-panel strong{color:var(--text);font-weight:700;}
 
-    .status-badge { font-size: 0.85rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; background: #f1f5f9; display: inline-block; margin-bottom: 10px; color: #334155; }
+  @media (max-width:900px){#canvas-container{height:430px;}}
+  @media (max-width:600px){
+    #canvas-container{height:330px;}
+    .config-grid,.monitor-grid{grid-template-columns:1fr;}
+    .action-bar .btn{flex:1 1 100%;justify-content:center;}
+  }
+  @media (pointer:coarse){
+    .btn{min-height:46px;}
+  }
+</style>
 
-    .progress-bar-bg { background: #e2e8f0; border-radius: 6px; height: 10px; width: 100%; overflow: hidden; position: relative; margin-bottom: 12px; }
-    .progress-p { background: var(--accent-p); height: 100%; width: 0%; position: absolute; transition: width 0.05s linear; }
-    .progress-s { background: var(--accent-s); height: 100%; width: 0%; position: absolute; transition: width 0.05s linear; }
-
-    .metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .metric-box { background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
-    .metric-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; }
-    .metric-val { font-size: 1.25rem; font-weight: 800; color: #0f172a; }
-    .shindo-tag { font-size: 1.3rem; font-weight: 900; color: #d97706; }
-
-    .hint-panel {
-      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px;
-      padding: 16px; text-align: left; font-size: 0.88rem; line-height: 1.6; color: #1e3a8a;
-    }
-
-    @media (max-width: 900px) {
-      #canvas-container { height: 420px; }
-    }
-    @media (max-width: 600px) {
-      body { padding: 12px; }
-      #canvas-container { height: 320px; }
-      h1 { font-size: 1.25rem; }
-      .config-grid, .monitor-grid { grid-template-columns: 1fr; }
-    }
-    @media (pointer: coarse) {
-      .btn { min-height: 44px; }
-      input[type=range] { height: 12px; }
-      input[type=range]::-webkit-slider-thumb { width: 26px; height: 26px; }
-    }
-  </style>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">15 ／ プレート境界地震と地震波</span>
+</div>
+
+<div class="sim-header">
+  <span class="eyebrow">Subduction Earthquake · P and S Waves</span>
+  <h1>3D プレート境界地震＆地震波シミュレーター</h1>
+  <p>プレートの沈み込みでひずみをため、跳ね上がりで地震を起こします。観測点を動かして、震源距離と初期微動継続時間・震度の関係を確かめましょう。</p>
+</div>
+
 <div class="container">
-  <header>
-    <h1>3D プレート境界地震＆地震波シミュレーター</h1>
-    <p class="subtitle">【広域・高照度モデル】視点回転・震度設定・観測点移動対応</p>
-  </header>
 
   <div id="canvas-container">
     <div class="overlay-guide">
@@ -300,33 +315,49 @@
     const height = container.clientHeight;
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xdbeafe);
+    // 背景は CSS のグラデーションを見せるため透過にする
+    scene.fog = new THREE.Fog(0xdde6f2, 110, 230);
 
     camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
     camera.position.set(5, 45, 80);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+    controls.dampingFactor = 0.06;
     controls.target.set(-5, 0, 0);
+    controls.minDistance = 40;
+    controls.maxDistance = 190;
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
-    scene.add(ambientLight);
+    // 立体感を出す三点照明（地層の色は潰さない）
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x8fa0b6, 0.68));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.34));
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    const dirLight = new THREE.DirectionalLight(0xfff4e4, 1.05);
     dirLight.position.set(40, 80, 50);
     dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(1024, 1024);
+    dirLight.shadow.camera.left = -70;
+    dirLight.shadow.camera.right = 70;
+    dirLight.shadow.camera.top = 70;
+    dirLight.shadow.camera.bottom = -70;
+    dirLight.shadow.bias = -0.0015;
     scene.add(dirLight);
+
+    const fillLight = new THREE.DirectionalLight(0xbcd6f2, 0.36);
+    fillLight.position.set(-50, 22, -40);
+    scene.add(fillLight);
 
     const landGeo = new THREE.PlaneGeometry(65, 40, 48, 32);
     landGeo.rotateX(-Math.PI / 2);
-    const landMat = new THREE.MeshStandardMaterial({
+    const landMat = new THREE.MeshStandardMaterial({ /* 陸のプレート上面 */
       color: 0x38a169,
       roughness: 0.7,
       metalness: 0.1,
@@ -354,7 +385,7 @@
 
     const seaGeo = new THREE.PlaneGeometry(90, 44);
     seaGeo.rotateX(-Math.PI / 2);
-    const seaMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.35 });
+    const seaMat = new THREE.MeshStandardMaterial({ color: 0x1583c4, transparent: true, opacity: 0.38, roughness: 0.14, metalness: 0.35 });
     const seaMesh = new THREE.Mesh(seaGeo, seaMat);
     seaMesh.position.set(5, 2.1, 0);
     scene.add(seaMesh);
@@ -366,21 +397,21 @@
     scene.add(epicenterMesh);
 
     const pWaveGeo = new THREE.SphereGeometry(1, 32, 32);
-    const pWaveMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, wireframe: true, transparent: true, opacity: 0.6 });
+    const pWaveMat = new THREE.MeshBasicMaterial({ color: 0x0b7fbf, wireframe: true, transparent: true, opacity: 0.6 });
     pWaveMesh = new THREE.Mesh(pWaveGeo, pWaveMat);
     pWaveMesh.position.copy(hypocenter);
     pWaveMesh.visible = false;
     scene.add(pWaveMesh);
 
     const sWaveGeo = new THREE.SphereGeometry(1, 32, 32);
-    const sWaveMat = new THREE.MeshBasicMaterial({ color: 0xe11d48, wireframe: true, transparent: true, opacity: 0.7 });
+    const sWaveMat = new THREE.MeshBasicMaterial({ color: 0xd33f5c, wireframe: true, transparent: true, opacity: 0.7 });
     sWaveMesh = new THREE.Mesh(sWaveGeo, sWaveMat);
     sWaveMesh.position.copy(hypocenter);
     sWaveMesh.visible = false;
     scene.add(sWaveMesh);
 
-    stationAMesh = createStationPin(0x0284c7);
-    stationBMesh = createStationPin(0xe11d48);
+    stationAMesh = createStationPin(0x0b7fbf);
+    stationBMesh = createStationPin(0xd33f5c);
 
     updateConfig();
     updateStations();

@@ -1,102 +1,137 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>中1理科：マグマのねばりけと火山の形・鉱物シミュレーター</title>
-  <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-    body { background: #f0f4f8; margin: 0; padding: 20px; text-align: center; color: #2b2d42; }
-    .card { max-width: 820px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-    h2 { margin-top: 0; color: #1d3557; }
-    
-    /* スライダーコントロール */
-    .controls { background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e9ecef; }
-    .slider-container { display: flex; align-items: center; justify-content: center; gap: 15px; font-size: 1.1rem; font-weight: bold; }
-    input[type=range] { width: 50%; cursor: pointer; }
-    .slider-labels { display: flex; justify-content: space-between; width: 50%; margin: 5px auto 0; font-size: 0.85rem; color: #6c757d; font-weight: bold; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>中1理科：マグマのねばりけと火山の形・鉱物シミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:var(--geo);--accent-soft:var(--geo-soft);}
+  .layout{grid-template-columns:1.55fr 1fr;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  #simCanvas{display:block;width:100%;height:auto;touch-action:manipulation;}
+  .stage{padding:0;}
 
-    canvas { background: linear-gradient(to bottom, #87ceeb 0%, #e0f6ff 70%, #d4a373 70%, #bc6c25 100%); border: 2px solid #ccc; border-radius: 12px; width: 100%; max-width: 760px; height: auto; touch-action: manipulation; }
+  /* ねばりけスライダーの目盛り */
+  .ticks{
+    display:flex;justify-content:space-between;
+    font-family:var(--font-mono);font-size:10px;color:var(--text-faint);margin-top:-2px;
+  }
 
-    /* 情報表示パネル */
-    .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px; text-align: left; }
-    .info-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px 15px; }
-    .info-card h4 { margin: 0 0 6px 0; color: #1d3557; font-size: 0.95rem; border-bottom: 2px solid #457b9d; padding-bottom: 3px; }
-    .info-value { font-size: 1.1rem; font-weight: bold; color: #e63946; }
+  /* 判定結果のカード */
+  .facts{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:520px){.facts{grid-template-columns:1fr;}}
+  .fact{
+    background:var(--bg-panel-2);border:1px solid var(--border);border-radius:var(--r-md);
+    padding:13px 15px;
+  }
+  .fact h4{
+    font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--text-faint);margin-bottom:8px;font-weight:500;
+  }
+  .fact .lead{font-size:14.5px;font-weight:700;color:var(--accent);line-height:1.45;}
+  .fact dl{margin-top:9px;display:flex;flex-direction:column;gap:5px;}
+  .fact dt{font-size:11px;color:var(--text-faint);font-family:var(--font-mono);}
+  .fact dd{font-size:12.5px;color:var(--text);font-weight:500;line-height:1.5;}
 
-    /* 鉱物割合メーター */
-    .mineral-bar-container { margin-top: 8px; background: #e0e0e0; border-radius: 6px; height: 20px; display: flex; overflow: hidden; }
-    .bar-colored { background: #343a40; color: #fff; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; transition: width 0.2s; }
-    .bar-colorless { background: #f8f9fa; color: #333; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; transition: width 0.2s; }
-
-    .mineral-list { font-size: 0.85rem; margin-top: 6px; line-height: 1.4; color: #495057; }
-
-    .hint { background: #f1faee; border-left: 4px solid #457b9d; padding: 10px 15px; text-align: left; margin-top: 15px; border-radius: 0 8px 8px 0; font-size: 0.9rem; line-height: 1.5; }
-
-    @media (max-width: 600px) {
-      body { padding: 12px; }
-      .card { padding: 14px; }
-      .slider-container { flex-wrap: wrap; gap: 8px; }
-      input[type=range] { width: 100%; }
-      .slider-labels { width: 100%; }
-      .info-grid { grid-template-columns: 1fr; }
-      .info-grid .info-card { grid-column: auto !important; }
-    }
-  </style>
+  /* 鉱物比率バー */
+  .mineral{margin-top:4px;}
+  .mbar{
+    display:flex;height:26px;border-radius:var(--r-pill);overflow:hidden;
+    border:1px solid var(--border);background:var(--bg-inset);
+    box-shadow:inset 0 1px 3px rgba(17,23,38,.12);
+  }
+  .mbar div{
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:11px;font-weight:500;
+    transition:width .25s var(--ease);white-space:nowrap;overflow:hidden;
+  }
+  .mbar .colored{background:linear-gradient(180deg,#4b5361,#2b323d);color:#fff;}
+  .mbar .colorless{background:linear-gradient(180deg,#ffffff,#eef1f6);color:#5a6478;}
+  .mineral-list{font-size:12.5px;line-height:1.85;color:var(--text-dim);margin-top:10px;}
+  .mineral-list strong{color:var(--text);font-weight:700;}
+</style>
 </head>
 <body>
 
-<div class="card">
-  <h2>マグマのねばりけと火山の分類</h2>
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">13 ／ マグマのねばりけと火山</span>
+</div>
 
-  <div class="controls">
-    <div class="slider-container">
-      <label for="viscositySlider">マグマのねばりけ：</label>
-      <input type="range" id="viscositySlider" min="0" max="100" value="0" oninput="updateSim()">
-    </div>
-    <div class="slider-labels">
-      <span>弱（サラサラ）</span>
-      <span>中程度</span>
-      <span>強（ドロドロ）</span>
+<div class="sim-header">
+  <span class="eyebrow">Magma Viscosity · Volcano Morphology</span>
+  <h1>マグマのねばりけと火山の分類</h1>
+  <p>ねばりけを変えると、火山の形・噴火のようす・岩石の色・鉱物の割合がどう連動して変わるかを確かめられます。</p>
+</div>
+
+<div class="layout">
+
+  <div class="panel flush">
+    <div class="stage">
+      <canvas id="simCanvas" width="760" height="300"></canvas>
     </div>
   </div>
 
-  <canvas id="simCanvas" width="760" height="300"></canvas>
+  <div class="panel">
+    <h2><span class="dot"></span>コントロール</h2>
 
-  <!-- 情報パネル -->
-  <div class="info-grid">
-    <div class="info-card">
-      <h4>火山の形・分類</h4>
-      <div class="info-value" id="shapeVal">盾状火山（傾斜がゆるい）</div>
-      <div style="font-size: 0.85rem; margin-top: 4px; color: #555;">代表例：<span id="exampleVal" style="font-weight: bold;">キラウエア、三原山</span></div>
-      <div style="font-size: 0.85rem; margin-top: 2px; color: #555;">噴火の様子：<span id="eruptionVal" style="font-weight: bold;">おだやか</span></div>
+    <div class="controls">
+      <div class="control">
+        <label for="viscositySlider">マグマのねばりけ<span class="val" id="viscLabel">弱</span></label>
+        <input type="range" id="viscositySlider" min="0" max="100" value="0" oninput="updateSim()">
+        <div class="ticks"><span>弱（サラサラ）</span><span>中程度</span><span>強（ドロドロ）</span></div>
+      </div>
     </div>
 
-    <div class="info-card">
-      <h4>溶岩・火砕物の色</h4>
-      <div class="info-value" id="colorVal">黒っぽい</div>
-      <div style="font-size: 0.85rem; margin-top: 4px; color: #555;">岩石の分類：<span id="rockVal" style="font-weight: bold;">玄武岩・斑れい岩（火山岩/深成岩）</span></div>
-      <div style="font-size: 0.85rem; margin-top: 2px; color: #555;">二酸化ケイ素(SiO₂)量：<span id="sio2Val" style="font-weight: bold;">少ない（約 50%）</span></div>
+    <hr class="divider">
+
+    <div class="facts">
+      <div class="fact">
+        <h4>火山の形・分類</h4>
+        <div class="lead" id="shapeVal">盾状火山（傾斜がゆるい）</div>
+        <dl>
+          <dt>代表例</dt><dd id="exampleVal">キラウエア、三原山</dd>
+          <dt>噴火の様子</dt><dd id="eruptionVal">おだやか</dd>
+        </dl>
+      </div>
+
+      <div class="fact">
+        <h4>溶岩・火砕物の色</h4>
+        <div class="lead" id="colorVal">黒っぽい</div>
+        <dl>
+          <dt>岩石の分類</dt><dd id="rockVal">玄武岩・斑れい岩（火山岩/深成岩）</dd>
+          <dt>二酸化ケイ素(SiO₂)量</dt><dd id="sio2Val">少ない（約 50%）</dd>
+        </dl>
+      </div>
     </div>
 
-    <div class="info-card" style="grid-column: span 2;">
-      <h4>含まれる代表的な鉱物（鉱物比率）</h4>
-      <div class="mineral-bar-container">
-        <div class="bar-colored" id="barColored" style="width: 70%;">有色鉱物 70%</div>
-        <div class="bar-colorless" id="barColorless" style="width: 30%;">無色鉱物 30%</div>
+    <hr class="divider">
+
+    <h3>含まれる代表的な鉱物（鉱物比率）</h3>
+    <div class="mineral">
+      <div class="mbar">
+        <div class="colored" id="barColored" style="width:70%">有色鉱物 70%</div>
+        <div class="colorless" id="barColorless" style="width:30%">無色鉱物 30%</div>
       </div>
       <div class="mineral-list" id="mineralList">
         ・<strong>主な有色鉱物（黒っぽい）：</strong> カンラン石、輝石（キセキ）、角閃石（カクセンセキ）<br>
         ・<strong>主な無色鉱物（白っぽく透明）：</strong> 長石（チョウセキ）、石英（セキエイ）
       </div>
     </div>
+
+    <div class="hint" style="margin-top:18px">
+      <span class="hint-title">テストに出る重要観察ポイント</span>
+      <ul>
+        <li><strong>ねばりけが弱い（黒っぽい）：</strong> 溶岩が流れて広がるため<strong>傾斜がゆるく平らな形（盾状火山）</strong>になり、有色鉱物を多く含むため<strong>黒っぽい色</strong>になります。</li>
+        <li><strong>ねばりけが強い（白っぽい）：</strong> 溶岩が流れにくく押し上げられるため<strong>盛り上がった形（溶岩ドーム）</strong>になり、ガスが溜まりやすく<strong>激しい噴火</strong>を引き起こします。</li>
+      </ul>
+    </div>
   </div>
 
-  <div class="hint">
-    <strong>【テストに出る重要観察ポイント】</strong><br>
-    ・<strong>ねばりけが弱い（黒っぽい）：</strong> 溶岩が流れて広がるため<strong>傾斜がゆるく平らな形（盾状火山）</strong>になり、有色鉱物を多く含むため<strong>黒っぽい色</strong>になります。<br>
-    ・<strong>ねばりけが強い（白っぽい）：</strong> 溶岩が流れにくく押し上げられるため<strong>盛り上がった形（溶岩ドーム）</strong>になり、ガスが溜まりやすく<strong>激しい噴火</strong>を引き起こします。
-  </div>
 </div>
 
 <script>
@@ -137,6 +172,8 @@
     barColorless.style.width = colorlessPercent + '%';
     barColorless.innerText = `無色鉱物 ${colorlessPercent}%`;
 
+    document.getElementById('viscLabel').innerText = val < 35 ? '弱' : (val < 70 ? '中' : '強');
+
     if (val < 35) {
       shapeVal.innerText = "盾状火山（傾斜が非常にゆるい）";
       exampleVal.innerText = "キラウエア、マウナロア、伊豆大島（三原山）";
@@ -167,12 +204,35 @@
   }
 
   function renderCanvas(val) {
-    ctx.clearRect(0, 0, BASE_W, BASE_H);
-
-    const W = BASE_W;
-    const H = BASE_H;
+    const W = BASE_W, H = BASE_H;
     const cX = W / 2;
     const groundY = 210;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // --- 0. 空と地面 ---
+    const sky = ctx.createLinearGradient(0, 0, 0, groundY);
+    sky.addColorStop(0, '#9fc9e8');
+    sky.addColorStop(.62, '#d9ecf8');
+    sky.addColorStop(1, '#f0f6fa');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, groundY);
+
+    const soil = ctx.createLinearGradient(0, groundY, 0, H);
+    soil.addColorStop(0, '#c8a077');
+    soil.addColorStop(.35, '#a97d52');
+    soil.addColorStop(1, '#6b4526');
+    ctx.fillStyle = soil;
+    ctx.fillRect(0, groundY, W, H - groundY);
+
+    // 地層らしさを出す横線
+    ctx.save();
+    ctx.strokeStyle = 'rgba(60,35,15,.16)';
+    ctx.lineWidth = 1;
+    for (let y = groundY + 14; y < H; y += 16) {
+      ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke();
+    }
+    ctx.restore();
 
     // --- 1. 火山および溶岩の色計算 (黒っぽい ➔ 白っぽい) ---
     const grayVal = Math.round(40 + (val * 1.7));
@@ -180,10 +240,8 @@
     const strokeColor = `rgb(${Math.max(0, grayVal - 30)}, ${Math.max(0, grayVal - 30)}, ${Math.max(0, grayVal - 30)})`;
 
     // --- 2. 火山の形状描画 ---
+    ctx.save();
     ctx.beginPath();
-    ctx.fillStyle = mountainColor;
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 3;
 
     ctx.moveTo(0, groundY);
 
@@ -217,31 +275,72 @@
     ctx.lineTo(W, H);
     ctx.lineTo(0, H);
     ctx.closePath();
+
+    // 山体は左上からの光を受けたグラデーションで塗る
+    const body = ctx.createLinearGradient(cX - 220, groundY - 190, cX + 220, groundY + 40);
+    body.addColorStop(0, `rgb(${Math.min(255, grayVal + 34)}, ${Math.min(255, grayVal + 36)}, ${Math.min(255, grayVal + 44)})`);
+    body.addColorStop(.5, mountainColor);
+    body.addColorStop(1, strokeColor);
+    ctx.fillStyle = body;
     ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
     ctx.stroke();
+
+    // 山肌の谷すじ（clip して山体内だけに描く）
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(255,255,255,.07)';
+    ctx.lineWidth = 2;
+    for (let i = -4; i <= 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(cX + i * 8, groundY - 200);
+      ctx.lineTo(cX + i * 46, groundY + 4);
+      ctx.stroke();
+    }
+    ctx.restore();
 
     // 火口の高さ算出
     const peakY = val < 50 ? groundY - (40 + (val/50) * 90) : groundY - (130 + ((val-50)/50) * 40);
 
     // --- 3. マグマ流路（通路） ---
-    ctx.beginPath();
-    ctx.fillStyle = '#ff4d00';
+    ctx.save();
+    const pipe = ctx.createLinearGradient(cX - 8, 0, cX + 8, 0);
+    pipe.addColorStop(0, '#a32200');
+    pipe.addColorStop(.5, '#ff7a1a');
+    pipe.addColorStop(1, '#a32200');
+    ctx.shadowColor = 'rgba(255,90,0,.65)';
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = pipe;
     ctx.fillRect(cX - 8, peakY + 10, 16, H - peakY);
+    ctx.restore();
 
-    // --- 4. 噴火アニメーション（修正版：上方向への動き） ---
+    // --- 4. 噴火アニメーション ---
     if (val < 40) {
       // 【おだやかな噴火】溶岩流＋上にポンポン弾けるしぶき
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.shadowColor = 'rgba(255,80,0,.6)';
+      ctx.shadowBlur = 14;
+      const lava = ctx.createLinearGradient(cX - 180, 0, cX + 180, 0);
+      lava.addColorStop(0, '#ff9a3c');
+      lava.addColorStop(.5, '#ff3b00');
+      lava.addColorStop(1, '#ff9a3c');
       ctx.beginPath();
-      ctx.strokeStyle = '#ff3300';
-      ctx.lineWidth = 6;
+      ctx.strokeStyle = lava;
+      ctx.lineWidth = 7;
       ctx.moveTo(cX - 10, peakY + 5);
       ctx.quadraticCurveTo(cX - 80, peakY + 15, cX - 180, groundY - 5);
       ctx.moveTo(cX + 10, peakY + 5);
       ctx.quadraticCurveTo(cX + 80, peakY + 15, cX + 180, groundY - 5);
       ctx.stroke();
+      ctx.restore();
 
       // 火口からまっすぐ上へ跳ね上がる赤い溶岩しぶき
-      ctx.fillStyle = '#ff5500';
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,120,0,.9)';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = '#ff6a00';
       for (let i = 0; i < 6; i++) {
         const progress = ((animFrame * 2 + i * 10) % 40) / 40; // 0 -> 1 のループ
         const rx = cX + (i - 2.5) * 6;
@@ -249,12 +348,16 @@
         const size = Math.max(1, 4 * (1 - progress * 0.5));
         ctx.beginPath(); ctx.arc(rx, ry, size, 0, Math.PI * 2); ctx.fill();
       }
+      ctx.restore();
     } else if (val < 70) {
       // 【やや激しい噴火】モクモク上昇する薄い煙＋飛び散る火山弾
-      drawSmoke(cX, peakY - 10, 25, 'rgba(130, 130, 130, 0.7)');
-      
+      drawSmoke(cX, peakY - 10, 25, [150, 150, 152], .62);
+
       // 斜め上方向に放射状に飛び散る火山弾
-      ctx.fillStyle = '#ff2200';
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,80,0,.85)';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = '#ff3a00';
       for (let i = 0; i < 7; i++) {
         const progress = ((animFrame * 2.5 + i * 12) % 50) / 50;
         const spreadAngle = (i - 3) * 0.25; // 左右への広がり
@@ -264,45 +367,70 @@
         const size = Math.max(1, 5 * (1 - progress * 0.6));
         ctx.beginPath(); ctx.arc(rx, ry, size, 0, Math.PI * 2); ctx.fill();
       }
+      ctx.restore();
     } else {
       // 【激しい爆発噴火】巨大なモクモク噴煙雲＋盛り上がったドーム状マグマ
-      drawSmoke(cX, peakY - 15, 45, 'rgba(80, 80, 80, 0.85)');
+      drawSmoke(cX, peakY - 15, 45, [92, 92, 96], .8);
 
       // 固まりかけたマグマドーム
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,70,0,.7)';
+      ctx.shadowBlur = 18;
+      const dome = ctx.createLinearGradient(cX, peakY - 20, cX, peakY + 6);
+      dome.addColorStop(0, '#ff6a1f');
+      dome.addColorStop(1, '#9e2b00');
       ctx.beginPath();
-      ctx.fillStyle = '#cc3300';
+      ctx.fillStyle = dome;
       ctx.arc(cX, peakY + 5, 22, Math.PI, 0);
       ctx.fill();
+      ctx.restore();
     }
 
-    // 地下マグマだまり
+    // --- 5. 地下マグマだまり ---
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,70,0,.55)';
+    ctx.shadowBlur = 22;
+    const cham = ctx.createRadialGradient(cX - 12, H - 32, 4, cX, H - 25, 52);
+    cham.addColorStop(0, '#ffd08a');
+    cham.addColorStop(.35, '#ff6a12');
+    cham.addColorStop(1, '#b32000');
     ctx.beginPath();
     ctx.ellipse(cX, H - 25, 50, 20, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#ff2200';
+    ctx.fillStyle = cham;
     ctx.fill();
-    ctx.strokeStyle = '#990000';
+    ctx.restore();
+    ctx.beginPath();
+    ctx.ellipse(cX, H - 25, 50, 20, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(120,20,0,.85)';
     ctx.lineWidth = 2;
     ctx.stroke();
+
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillText('マグマだまり', cX - 34, H - 21);
+    ctx.font = '500 12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('マグマだまり', cX, H - 25);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
   }
 
   // 煙がすーっと上に登っていく描画関数
-  function drawSmoke(x, y, baseRadius, color) {
-    for (let i = 0; i < 5; i++) {
-      const progress = ((animFrame * 1.2 + i * 20) % 90) / 90; // 下から上へ移動
+  function drawSmoke(x, y, baseRadius, rgb, alpha) {
+    for (let i = 0; i < 6; i++) {
+      const progress = ((animFrame * 1.2 + i * 16) % 90) / 90; // 下から上へ移動
       const currentY = y - progress * 80;
-      const currentRadius = baseRadius * (0.3 + progress * 0.9);
+      const currentRadius = Math.max(1, baseRadius * (0.3 + progress * 0.9));
       const currentX = x + Math.sin(progress * 3 + i) * (progress * 12); // 少し揺らぎながら登る
-      
-      ctx.save();
-      ctx.fillStyle = color;
-      ctx.globalAlpha = Math.max(0, 1 - progress); // 上に行くほど透明になる
+      const a = Math.max(0, (1 - progress)) * alpha;
+
+      const g = ctx.createRadialGradient(currentX, currentY, 0, currentX, currentY, currentRadius);
+      g.addColorStop(0, `rgba(${rgb[0]+34},${rgb[1]+34},${rgb[2]+34},${a})`);
+      g.addColorStop(.6, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a * .8})`);
+      g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
       ctx.beginPath();
-      ctx.arc(currentX, currentY, Math.max(1, currentRadius), 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.arc(currentX, currentY, currentRadius, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
     }
   }
 

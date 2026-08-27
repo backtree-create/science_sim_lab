@@ -1,156 +1,169 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>地層の変形（断層・褶曲）3Dシミュレーター</title>
-  <style>
-    :root {
-      --bg-color: #f8fafc;
-      --card-bg: #ffffff;
-      --border-color: #cbd5e1;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --primary: #2563eb;
-      --accent-red: #dc2626;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>地層の変形（断層・褶曲）3Dシミュレーター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  :root{--accent:var(--geo);--accent-soft:var(--geo-soft);}
+  .layout{grid-template-columns:1fr;max-width:1120px;}
 
-    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-    body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; text-align: center; -webkit-tap-highlight-color: transparent; }
-    
-    .container { max-width: 1100px; margin: 0 auto; }
+  /* 3Dステージ */
+  #canvas-container{
+    width:100%;height:500px;
+    border-radius:var(--r-md);
+    position:relative;overflow:hidden;
+    background:radial-gradient(130% 120% at 50% -10%, #f4f7fc 0%, #e6ebf3 55%, #d9e0ea 100%);
+    border:1px solid var(--border);
+    box-shadow:inset 0 1px 0 #fff, inset 0 -30px 60px -40px rgba(17,23,38,.45);
+    cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
+  }
+  #canvas-container:active{cursor:grabbing;}
+  #canvas-container canvas{display:block;}
+  .overlay-guide{
+    position:absolute;top:12px;left:12px;z-index:2;
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.02em;
+    color:var(--text-dim);
+    background:rgba(255,255,255,.82);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    padding:7px 13px;border-radius:100px;border:1px solid var(--border);
+    pointer-events:none;
+  }
 
-    header { margin-bottom: 16px; }
-    h1 { margin: 0; font-size: 1.75rem; font-weight: 800; color: #1e293b; }
-    p.subtitle { margin: 6px 0 0; color: var(--text-muted); font-size: 0.9rem; }
+  /* 力の選択 */
+  .force-selector{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;
+  }
+  .force-btn{
+    padding:14px 16px;text-align:left;cursor:pointer;
+    background:var(--bg-panel-2);border:1px solid var(--border);
+    border-radius:var(--r-md);color:var(--text);
+    font-family:var(--font-display);font-size:13px;font-weight:700;line-height:1.5;
+    transition:.18s var(--ease);touch-action:manipulation;
+    position:relative;overflow:hidden;
+  }
+  .force-btn::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:var(--border-strong);transition:.18s var(--ease);
+  }
+  .force-btn small{
+    display:block;margin-top:5px;
+    font-family:var(--font-mono);font-size:11px;font-weight:400;color:var(--text-faint);
+  }
+  .force-btn:hover{border-color:var(--border-strong);background:#fff;}
+  .force-btn.active{
+    background:var(--accent-soft);
+    border-color:var(--accent);
+    color:var(--text);
+  }
+  .force-btn.active::before{background:var(--accent);}
+  .force-btn.active small{color:var(--accent);}
 
-    /* 3Dキャンバス領域 */
-    #canvas-container {
-      width: 100%; height: 480px;
-      background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
-      border-radius: 16px; position: relative; overflow: hidden;
-      border: 2px solid var(--border-color);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-      cursor: grab;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    #canvas-container:active { cursor: grabbing; }
+  /* 操作ボタン */
+  .action-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .btn-apply,.btn-reset{
+    font-family:var(--font-mono);font-size:12.5px;letter-spacing:.04em;
+    border-radius:var(--r-sm);padding:12px 20px;cursor:pointer;
+    transition:.16s var(--ease);touch-action:manipulation;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-apply{
+    background:var(--accent);color:#fff;border:1px solid transparent;font-weight:700;
+    box-shadow:0 2px 12px -2px rgba(217,119,6,.6);
+  }
+  .btn-apply:hover{filter:brightness(1.07);transform:translateY(-1px);}
+  .btn-reset{background:var(--bg-panel-2);color:var(--text);border:1px solid var(--border);}
+  .btn-reset:hover{border-color:var(--border-strong);background:#fff;}
 
-    .overlay-guide {
-      position: absolute; top: 12px; left: 12px;
-      background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(4px);
-      padding: 8px 14px; border-radius: 8px; font-size: 0.8rem;
-      color: var(--text-main); text-align: left; border: 1px solid var(--border-color);
-      pointer-events: none; font-weight: 600;
-    }
+  /* 解説 */
+  .info-card{
+    background:var(--bg-panel-2);border:1px solid var(--border);
+    border-left:3px solid var(--accent);
+    border-radius:0 var(--r-md) var(--r-md) 0;
+    padding:15px 18px;line-height:1.9;font-size:13.5px;color:var(--text-dim);
+  }
+  .info-card h3{
+    margin:0 0 8px;font-family:var(--font-display);font-size:15px;font-weight:900;color:var(--text);
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .info-card strong{color:var(--text);font-weight:700;}
+  .tag{
+    display:inline-block;padding:3px 10px;border-radius:100px;
+    font-family:var(--font-mono);font-size:10.5px;font-weight:500;color:#fff;letter-spacing:.04em;
+  }
+  .tag-compress{background:#c2410c;}
+  .tag-tension{background:#1d4ed8;}
+  .tag-shear{background:#a16207;}
 
-    /* コントロールエリア */
-    .control-section {
-      background: var(--card-bg); border-radius: 12px; padding: 20px; margin-top: 16px;
-      border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-      text-align: left;
-    }
+  @media (max-width:900px){ #canvas-container{height:420px;} }
+  @media (max-width:600px){
+    #canvas-container{height:330px;}
+    .force-selector{grid-template-columns:1fr;}
+    .action-row .btn-apply,.action-row .btn-reset{flex:1 1 auto;justify-content:center;}
+  }
+  @media (pointer:coarse){
+    .force-btn,.btn-apply,.btn-reset{min-height:46px;}
+  }
+</style>
 
-    .section-title { font-weight: 800; font-size: 1rem; color: #1e293b; margin-bottom: 12px; }
-
-    /* 力の選択ボタン */
-    .force-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 16px; }
-    .force-btn {
-      padding: 12px; border: 2px solid var(--border-color); background: #f1f5f9;
-      border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 0.9rem;
-      color: var(--text-main); transition: all 0.2s; text-align: center;
-      touch-action: manipulation;
-    }
-    .force-btn:hover { border-color: var(--primary); background: #eff6ff; }
-    .force-btn.active { border-color: var(--primary); background: #2563eb; color: #ffffff; }
-
-    /* 操作ボタン */
-    .action-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-    .btn-apply {
-      padding: 12px 28px; background: #dc2626; color: white; border: none;
-      border-radius: 30px; font-weight: 800; font-size: 1rem; cursor: pointer;
-      box-shadow: 0 4px 10px rgba(220,38,38,0.25); transition: all 0.2s;
-      touch-action: manipulation;
-    }
-    .btn-apply:hover { background: #b91c1c; transform: translateY(-2px); }
-    .btn-reset {
-      padding: 12px 20px; background: #475569; color: white; border: none;
-      border-radius: 30px; font-weight: 700; font-size: 0.9rem; cursor: pointer;
-      transition: all 0.2s;
-      touch-action: manipulation;
-    }
-    .btn-reset:hover { background: #334155; }
-
-    /* 解説カード */
-    .info-card {
-      background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px;
-      padding: 14px 18px; line-height: 1.6; font-size: 0.9rem;
-    }
-    .info-card h3 { margin: 0 0 6px 0; font-size: 1.05rem; color: #1e293b; display: flex; align-items: center; gap: 8px; }
-    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; color: white; }
-    .tag-compress { background: #dc2626; }
-    .tag-tension { background: #2563eb; }
-    .tag-shear { background: #d97706; }
-
-    @media (max-width: 900px) {
-      #canvas-container { height: 420px; }
-    }
-    @media (max-width: 600px) {
-      body { padding: 12px; }
-      #canvas-container { height: 320px; }
-      h1 { font-size: 1.25rem; }
-      .force-selector { grid-template-columns: 1fr; }
-    }
-    @media (pointer: coarse) {
-      .force-btn, .btn-apply, .btn-reset { min-height: 44px; }
-    }
-  </style>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
-<div class="container">
-  <header>
-    <h1>地層の変形（断層・褶曲）3Dシミュレーター</h1>
-    <p class="subtitle">左右から加わる力によって生じる地層のズレとなだらかな曲がりの可視化</p>
-  </header>
+<div class="topbar">
+  <a class="back" href="index.html">← ホームへ</a>
+  <span class="unit-title">14 ／ 地層の変形（断層・褶曲）</span>
+</div>
 
-  <div id="canvas-container">
-    <div class="overlay-guide">
-      🖱️ マウスドラッグ: 視点回転 | 🔍 ホイール: ズーム | 右ドラッグ: 平行移動
+<div class="sim-header">
+  <span class="eyebrow">Crustal Deformation · Folds and Faults</span>
+  <h1>地層の変形（断層・褶曲）3Dシミュレーター</h1>
+  <p>左右から加わる力によって生じる地層のズレとなだらかな曲がりの可視化</p>
+</div>
+
+<div class="layout">
+
+  <div class="panel flush">
+    <div id="canvas-container">
+      <div class="overlay-guide">ドラッグ：視点回転 ／ ホイール：ズーム ／ 右ドラッグ：平行移動</div>
     </div>
   </div>
 
-  <div class="control-section">
-    <div class="section-title">1. 大地に加える力を選択してください</div>
+  <div class="panel">
+    <h2><span class="dot"></span>大地に加える力を選ぶ</h2>
+
     <div class="force-selector">
       <button class="force-btn active" onclick="selectMode('fold')">
-        両側から押す力 (圧縮)<br><small>【褶曲 (しゅうきょく)】</small>
+        両側から押す力 (圧縮)<small>褶曲（しゅうきょく）</small>
       </button>
       <button class="force-btn" onclick="selectMode('reverse')">
-        両側から押す力 (圧縮)<br><small>【逆断層】</small>
+        両側から押す力 (圧縮)<small>逆断層</small>
       </button>
       <button class="force-btn" onclick="selectMode('normal')">
-        両側に引っ張る力 (引張)<br><small>【正断層】</small>
+        両側に引っ張る力 (引張)<small>正断層</small>
       </button>
       <button class="force-btn" onclick="selectMode('strike')">
-        水平にすれ違う力 (剪断)<br><small>【横ずれ断層】</small>
+        水平にすれ違う力 (剪断)<small>横ずれ断層</small>
       </button>
     </div>
+
+    <hr class="divider">
 
     <div class="action-row">
       <button class="btn-apply" onclick="applyForce()">▶ 力を加える（変形開始）</button>
       <button class="btn-reset" onclick="resetSim()">🔄 元の状態に戻す</button>
     </div>
 
-    <div class="info-card" id="infoCard">
-      <!-- 動的テキスト挿入 -->
-    </div>
+    <hr class="divider">
+
+    <div class="info-card" id="infoCard"><!-- 動的テキスト挿入 --></div>
   </div>
+
 </div>
 
 <script>
@@ -196,29 +209,62 @@
     const h = container.clientHeight;
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xe2e8f0);
+    // 背景は CSS のグラデーションを見せるため透過にする
+    scene.fog = new THREE.Fog(0xdfe6ef, 62, 130);
 
     camera = new THREE.PerspectiveCamera(38, w / h, 0.1, 1000);
     camera.position.set(24, 18, 32);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(w, h);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
     controls.target.set(0, 0, 0);
+    controls.minDistance = 18;
+    controls.maxDistance = 90;
 
-    // 照明設定
-    const ambLight = new THREE.AmbientLight(0xffffff, 1.0);
-    scene.add(ambLight);
+    // 照明設定（陰影で立体感を出しつつ、地層の色を潰さない明るさ）
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa6b8, 0.72));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.34));
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const dirLight = new THREE.DirectionalLight(0xfff6e8, 1.05);
     dirLight.position.set(25, 45, 20);
     dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(1024, 1024);
+    dirLight.shadow.camera.left = -30;
+    dirLight.shadow.camera.right = 30;
+    dirLight.shadow.camera.top = 30;
+    dirLight.shadow.camera.bottom = -30;
+    dirLight.shadow.bias = -0.0012;
     scene.add(dirLight);
+
+    const fill = new THREE.DirectionalLight(0xcddcf0, 0.34);
+    fill.position.set(-28, 12, -18);
+    scene.add(fill);
+
+    // 影を受ける地面（地層の下に薄く敷く）
+    const shadowPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(120, 120),
+      new THREE.ShadowMaterial({ opacity: 0.16 })
+    );
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = -6.2;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
+    // 目盛りのようなグリッド（スケール感の手がかり）
+    const grid = new THREE.GridHelper(120, 24, 0x9aa6b8, 0xc3cbd8);
+    grid.position.y = -6.18;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.22;
+    scene.add(grid);
 
     groundGroup = new THREE.Group();
     scene.add(groundGroup);
@@ -240,30 +286,78 @@
   // 現実的なアースカラー地層テクスチャの生成
   function createNaturalStrataTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 512; canvas.height = 512;
+    canvas.width = 1024; canvas.height = 1024;
     const ctx = canvas.getContext('2d');
 
-    const strataColors = [
-      '#4d5d36', // 表土・草地
-      '#6b523b', // 腐植土層
-      '#c2a68c', // 砂岩層
-      '#8c6d53', // 泥岩層
-      '#a3a3a3', // 凝灰岩・粘土層
-      '#594a3e'  // 礫岩・基盤岩
+    // 層ごとに「地の色 → 少し明るい色」と粒の粗さを持たせる
+    const strata = [
+      { a: '#54653a', b: '#41512c', grain: 'fine',   name: '表土・草地' },
+      { a: '#77593f', b: '#5d4531', grain: 'fine',   name: '腐植土層' },
+      { a: '#cfb096', b: '#b8977c', grain: 'sand',   name: '砂岩層' },
+      { a: '#94745a', b: '#7a5e47', grain: 'mud',    name: '泥岩層' },
+      { a: '#adadad', b: '#8f8f8f', grain: 'fine',   name: '凝灰岩・粘土層' },
+      { a: '#635345', b: '#4b3e33', grain: 'gravel', name: '礫岩・基盤岩' }
     ];
 
-    const layerH = canvas.height / strataColors.length;
-    for (let i = 0; i < strataColors.length; i++) {
-      ctx.fillStyle = strataColors[i];
-      ctx.fillRect(0, i * layerH, canvas.width, layerH);
-      
-      ctx.fillStyle = 'rgba(0,0,0,0.12)';
-      ctx.fillRect(0, (i + 1) * layerH - 3, canvas.width, 3);
+    const H = canvas.height, W = canvas.width;
+    const layerH = H / strata.length;
+
+    for (let i = 0; i < strata.length; i++) {
+      const s = strata[i];
+      const y0 = i * layerH;
+
+      // 地の色（層内で上下にわずかな濃淡）
+      const g = ctx.createLinearGradient(0, y0, 0, y0 + layerH);
+      g.addColorStop(0, s.a);
+      g.addColorStop(1, s.b);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, y0, W, layerH);
+
+      // 粒子感（岩相ごとに粒の大きさと密度を変える）
+      const spec = {
+        fine:   { n: 2600, r: 1.2, a: .10 },
+        sand:   { n: 3400, r: 1.9, a: .14 },
+        mud:    { n: 1500, r: 1.1, a: .09 },
+        gravel: { n:  900, r: 4.6, a: .18 }
+      }[s.grain];
+      for (let k = 0; k < spec.n; k++) {
+        const x = Math.random() * W;
+        const y = y0 + Math.random() * layerH;
+        const r = spec.r * (0.5 + Math.random());
+        ctx.fillStyle = Math.random() < .5
+          ? `rgba(255,255,255,${spec.a})`
+          : `rgba(0,0,0,${spec.a})`;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r * (0.6 + Math.random() * 0.5), Math.random() * Math.PI, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 葉理（層の中の細かい縞）
+      ctx.strokeStyle = 'rgba(0,0,0,.055)';
+      ctx.lineWidth = 1;
+      const lam = s.grain === 'gravel' ? 5 : 11;
+      for (let k = 1; k < lam; k++) {
+        const y = y0 + layerH * (k / lam);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        for (let x = 0; x <= W; x += 32) {
+          ctx.lineTo(x, y + Math.sin(x * 0.012 + k * 1.7 + i) * 2.4);
+        }
+        ctx.stroke();
+      }
+
+      // 層理面（層と層の境目をはっきり見せる）
+      const bY = (i + 1) * layerH;
+      ctx.fillStyle = 'rgba(0,0,0,.20)';
+      ctx.fillRect(0, bY - 5, W, 5);
+      ctx.fillStyle = 'rgba(255,255,255,.13)';
+      ctx.fillRect(0, bY - 6.5, W, 1.5);
     }
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = 8;
     return texture;
   }
 
@@ -284,7 +378,7 @@
 
   function createArrow(color) {
     const group = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3 });
+    const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.35, metalness: 0.05, emissive: new THREE.Color(color).multiplyScalar(0.12) });
     
     const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 4.5, 16), mat);
     cylinder.rotation.z = Math.PI / 2;
@@ -303,7 +397,7 @@
       groundGroup.remove(groundGroup.children[0]); 
     }
 
-    const mat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.7 });
+    const mat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.86, metalness: 0.02 });
     const W = 20, H = 8, D = 10;
 
     if (currentMode === 'fold') {
@@ -332,6 +426,10 @@
 
       blockA.position.set(0, 0, D / 4);
       blockB.position.set(0, 0, -D / 4);
+
+      blockA.castShadow = blockA.receiveShadow = true;
+
+      blockB.castShadow = blockB.receiveShadow = true;
 
       groundGroup.add(blockA);
       groundGroup.add(blockB);
@@ -366,6 +464,10 @@
 
       blockA.position.set(0, 0, 0);
       blockB.position.set(0, 0, 0);
+
+      blockA.castShadow = blockA.receiveShadow = true;
+
+      blockB.castShadow = blockB.receiveShadow = true;
 
       groundGroup.add(blockA);
       groundGroup.add(blockB);

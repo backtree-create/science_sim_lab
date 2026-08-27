@@ -26,6 +26,8 @@
   /* --- category accents（index.html と同一） --- */
   --phys:#2563eb;  --phys-2:#60a5fa;  --phys-soft:#edf3fe;
   --chem:#0ca08e;  --chem-2:#34d3b6;  --chem-soft:#e7f8f4;
+  --geo:#d97706;   --geo-2:#fbbf24;   --geo-soft:#fdf4e4;
+  --cosmo:#7c3aed; --cosmo-2:#a78bfa; --cosmo-soft:#f3eefe;
 
   /* --- page accent : 各ページが :root{--accent:…} で差し替えるだけでよい。
          淡色 --accent-soft はアクセントから自動で作る（非対応環境用に無彩色の控えを先に置く） --- */
