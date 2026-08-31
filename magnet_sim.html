@@ -481,7 +481,8 @@ FlowLines.prototype.build = function(traces, opt){
     pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
     var pm = new THREE.PointsMaterial({
-      size: opt.size || 0.0045, vertexColors:true, transparent:true, opacity:0.95,
+      size: opt.size || 0.0045, vertexColors:true, transparent:true,
+      opacity: (opt.opacity === undefined ? 0.82 : opt.opacity),
       sizeAttenuation:true, depthWrite:false,
       /* 導線の中を流れる電流は、管にさえぎられると見えないので手前に描く */
       depthTest: !opt.onTop });
@@ -551,10 +552,17 @@ function initThree(){
   controls.enablePan = false;
   controls.autoRotateSpeed = 0.7;
 
-  scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x16202e, 1.0));
-  scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-  var k = new THREE.DirectionalLight(0xffffff, 0.85); k.position.set(0.3, 0.5, 0.4); scene.add(k);
-  var f = new THREE.DirectionalLight(0x88aaff, 0.4); f.position.set(-0.4, -0.2, -0.3); scene.add(f);
+  /* 明るくしすぎると面が真っ白に飛んで立体感が消えるので、控えめにする */
+  scene.add(new THREE.HemisphereLight(0xbcd4ec, 0x141c28, 0.55));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.12));
+  var k = new THREE.DirectionalLight(0xffffff, 0.55); k.position.set(0.28, 0.46, 0.38); scene.add(k);
+  var f = new THREE.DirectionalLight(0x7f9fd0, 0.22); f.position.set(-0.38, -0.18, -0.30); scene.add(f);
+
+  /* 置き場所がわかるように、うっすら床の目盛りを敷く */
+  var grid = new THREE.GridHelper(0.60, 24, 0x2b3a4d, 0x1c2532);
+  grid.position.y = -0.092;
+  grid.material.transparent = true; grid.material.opacity = 0.4;
+  scene.add(grid);
 
   root = new THREE.Group(); scene.add(root);
   raycaster = new THREE.Raycaster();
@@ -581,13 +589,13 @@ function setView(v){
 /* --- よく使う部品 --- */
 function makeArrow(color, len, thick){
   var g = new THREE.Group();
+  /* 自己発光を強くすると面が白く飛ぶ。弱めて、粗さで陰影を出す */
+  var mat = new THREE.MeshStandardMaterial({
+    color:color, roughness:.68, metalness:0, emissive:color, emissiveIntensity:.07 });
   var shaft = new THREE.Mesh(
-    new THREE.CylinderGeometry(thick, thick, Math.max(0.001, len - thick*4), 10),
-    new THREE.MeshStandardMaterial({ color:color, roughness:.45, emissive:color, emissiveIntensity:.25 }));
+    new THREE.CylinderGeometry(thick, thick, Math.max(0.001, len - thick*4), 14), mat);
   shaft.position.y = (len - thick*4)/2;
-  var head = new THREE.Mesh(
-    new THREE.ConeGeometry(thick*2.3, thick*4.6, 12),
-    new THREE.MeshStandardMaterial({ color:color, roughness:.45, emissive:color, emissiveIntensity:.25 }));
+  var head = new THREE.Mesh(new THREE.ConeGeometry(thick*2.3, thick*4.6, 18), mat);
   head.position.y = len - thick*2.3;
   g.add(shaft); g.add(head);
   return g;
@@ -619,8 +627,8 @@ function labelSprite(text, color, size){
 /* 棒磁石の見た目（軸は y、+y が N） */
 function magnetMesh(halfLen, R, flip){
   var g = new THREE.Group();
-  var matN = new THREE.MeshStandardMaterial({ color:0xff5a4a, roughness:.42, metalness:.15 });
-  var matS = new THREE.MeshStandardMaterial({ color:0x4a9dff, roughness:.42, metalness:.15 });
+  var matN = new THREE.MeshStandardMaterial({ color:0xdd5a4c, roughness:.70, metalness:0 });
+  var matS = new THREE.MeshStandardMaterial({ color:0x5090d4, roughness:.70, metalness:0 });
   var up = new THREE.Mesh(new THREE.CylinderGeometry(R, R, halfLen, 26), flip ? matS : matN);
   up.position.y = halfLen/2;
   var dn = new THREE.Mesh(new THREE.CylinderGeometry(R, R, halfLen, 26), flip ? matN : matS);
@@ -633,20 +641,28 @@ function magnetMesh(halfLen, R, flip){
 }
 
 /* 方位磁針（N極が赤） */
+/* 方位磁針。4面のとがったコーンだと硬くてトゲトゲしく見えるので、
+   平たい円盤の上に、うすい板のような針をのせる。 */
 function compassMesh(r){
   var g = new THREE.Group();
-  var base = new THREE.Mesh(new THREE.CylinderGeometry(r, r, r*0.22, 20),
-    new THREE.MeshStandardMaterial({ color:0x1d2632, roughness:.7 }));
+  var base = new THREE.Mesh(new THREE.CylinderGeometry(r, r*0.96, r*0.16, 24),
+    new THREE.MeshStandardMaterial({ color:0x222c3a, roughness:.85, metalness:0 }));
   g.add(base);
+  var rim = new THREE.Mesh(new THREE.TorusGeometry(r*0.98, r*0.055, 8, 28),
+    new THREE.MeshStandardMaterial({ color:0x3a4757, roughness:.8, metalness:0 }));
+  rim.rotation.x = Math.PI/2; rim.position.y = r*0.09;
+  g.add(rim);
   var needle = new THREE.Group();
-  var nn = new THREE.Mesh(new THREE.ConeGeometry(r*0.26, r*0.9, 4),
-    new THREE.MeshStandardMaterial({ color:0xff5a4a, roughness:.35, emissive:0xff5a4a, emissiveIntensity:.3 }));
-  nn.rotation.z = -Math.PI/2; nn.position.x = r*0.45;
-  var ss = new THREE.Mesh(new THREE.ConeGeometry(r*0.26, r*0.9, 4),
-    new THREE.MeshStandardMaterial({ color:0xdfe6f2, roughness:.35 }));
-  ss.rotation.z = Math.PI/2; ss.position.x = -r*0.45;
-  needle.add(nn); needle.add(ss);
-  needle.position.y = r*0.16;
+  var nn = new THREE.Mesh(new THREE.ConeGeometry(r*0.20, r*0.86, 16),
+    new THREE.MeshStandardMaterial({ color:0xe0574a, roughness:.62, metalness:0 }));
+  nn.rotation.z = -Math.PI/2; nn.position.x = r*0.43;
+  var ss = new THREE.Mesh(new THREE.ConeGeometry(r*0.20, r*0.86, 16),
+    new THREE.MeshStandardMaterial({ color:0xc3cddc, roughness:.62, metalness:0 }));
+  ss.rotation.z = Math.PI/2; ss.position.x = -r*0.43;
+  var pin = new THREE.Mesh(new THREE.SphereGeometry(r*0.13, 12, 10),
+    new THREE.MeshStandardMaterial({ color:0x8b95a5, roughness:.6 }));
+  needle.add(nn); needle.add(ss); needle.add(pin);
+  needle.position.y = r*0.14;
   g.add(needle);
   g.userData.needle = needle;
   return g;
@@ -787,7 +803,7 @@ mods.magnet = (function(){
       }
     }
     flow.build(traces, { showLines: document.getElementById('magLines').checked,
-      lineColor:0x2f6fae, partColor:0x7fd4ff, hotColor:0xffffff,
+      lineColor:0x36638f, partColor:0x6fb4e0, hotColor:0xd8ecff,
       size:0.0042, density: fast ? 55 : 80 });
     /* 1本のときは磁力線ごと磁石について動かす（回転も同じ） */
     if (single && magA){ flow.group.position.copy(magA.position); flow.group.rotation.z = st.rot[0]; }
@@ -814,9 +830,9 @@ mods.magnet = (function(){
     needles.forEach(function(n){ g.remove(n); });
     needles = [];
     if (!document.getElementById('magNeedles').checked) return;
-    for (var i = -2; i <= 2; i++) for (var j = -2; j <= 2; j++){
-      var c = compassMesh(0.011);
-      c.position.set(i*0.045, -0.078, j*0.045);
+    for (var i = -1; i <= 1; i++) for (var j = -1; j <= 1; j++){
+      var c = compassMesh(0.013);
+      c.position.set(i*0.062, -0.080, j*0.062);
       g.add(c); needles.push(c);
     }
   }
@@ -948,7 +964,7 @@ mods.current = (function(){
 
     if (st.arr === 'wire'){
       wireMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.24, 16),
-        new THREE.MeshStandardMaterial({ color:0xd08a3a, roughness:.4, metalness:.4 }));
+        new THREE.MeshStandardMaterial({ color:0xc2853f, roughness:.62, metalness:.18 }));
       g.add(wireMesh);
       /* 磁力線＝導線を中心とする円 */
       for (var ri = 1; ri <= 5; ri++){
@@ -972,7 +988,7 @@ mods.current = (function(){
         : coilSegs(-0.045, 0.045, R2, turns, st.I, 30);
       /* コイルの見た目 */
       coilMesh = new THREE.Group();
-      var tubeMat = new THREE.MeshStandardMaterial({ color:0xd08a3a, roughness:.4, metalness:.4 });
+      var tubeMat = new THREE.MeshStandardMaterial({ color:0xc2853f, roughness:.62, metalness:.18 });
       if (st.arr === 'loop'){
         coilMesh.add(new THREE.Mesh(new THREE.TorusGeometry(R2, 0.0028, 10, 60), tubeMat));
         coilMesh.children[0].rotation.x = Math.PI/2;
@@ -990,7 +1006,7 @@ mods.current = (function(){
       g.add(coilMesh);
       if (st.core){
         coreMesh = new THREE.Mesh(new THREE.CylinderGeometry(R2*0.62, R2*0.62, 0.105, 20),
-          new THREE.MeshStandardMaterial({ color:0x8792a5, roughness:.55, metalness:.6 }));
+          new THREE.MeshStandardMaterial({ color:0x7c8798, roughness:.78, metalness:.12 }));
         g.add(coreMesh);
       }
       /* 磁力線 */
@@ -1019,7 +1035,7 @@ mods.current = (function(){
        電流をマイナスにすると流れが逆になる（速さの符号で表す）。 */
     var cp = currentPath(), cm = cp.map(function(){ return 1; });
     curFlow.build([{ pts:cp, mags:cm }], { showLines:false,
-      partColor:0xffe14d, flat:true, onTop:true, size:0.0072,
+      partColor:0xf2c545, flat:true, onTop:true, opacity:0.95, size:0.0072,
       density: st.arr === 'wire' ? 110 : 150 });
 
     /* 電流の向きを示す矢印。導線の太さより大きくしないと管に埋もれてしまう */
@@ -1027,7 +1043,7 @@ mods.current = (function(){
     curArrows = new THREE.Group();
     if (st.arr === 'wire'){
       [-0.078, -0.026, 0.026, 0.078].forEach(function(y){
-        var a = makeArrow(0xffe14d, 0.026, 0.0030);
+        var a = makeArrow(0xf2c545, 0.026, 0.0030);
         a.position.set(0, y, 0);
         a.userData.dir = new THREE.Vector3(0, 1, 0);
         curArrows.add(a);
@@ -1039,7 +1055,7 @@ mods.current = (function(){
       ys.forEach(function(yy, k){
         for (var q = 0; q < (st.arr === 'loop' ? 4 : 2); q++){
           var tt = (q/(st.arr === 'loop' ? 4 : 2) + k*0.13) * 2*Math.PI;
-          var a = makeArrow(0xffe14d, 0.020, 0.0026);
+          var a = makeArrow(0xf2c545, 0.020, 0.0026);
           a.position.set(R*Math.sin(tt), yy, R*Math.cos(tt));
           a.userData.dir = new THREE.Vector3(Math.cos(tt), 0, -Math.sin(tt));
           curArrows.add(a);
@@ -1050,7 +1066,7 @@ mods.current = (function(){
     g.add(curArrows);
 
     flow.build(traces, { showLines:true, lineColor:0x2f6fae,
-      partColor:0x7fd4ff, hotColor:0xffffff, size:0.004, density:70 });
+      partColor:0x6fb4e0, hotColor:0xd8ecff, size:0.0036, density:70 });
     /* 線そのものが磁界の向きに沿って作られているので、速さは正のままでよい。
        ここで符号を掛けると二重に反転してしまう。 */
     flow.speed = 1;
@@ -1058,10 +1074,10 @@ mods.current = (function(){
   function rebuildNeedles(){
     needles.forEach(function(n){ g.remove(n); }); needles = [];
     if (!document.getElementById('curNeedles').checked) return;
-    var ring = 8, R = st.arr === 'wire' ? 0.042 : 0.055;
+    var ring = 6, R = st.arr === 'wire' ? 0.045 : 0.058;
     for (var i = 0; i < ring; i++){
       var th = i/ring*2*Math.PI;
-      var c = compassMesh(0.010);
+      var c = compassMesh(0.012);
       c.position.set(R*Math.cos(th), st.arr === 'wire' ? 0 : -0.070, R*Math.sin(th));
       g.add(c); needles.push(c);
     }
@@ -1151,8 +1167,8 @@ mods.force = (function(){
     if (poles) g.remove(poles);
     poles = new THREE.Group();
     var pos = st.B >= 0, size = 0.075, axis = (st.arr === 'motor') ? 'y' : 'z';
-    var matN = new THREE.MeshStandardMaterial({ color:0xff5a4a, roughness:.45 });
-    var matS = new THREE.MeshStandardMaterial({ color:0x4a9dff, roughness:.45 });
+    var matN = new THREE.MeshStandardMaterial({ color:0xdd5a4c, roughness:.72 });
+    var matS = new THREE.MeshStandardMaterial({ color:0x5090d4, roughness:.72 });
     var d = 0.052;
     /* pos=true のとき、N極は +軸側。磁界は N→S なので −軸向きになる */
     var geo = (axis === 'y') ? new THREE.BoxGeometry(size, 0.012, size)
@@ -1180,15 +1196,15 @@ mods.force = (function(){
       }
       traces.push({ pts:pts, mags:mags });
     }
-    fieldFlow.build(traces, { showLines:true, lineColor:0x2a5f96, lineOpacity:0.3,
-      partColor:0x6fb6ff, hotColor:0xbfe4ff, size:0.0034, density:110 });
+    fieldFlow.build(traces, { showLines:true, lineColor:0x2f587f, lineOpacity:0.42,
+      partColor:0x6fb4e0, hotColor:0xcfe6fb, size:0.0032, density:110 });
     g.add(fieldFlow.group);
   }
   function buildWire(){
     if (wire) g.remove(wire);
     wire = new THREE.Group();
     var m = new THREE.Mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.16, 14),
-      new THREE.MeshStandardMaterial({ color:0xd08a3a, roughness:.4, metalness:.4 }));
+      new THREE.MeshStandardMaterial({ color:0xc2853f, roughness:.62, metalness:.18 }));
     m.rotation.z = Math.PI/2;
     wire.add(m);
     g.add(wire);
@@ -1196,13 +1212,13 @@ mods.force = (function(){
     var pts = [], mags = [];
     for (var k = 0; k <= 20; k++){ pts.push(new THREE.Vector3(-0.08 + 0.16*k/20, 0, 0)); mags.push(1); }
     wireFlow.build([{ pts:pts, mags:mags }], { showLines:false,
-      partColor:0xffe14d, flat:true, onTop:true, size:0.0075, density:220 });
+      partColor:0xf2c545, flat:true, onTop:true, opacity:0.95, size:0.0075, density:220 });
     wire.add(wireFlow.group);
   }
   function buildCoil(){
     if (coil) g.remove(coil);
     coil = new THREE.Group();
-    var mat = new THREE.MeshStandardMaterial({ color:0xd08a3a, roughness:.4, metalness:.4 });
+    var mat = new THREE.MeshStandardMaterial({ color:0xc2853f, roughness:.62, metalness:.18 });
     var w = COIL_W, h = COIL_H;
     var pts = [ new THREE.Vector3(-w,-h,0), new THREE.Vector3(w,-h,0),
                 new THREE.Vector3(w,h,0), new THREE.Vector3(-w,h,0), new THREE.Vector3(-w,-h,0) ];
@@ -1210,7 +1226,7 @@ mods.force = (function(){
     coil.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 0.0030, 8, false), mat));
     /* 軸 */
     var ax = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0022, 0.15, 10),
-      new THREE.MeshStandardMaterial({ color:0x8792a5, roughness:.6, metalness:.5 }));
+      new THREE.MeshStandardMaterial({ color:0x7c8798, roughness:.75, metalness:.15 }));
     ax.rotation.z = Math.PI/2; coil.add(ax);
     /* 整流子は2つに割れた輪。コイルといっしょに回るので、回転がひと目でわかる */
     var commGroup = new THREE.Group();
@@ -1239,7 +1255,7 @@ mods.force = (function(){
       cp.push(new THREE.Vector3(a.x+(b.x-a.x)*f, a.y+(b.y-a.y)*f, 0)); cm2.push(1);
     }
     wireFlow.build([{ pts:cp, mags:cm2 }], { showLines:false,
-      partColor:0xffe14d, flat:true, onTop:true, size:0.0072, density:80 });
+      partColor:0xf2c545, flat:true, onTop:true, opacity:0.95, size:0.0072, density:80 });
     coil.add(wireFlow.group);
     /* ブラシ（回らない接点）。整流子の割れ目がここを通るたびに電流の向きが入れかわる */
     if (brushes) g.remove(brushes);
@@ -1424,11 +1440,11 @@ mods.induce = (function(){
     }
     var curve = new THREE.CatmullRomCurve3(pts);
     coilMesh.add(new THREE.Mesh(new THREE.TubeGeometry(curve, TT*SEG, 0.0026, 8, false),
-      new THREE.MeshStandardMaterial({ color:0xd08a3a, roughness:.4, metalness:.4 })));
+      new THREE.MeshStandardMaterial({ color:0xc2853f, roughness:.62, metalness:.18 })));
     g.add(coilMesh);
     var mags = pts.map(function(){ return 1; });
     coilFlow.build([{ pts:pts, mags:mags }], { showLines:false,
-      partColor:0xffe14d, flat:true, onTop:true, size:0.0072, density:110 });
+      partColor:0xf2c545, flat:true, onTop:true, opacity:0.95, size:0.0072, density:110 });
     coilMesh.add(coilFlow.group);
 
     /* 誘導電流がつくる磁界の極。レンツの法則で向きが決まる */
@@ -1461,8 +1477,8 @@ mods.induce = (function(){
         traces.push({ pts:bb.pts.concat(ff.pts), mags:bb.mags.concat(ff.mags) });
       }
     }
-    magFlow.build(traces, { showLines:true, lineColor:0x2a5f96, lineOpacity:0.32,
-      partColor:0x7fd4ff, hotColor:0xffffff, size:0.0034, density:60 });
+    magFlow.build(traces, { showLines:true, lineColor:0x2f587f, lineOpacity:0.422,
+      partColor:0x6fb4e0, hotColor:0xd8ecff, size:0.0034, density:60 });
     g.add(magFlow.group);
 
     if (!reactArrow){
