@@ -15,13 +15,13 @@
   --line: rgba(30,41,59,0.12);
   --text:#1c2536;
   --muted:#5b6b85;
-  --high:#b9791a;
+  --high:#9a4b00;
   --high-soft: rgba(185,121,26,0.12);
-  --low:#1c76c9;
+  --low:#075ca8;
   --low-soft: rgba(28,118,201,0.12);
-  --typhoon:#d84850;
+  --typhoon:#b51f3a;
   --typhoon-soft: rgba(216,72,80,0.12);
-  --jet:#8a4fd1;
+  --jet:#6626b5;
   --jet-soft: rgba(138,79,209,0.12);
   --airmass:#2f9955;
   --airmass-soft: rgba(47,153,85,0.12);
@@ -475,10 +475,10 @@ input[type=range]{width:100%;accent-color:var(--jet);}
       <div class="panel-block">
         <h4>凡例</h4>
         <div class="legend">
-          <div class="row"><span class="sw" style="background:#5a8bd6"></span>シベリア気団（寒・乾）</div>
-          <div class="row"><span class="sw" style="background:#3fc7d6"></span>オホーツク海気団（寒・湿）</div>
+          <div class="row"><span class="sw" style="background:#2457ad"></span>シベリア気団（寒・乾）</div>
+          <div class="row"><span class="sw" style="background:#007d85"></span>オホーツク海気団（寒・湿）</div>
           <div class="row"><span class="sw" style="background:var(--high)"></span>小笠原気団（暖・湿）</div>
-          <div class="row"><span class="sw" style="background:#d6c23f"></span>揚子江気団（暖・乾）</div>
+          <div class="row"><span class="sw" style="background:#8b6700"></span>揚子江気団（暖・乾）</div>
         </div>
       </div>
     </div>
@@ -520,8 +520,8 @@ input[type=range]{width:100%;accent-color:var(--jet);}
       <div class="panel-block">
         <h4>凡例</h4>
         <div class="legend">
-          <div class="row"><span class="sw" style="background:#aecbe8"></span>壁雲（アイウォール・急な上昇）</div>
-          <div class="row"><span class="sw" style="background:#4fc3f7"></span>スパイラルバンド（外側の雨雲）</div>
+          <div class="row"><span class="sw" style="background:#174c91"></span>壁雲（アイウォール・急な上昇）</div>
+          <div class="row"><span class="sw" style="background:#007d85"></span>スパイラルバンド（外側の雨雲）</div>
           <div class="row"><span class="sw" style="background:var(--typhoon)"></span>暖かい中心（暖核）</div>
           <div class="row"><span class="sw" style="background:var(--jet)"></span>上空の吹き出し（時計回り）</div>
         </div>
@@ -557,7 +557,7 @@ const SharedGL = (() => {
   function textSprite(text, opts={}){
     const fontsize = opts.fontsize||44;
     const color = opts.color||'#1c2536';
-    const bg = opts.bg||null;
+    const bg = opts.bg||'#ffffff';
     const scale = opts.scale||2.2;
     const c=document.createElement('canvas');
     const ctx=c.getContext('2d');
@@ -573,8 +573,9 @@ const SharedGL = (() => {
     ctx.textBaseline='middle';
     ctx.fillText(text, pad, c.height/2);
     const tex=new THREE.CanvasTexture(c);
+    tex.encoding=THREE.sRGBEncoding;
     tex.minFilter=THREE.LinearFilter;
-    const mat=new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false});
+    const mat=new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false, depthTest:false, toneMapped:false});
     const sp=new THREE.Sprite(mat);
     const aspect=c.width/c.height;
     sp.scale.set(aspect*scale, scale, 1);
@@ -737,8 +738,8 @@ const SharedGL = (() => {
   function buildJapanGroupFromShapes(shapes, color, opacity){
     // 個々の島を別々に取捨選択せず、常にひとまとまりのオーバーレイとして地図全体を描画する
     const group=new THREE.Group();
-    const mat=new THREE.MeshStandardMaterial({color, transparent:true, opacity:0.88, roughness:0.9, metalness:0, side:THREE.DoubleSide, depthWrite:false});
-    const edgeMat=new THREE.LineBasicMaterial({color:0x2f8f5f, transparent:true, opacity:0.8});
+    const mat=new THREE.MeshStandardMaterial({color, transparent:true, opacity:1, roughness:0.9, metalness:0, side:THREE.DoubleSide, depthWrite:false});
+    const edgeMat=new THREE.LineBasicMaterial({color:0x163e2c, transparent:true, opacity:0.8});
     shapes.forEach(shape=>{
       const geo=new THREE.ExtrudeGeometry(shape,{depth:0.22, bevelEnabled:false, curveSegments:4});
       geo.rotateX(-Math.PI/2);
@@ -771,7 +772,7 @@ const SharedGL = (() => {
     return g;
   }
   function baseLights(scene){
-    scene.add(new THREE.HemisphereLight(0xf3f9ff,0x779095,0.85));
+    scene.add(new THREE.HemisphereLight(0xf3f9ff,0x445766,0.6));
     const dl=new THREE.DirectionalLight(0xfff5e7,1.05);
     dl.position.set(15,40,20);
     scene.add(dl);
@@ -975,13 +976,13 @@ const SimPressure = (()=>{
 
   let windTrails=[];
   function updateWindTrails(){
-    if(!windTrails.length){for(let k=0;k<24;k++){const source=Math.floor(k*N/24),points=new Float32Array(18*3),geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(points,3));const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:state[source].warm?0xb67b26:0x257ead,transparent:true,opacity:.45,depthWrite:false}));line.frustumCulled=false;scene.add(line);windTrails.push({source,line,history:[]});}}
+    if(!windTrails.length){for(let k=0;k<24;k++){const source=Math.floor(k*N/24),points=new Float32Array(18*3),geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(points,3));const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:state[source].warm?0x9a4b00:0x075ca8,transparent:true,opacity:.8,depthWrite:false}));line.frustumCulled=false;scene.add(line);windTrails.push({source,line,history:[]});}}
     windTrails.forEach(t=>{const s=state[t.source],p=new THREE.Vector3(s.x,s.y+.3,s.z);if(t.history.length&&p.distanceTo(t.history[0])>5)t.history=[];t.history.unshift(p);t.history.length=Math.min(18,t.history.length);const a=t.line.geometry.attributes.position;for(let i=0;i<18;i++){const v=t.history[Math.min(i,t.history.length-1)];a.setXYZ(i,v.x,v.y,v.z);}a.needsUpdate=true;});
   }
   function buildClouds(group, color, count){
     group.clear();
     for(let i=0;i<count;i++){
-      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:Lab3D.cloudTexture(), color:0xf2f7ff, transparent:true, depthWrite:false, opacity:0.66}));
+      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:Lab3D.cloudTexture(), color:0x677d98, transparent:true, depthWrite:false, opacity:0.66}));
       const a=Math.random()*Math.PI*2, r=Math.random()*3.2;
       sp.position.set(Math.cos(a)*r, 0, Math.sin(a)*r);
       sp.scale.setScalar(3+Math.random()*2.2);
@@ -1014,8 +1015,8 @@ const SimPressure = (()=>{
     scene.add(SharedGL.makeJapanMesh());
     SharedGL.compassLabels(scene, 34);
 
-    hMesh=SharedGL.textSprite('H',{color:'#e8a33d',scale:3}); scene.add(hMesh);
-    lMesh=SharedGL.textSprite('L',{color:'#3fa9f5',scale:3}); scene.add(lMesh);
+    hMesh=SharedGL.textSprite('H',{color:'#9a4b00',scale:3}); scene.add(hMesh);
+    lMesh=SharedGL.textSprite('L',{color:'#075ca8',scale:3}); scene.add(lMesh);
     hCloudGroup=new THREE.Group(); scene.add(hCloudGroup);
     lCloudGroup=new THREE.Group(); scene.add(lCloudGroup);
     buildClouds(hCloudGroup,'255,214,140',5);
@@ -1029,8 +1030,8 @@ const SimPressure = (()=>{
     // 風向きに合わせて向きを変える「流動的なラベル型矢印」で3D風の流れを表現
     dummy=new THREE.Object3D();
     const arrowGeo=SharedGL.makeArrowGeometry();
-    const warmMat=new THREE.MeshStandardMaterial({color:0xe8a33d, emissive:0xe8a33d, emissiveIntensity:0.35, roughness:0.5, side:THREE.DoubleSide});
-    const coolMat=new THREE.MeshStandardMaterial({color:0x3fa9f5, emissive:0x3fa9f5, emissiveIntensity:0.35, roughness:0.5, side:THREE.DoubleSide});
+    const warmMat=new THREE.MeshStandardMaterial({color:0x9a4b00, emissive:0x9a4b00, emissiveIntensity:0.08, roughness:0.5, side:THREE.DoubleSide});
+    const coolMat=new THREE.MeshStandardMaterial({color:0x075ca8, emissive:0x075ca8, emissiveIntensity:0.08, roughness:0.5, side:THREE.DoubleSide});
     const halfN=Math.floor(N/2);
     warmMesh=new THREE.InstancedMesh(arrowGeo, warmMat, halfN);
     coolMesh=new THREE.InstancedMesh(arrowGeo, coolMat, N-halfN);
@@ -1147,9 +1148,9 @@ const SimJet = (()=>{
   const COUNT=130;
   const domainX=32, jetY=13;
   const seasonParams={
-    winter:{baseZ:3, amp:5.5, k:0.16, speed:9, color:0xd9a6ef, label:'冬：南寄り・強い', readout:'緯度位置：日本付近まで南下／風速：強い（100m/s近くに達することも）'},
-    shoulder:{baseZ:-6, amp:3.5, k:0.15, speed:6, color:0xc792ea, label:'春・秋：中間', readout:'緯度位置：中間／風速：中程度'},
-    summer:{baseZ:-16, amp:2.4, k:0.13, speed:4.2, color:0xb08de0, label:'夏：北寄り・弱い', readout:'緯度位置：北へ後退／風速：弱い（冬のおよそ半分程度）'}
+    winter:{baseZ:3, amp:5.5, k:0.16, speed:9, color:0x6626b5, label:'冬：南寄り・強い', readout:'緯度位置：日本付近まで南下／風速：強い（100m/s近くに達することも）'},
+    shoulder:{baseZ:-6, amp:3.5, k:0.15, speed:6, color:0x6626b5, label:'春・秋：中間', readout:'緯度位置：中間／風速：中程度'},
+    summer:{baseZ:-16, amp:2.4, k:0.13, speed:4.2, color:0x6626b5, label:'夏：北寄り・弱い', readout:'緯度位置：北へ後退／風速：弱い（冬のおよそ半分程度）'}
   };
   let season='shoulder';
   let amp=3.5;
@@ -1173,7 +1174,7 @@ const SimJet = (()=>{
     SharedGL.compassLabels(scene, 38);
 
     const arrowGeo=SharedGL.makeArrowGeometry();
-    const mat=new THREE.MeshStandardMaterial({color:seasonParams[season].color, emissive:seasonParams[season].color, emissiveIntensity:0.35, side:THREE.DoubleSide});
+    const mat=new THREE.MeshStandardMaterial({color:seasonParams[season].color, emissive:seasonParams[season].color, emissiveIntensity:0.08, side:THREE.DoubleSide});
     arrowMesh=new THREE.InstancedMesh(arrowGeo, mat, COUNT);
     scene.add(arrowMesh);
     dummy=new THREE.Object3D();
@@ -1188,7 +1189,7 @@ const SimJet = (()=>{
     // surface L markers steered by jet
     for(let i=0;i<3;i++){
       const g=new THREE.Group();
-      const lbl=SharedGL.textSprite('L',{color:'#3fa9f5',scale:2.4});
+      const lbl=SharedGL.textSprite('L',{color:'#075ca8',scale:2.4});
       g.add(lbl);
       g.userData.x=-domainX + i*(domainX*2/3);
       scene.add(g);
@@ -1316,7 +1317,7 @@ const SimTyphoon = (()=>{
     curve=buildCurve(curKey);
     const pts=curve.getPoints(90);
     const geo=new THREE.BufferGeometry().setFromPoints(pts);
-    const mat=new THREE.LineDashedMaterial({color:0xff8a8e, dashSize:1.2, gapSize:0.8, transparent:true, opacity:0.85});
+    const mat=new THREE.LineDashedMaterial({color:0xb51f3a, dashSize:1.2, gapSize:0.8, transparent:true, opacity:0.85});
     guideLine=new THREE.Line(geo, mat);
     guideLine.computeLineDistances();
     scene.add(guideLine);
@@ -1326,11 +1327,11 @@ const SimTyphoon = (()=>{
       if(pacificHigh.userData.label) scene.remove(pacificHigh.userData.label);
     }
     const g=new THREE.SphereGeometry(1,24,16);
-    pacificHigh=new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:0xe8a33d, transparent:true, opacity:0.28, roughness:1}));
+    pacificHigh=new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:0x9a4b00, transparent:true, opacity:0.28, roughness:1}));
     pacificHigh.scale.set(t.highR, t.highR*0.35, t.highR);
     pacificHigh.position.set(t.highPos[0], 3, t.highPos[1]);
     scene.add(pacificHigh);
-    const hLabel=SharedGL.textSprite('太平洋高気圧',{color:'#e8a33d',scale:2.2});
+    const hLabel=SharedGL.textSprite('太平洋高気圧',{color:'#9a4b00',scale:2.2});
     hLabel.position.set(t.highPos[0], t.highR*0.35+4, t.highPos[1]);
     pacificHigh.userData.label=hLabel;
     scene.add(hLabel);
@@ -1341,10 +1342,10 @@ const SimTyphoon = (()=>{
     const jpts=[];
     for(let x=-32;x<=38;x+=3){ jpts.push(new THREE.Vector3(x, 13, jz+2.2*Math.sin(x*0.16))); }
     const jgeo=new THREE.BufferGeometry().setFromPoints(jpts);
-    const jmat=new THREE.LineBasicMaterial({color:0xc792ea, transparent:true, opacity:0.75});
+    const jmat=new THREE.LineBasicMaterial({color:0x6626b5, transparent:true, opacity:0.75});
     const jline=new THREE.Line(jgeo,jmat);
     scene.add(jline); jetRibbon.push(jline);
-    const jLabel=SharedGL.textSprite('偏西風（ジェット気流）',{color:'#c792ea',scale:2.0});
+    const jLabel=SharedGL.textSprite('偏西風（ジェット気流）',{color:'#6626b5',scale:2.0});
     jLabel.position.set(-28,15,jz);
     scene.add(jLabel); jetRibbon.push(jLabel);
 
@@ -1362,7 +1363,7 @@ const SimTyphoon = (()=>{
       const count=10;
       for(let i=0;i<count;i++){
         const ang0=(i/count)*Math.PI*2 + L*0.4;
-        const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:Lab3D.cloudTexture(), color:0xdbe5ee, transparent:true, depthWrite:false, opacity:0.82-L*0.09}));
+        const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:Lab3D.cloudTexture(), color:0x677d98, transparent:true, depthWrite:false, opacity:0.82-L*0.09}));
         sp.scale.setScalar(1.15 + (levels-L)*0.05);
         sp.userData.baseAng=ang0; sp.userData.rr=rr; sp.userData.y=y;
         swirl.add(sp);
@@ -1372,7 +1373,7 @@ const SimTyphoon = (()=>{
     const topY=baseY+levels*levelGap;
     for(let i=0;i<16;i++){
       const ang0=(i/16)*Math.PI*2;
-      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:Lab3D.cloudTexture(), color:0xf2f6fa, transparent:true, depthWrite:false, opacity:0.6}));
+      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:Lab3D.cloudTexture(), color:0x677d98, transparent:true, depthWrite:false, opacity:0.6}));
       sp.scale.setScalar(1.7);
       sp.userData.baseAng=ang0; sp.userData.rr=4.8; sp.userData.y=topY; sp.userData.outflow=true;
       swirl.add(sp);
@@ -1474,10 +1475,10 @@ const SimAirmass = (()=>{
   let mount,renderer,scene,camera,orbit,raf=null,running=false,lastT=0;
   let blobs={}, patternGroup, migGroup, migT=0;
   const defs={
-    siberia:{pos:[-17,-9], color:0x5a8bd6, label:'シベリア気団\n（寒・乾）'},
-    okhotsk:{pos:[3,-19], color:0x3fc7d6, label:'オホーツク海気団\n（寒・湿）'},
-    ogasawara:{pos:[15,17], color:0xe8a33d, label:'小笠原気団\n（暖・湿）'},
-    yangtze:{pos:[-15,10], color:0xd6c23f, label:'揚子江気団\n（暖・乾）'}
+    siberia:{pos:[-17,-9], color:0x2457ad, label:'シベリア気団\n（寒・乾）'},
+    okhotsk:{pos:[3,-19], color:0x007d85, label:'オホーツク海気団\n（寒・湿）'},
+    ogasawara:{pos:[15,17], color:0x9a4b00, label:'小笠原気団\n（暖・湿）'},
+    yangtze:{pos:[-15,10], color:0x8b6700, label:'揚子江気団\n（暖・乾）'}
   };
   const influence={
     winter:{siberia:1.0, okhotsk:0.3, ogasawara:0.08, yangtze:0.2},
@@ -1500,7 +1501,7 @@ const SimAirmass = (()=>{
       const curve=new THREE.EllipseCurve(0,0, rr, rr*0.78, 0, Math.PI*2,false,0);
       const pts=curve.getPoints(64).map(p=>new THREE.Vector3(p.x,0,p.y));
       const geo=new THREE.BufferGeometry().setFromPoints(pts);
-      const mat=new THREE.LineBasicMaterial({color, transparent:true, opacity:0.55-i*0.07});
+      const mat=new THREE.LineBasicMaterial({color, transparent:true, opacity:0.85-i*0.07});
       const line=new THREE.LineLoop(geo,mat);
       line.position.set(center[0],0.25+i*0.01,center[1]);
       g.add(line);
@@ -1525,12 +1526,12 @@ const SimAirmass = (()=>{
     for(let i=1;i<pts.length-1;i+=2){
       const p=pts[i];
       if(i%4===1){
-        const tri=new THREE.Mesh(new THREE.ConeGeometry(0.6,1.1,4), new THREE.MeshStandardMaterial({color:0x3fc7d6}));
+        const tri=new THREE.Mesh(new THREE.ConeGeometry(0.6,1.1,4), new THREE.MeshStandardMaterial({color:0x007d85}));
         tri.position.set(p.x,0.4,p.z-0.8);
         tri.rotation.x=Math.PI/2;
         g.add(tri);
       } else {
-        const semi=new THREE.Mesh(new THREE.SphereGeometry(0.55,10,8,0,Math.PI), new THREE.MeshStandardMaterial({color:0xe8a33d}));
+        const semi=new THREE.Mesh(new THREE.SphereGeometry(0.55,10,8,0,Math.PI), new THREE.MeshStandardMaterial({color:0x9a4b00}));
         semi.position.set(p.x,0.4,p.z+0.8);
         semi.rotation.y=Math.PI/2;
         g.add(semi);
@@ -1545,10 +1546,10 @@ const SimAirmass = (()=>{
     patternGroup=new THREE.Group();
     migGroup=new THREE.Group();
     if(season==='winter'){
-      patternGroup.add(ring(defs.siberia.pos, 0x5a8bd6, 4, 6));
-      patternGroup.add(ring([26,-14], 0x3fa9f5, 3, 5));
-      const hl=SharedGL.textSprite('高',{color:'#5a8bd6',scale:2.4}); hl.position.set(defs.siberia.pos[0],3,defs.siberia.pos[1]); patternGroup.add(hl);
-      const ll=SharedGL.textSprite('低',{color:'#3fa9f5',scale:2.4}); ll.position.set(26,3,-14); patternGroup.add(ll);
+      patternGroup.add(ring(defs.siberia.pos, 0x2457ad, 4, 6));
+      patternGroup.add(ring([26,-14], 0x075ca8, 3, 5));
+      const hl=SharedGL.textSprite('高',{color:'#2457ad',scale:2.4}); hl.position.set(defs.siberia.pos[0],3,defs.siberia.pos[1]); patternGroup.add(hl);
+      const ll=SharedGL.textSprite('低',{color:'#075ca8',scale:2.4}); ll.position.set(26,3,-14); patternGroup.add(ll);
       // 縦じま等圧線
       for(let i=-3;i<=3;i++){
         const pts=[];
@@ -1558,18 +1559,18 @@ const SimAirmass = (()=>{
         patternGroup.add(line);
       }
     } else if(season==='summer'){
-      patternGroup.add(ring(defs.ogasawara.pos, 0xe8a33d, 5, 7));
-      patternGroup.add(ring([-2,-24], 0x3fa9f5, 2, 4));
-      const hl=SharedGL.textSprite('高',{color:'#e8a33d',scale:2.4}); hl.position.set(defs.ogasawara.pos[0],3,defs.ogasawara.pos[1]); patternGroup.add(hl);
-      const ll=SharedGL.textSprite('低',{color:'#3fa9f5',scale:2.0}); ll.position.set(-2,3,-24); patternGroup.add(ll);
+      patternGroup.add(ring(defs.ogasawara.pos, 0x9a4b00, 5, 7));
+      patternGroup.add(ring([-2,-24], 0x075ca8, 2, 4));
+      const hl=SharedGL.textSprite('高',{color:'#9a4b00',scale:2.4}); hl.position.set(defs.ogasawara.pos[0],3,defs.ogasawara.pos[1]); patternGroup.add(hl);
+      const ll=SharedGL.textSprite('低',{color:'#075ca8',scale:2.0}); ll.position.set(-2,3,-24); patternGroup.add(ll);
     } else if(season==='baiu'){
       patternGroup.add(frontSymbol(-4,-2, -20, 22));
       const fl=SharedGL.textSprite('梅雨前線',{color:'#33415a',scale:2.0}); fl.position.set(0,4,-3); patternGroup.add(fl);
     } else if(season==='shoulder'){
       const positions=[[-24,6,'H'],[-8,-10,'L'],[10,8,'H'],[24,-8,'L']];
       positions.forEach(p=>{
-        const grp=ring([p[0],p[1]], p[2]==='H'?0xe8a33d:0x3fa9f5, 2, 3.4);
-        const lbl=SharedGL.textSprite(p[2]==='H'?'高':'低',{color:p[2]==='H'?'#e8a33d':'#3fa9f5',scale:1.8});
+        const grp=ring([p[0],p[1]], p[2]==='H'?0x9a4b00:0x075ca8, 2, 3.4);
+        const lbl=SharedGL.textSprite(p[2]==='H'?'高':'低',{color:p[2]==='H'?'#9a4b00':'#075ca8',scale:1.8});
         lbl.position.set(p[0],2.6,p[1]);
         grp.add(lbl);
         grp.userData.drift=true;
@@ -1635,7 +1636,7 @@ const SimAirmass = (()=>{
       b.userData.cur += (b.userData.target - b.userData.cur)*Math.min(1,dt*1.6);
       const s=b.userData.baseScale*(0.35+b.userData.cur*0.9);
       b.scale.setScalar(s);
-      b.material.opacity=0.16+b.userData.cur*0.32;
+      b.material.opacity=0.22+b.userData.cur*0.36;
     });
     migT += dt;
     migGroup.children.forEach((g,i)=>{
@@ -1696,26 +1697,26 @@ const SimStructure = (()=>{
     );
     eyeCyl.position.y=8;
     scene.add(eyeCyl);
-    const eyeLbl=SharedGL.textSprite('目（おだやかで晴れ）',{color:'#1c76c9',scale:1.4}); eyeLbl.position.set(0,2.2,0); scene.add(eyeLbl);
+    const eyeLbl=SharedGL.textSprite('目（おだやかで晴れ）',{color:'#075ca8',scale:1.4}); eyeLbl.position.set(0,2.2,0); scene.add(eyeLbl);
     eyeCyl.userData.label=eyeLbl;
 
     coreMesh=new THREE.Mesh(new THREE.CylinderGeometry(1.1,0.6,14,16), new THREE.MeshStandardMaterial({color:0xff6b6f, emissive:0xff2a30, emissiveIntensity:0.5, transparent:true, opacity:0.55}));
     coreMesh.position.y=7;
     scene.add(coreMesh);
-    const coreLbl=SharedGL.textSprite('暖核',{color:'#d84850',scale:1.6}); coreLbl.position.set(0,15.5,0); scene.add(coreLbl);
+    const coreLbl=SharedGL.textSprite('暖核',{color:'#b51f3a',scale:1.6}); coreLbl.position.set(0,15.5,0); scene.add(coreLbl);
 
     // 風向きに沿って向きを変える「流動的なラベル型矢印」で壁雲・スパイラルバンド・上空の吹き出しを表現
     dummy=new THREE.Object3D();
     const arrowGeo=SharedGL.makeArrowGeometry();
-    const wallMat=new THREE.MeshStandardMaterial({color:0xd8e6f5, emissive:0x4a78b0, emissiveIntensity:0.3, roughness:0.45, transparent:true, opacity:0.95, side:THREE.DoubleSide});
-    const rainMat=new THREE.MeshStandardMaterial({color:0x4fc3f7, emissive:0x2f9fe0, emissiveIntensity:0.3, roughness:0.55, transparent:true, opacity:0.9, side:THREE.DoubleSide});
-    const outMat=new THREE.MeshStandardMaterial({color:0xc792ea, emissive:0xc792ea, emissiveIntensity:0.35, roughness:0.5, transparent:true, opacity:0.92, side:THREE.DoubleSide});
+    const wallMat=new THREE.MeshStandardMaterial({color:0x174c91, emissive:0x4a78b0, emissiveIntensity:0.08, roughness:0.45, transparent:true, opacity:0.95, side:THREE.DoubleSide});
+    const rainMat=new THREE.MeshStandardMaterial({color:0x007d85, emissive:0x007d85, emissiveIntensity:0.08, roughness:0.55, transparent:true, opacity:0.9, side:THREE.DoubleSide});
+    const outMat=new THREE.MeshStandardMaterial({color:0x6626b5, emissive:0x6626b5, emissiveIntensity:0.08, roughness:0.5, transparent:true, opacity:0.92, side:THREE.DoubleSide});
     wallMesh=new THREE.InstancedMesh(arrowGeo, wallMat, WALL_N); scene.add(wallMesh);
     rainMesh=new THREE.InstancedMesh(arrowGeo, rainMat, RAIN_N); scene.add(rainMesh);
     outMesh=new THREE.InstancedMesh(arrowGeo, outMat, OUT_N); scene.add(outMesh);
 
     const cloudGeo=new THREE.SphereGeometry(1,14,10);
-    const cloudMat=new THREE.MeshStandardMaterial({color:0xe7eff4,roughness:.95,transparent:true,opacity:.3,depthWrite:false});
+    const cloudMat=new THREE.MeshStandardMaterial({color:0x829bb7,roughness:.95,transparent:true,opacity:.3,depthWrite:false});
     cloudWall=new THREE.InstancedMesh(cloudGeo,cloudMat,WALL_N);cloudBands=new THREE.InstancedMesh(cloudGeo,cloudMat.clone(),RAIN_N);
     cloudBands.material.opacity=.22;scene.add(cloudWall,cloudBands);
     for(let i=0;i<WALL_N;i++) initWall(i);
@@ -1725,11 +1726,11 @@ const SimStructure = (()=>{
     // 構造がひと目でわかるよう、地面に壁雲・スパイラルバンドの範囲を示すリングと日本語ラベルを追加
     const wallRing=new THREE.Mesh(new THREE.RingGeometry(eyeR()+0.3,eyeR()+0.9,48), new THREE.MeshBasicMaterial({color:0x2f7fc9, transparent:true, opacity:0.35, side:THREE.DoubleSide}));
     wallRing.rotation.x=-Math.PI/2; wallRing.position.y=0.03; scene.add(wallRing);
-    const wallLbl=SharedGL.textSprite('壁雲（アイウォール）',{color:'#1c76c9',scale:1.4}); wallLbl.position.set(eyeR()+2.2,1.2,0); scene.add(wallLbl);
-    const rainLbl=SharedGL.textSprite('スパイラルバンド',{color:'#2f9fe0',scale:1.4}); rainLbl.position.set(eyeR()+10,1.2,0); scene.add(rainLbl);
+    const wallLbl=SharedGL.textSprite('壁雲（アイウォール）',{color:'#075ca8',scale:1.4}); wallLbl.position.set(eyeR()+2.2,1.2,0); scene.add(wallLbl);
+    const rainLbl=SharedGL.textSprite('スパイラルバンド',{color:'#007d85',scale:1.4}); rainLbl.position.set(eyeR()+10,1.2,0); scene.add(rainLbl);
     structureLabels={wallRing, wallLbl, rainLbl};
 
-    const outLbl=SharedGL.textSprite('上空の吹き出し（時計回り）',{color:'#8a4fd1',scale:1.5}); outLbl.position.set(0,17.5,0); scene.add(outLbl);
+    const outLbl=SharedGL.textSprite('上空の吹き出し（時計回り）',{color:'#6626b5',scale:1.5}); outLbl.position.set(0,17.5,0); scene.add(outLbl);
 
     bindControls();
     onResize();

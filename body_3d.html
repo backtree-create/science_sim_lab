@@ -177,10 +177,10 @@
    ============================================================ */
 var PALETTE = {
   esophagus:'#ffd9a0', stomach:'#ff9f40', smallIntestine:'#ff6b3d', largeIntestine:'#bb3c85',
-  liver:'#4d9de0', gallbladder:'#22c1c3', pancreas:'#9b7ede',
+  liver:'#258de0', gallbladder:'#00d4bc', pancreas:'#ba70ff',
   trachea:'#e8f6ff', lungRight:'#3ec1f3', lungLeft:'#3ec1f3', diaphragm:'#cf7fe0',
   bronchiRight:'#ffe08a', bronchiLeft:'#ffe08a',
-  heart:'#e05263', kidneyRight:'#5fbf8f', kidneyLeft:'#5fbf8f'
+  heart:'#ff435c', kidneyRight:'#35d58b', kidneyLeft:'#35d58b'
 };
 var GHOST = 0x38445c;
 
@@ -314,7 +314,7 @@ function buildOrgans(data){
     geo.computeBoundingBox();
 
     var mat = new THREE.MeshPhysicalMaterial({
-      clearcoat:0.3, clearcoatRoughness:0.42,
+      clearcoat:0.08, clearcoatRoughness:0.65,
       color: PALETTE[key] || '#9aa7ba', roughness:.42, metalness:0,
       transparent:true, opacity:1, side:THREE.DoubleSide
     });
@@ -507,7 +507,7 @@ function spawn(){
   var geo = new THREE.SphereGeometry(0.4, 12, 10);
   function add(curve, u, kind, color){
     var m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-      color: color, transparent: true, opacity: 1, depthWrite: false }));
+      color: color, transparent: true, opacity: 1, depthWrite: false, toneMapped:false }));
     m.renderOrder = 3;
     root.add(m);
     particles.push({ mesh:m, curve:curve, u:u, u0:u, kind:kind });
@@ -856,13 +856,13 @@ function bodyAppearance(){
 function bodyBuildPath(){
  if(bodyPathGroup){root.remove(bodyPathGroup);Lab3D.dispose(bodyPathGroup);}
  bodyPathGroup=new THREE.Group();root.add(bodyPathGroup);
- function path(curve,color){var g=new THREE.TubeGeometry(curve,220,.065,6,false),m=new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:.32,depthWrite:false});bodyPathGroup.add(new THREE.Mesh(g,m));}
+ function path(curve,color){var g=new THREE.TubeGeometry(curve,220,.065,6,false),m=new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:.72,depthWrite:false,toneMapped:false});bodyPathGroup.add(new THREE.Mesh(g,m));}
  if(mode==='digestion')path(paths.digestion,FLOW.food);
  if(mode==='respiration')paths.air.forEach(c=>path(c,FLOW.airIn));
  // Circulation uses point colors to retain the arterial / venous transition locations.
  if(mode==='circulation'){
   var curves=particles.map(p=>p.curve).filter((c,i,a)=>a.indexOf(c)===i);
-  curves.forEach(c=>{var points=[],colors=[];for(var i=0;i<=240;i++){var u=i/240,p=c.getPointAt(u),color=new THREE.Color(FLOW[bloodKind(c,u)]);points.push(p.x,p.y,p.z);colors.push(color.r,color.g,color.b);}var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(points,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));bodyPathGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.5,depthWrite:false})));});
+  curves.forEach(c=>{var points=[],colors=[];for(var i=0;i<=240;i++){var u=i/240,p=c.getPointAt(u),color=new THREE.Color(FLOW[bloodKind(c,u)]);points.push(p.x,p.y,p.z);colors.push(color.r,color.g,color.b);}var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(points,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));bodyPathGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.85,depthWrite:false,toneMapped:false})));});
  }
  applyMode();
 }

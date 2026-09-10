@@ -11,8 +11,8 @@
 <style>
   :root{
     --accent:var(--geo);--accent-soft:var(--geo-soft);
-    --accent-p:#0b7fbf;   /* P波 */
-    --accent-s:#d33f5c;   /* S波 */
+    --accent-p:#005ca8;   /* P波 */
+    --accent-s:#bd1945;   /* S波 */
   }
   .container{max-width:1200px;margin:0 auto;padding:26px 28px 64px;}
   @media (max-width:600px){.container{padding:20px 16px 52px;}}
@@ -171,7 +171,7 @@
     </div>
   </div>
 
-  <div class="lab-legend"><span><i style="--key:#0b7fbf"></i>P波：先に到達</span><span><i style="--key:#d33f5c"></i>S波：後から到達</span><span>球面は波の到達範囲を表します</span></div>
+  <div class="lab-legend"><span><i style="--key:#005ca8"></i>P波：先に到達</span><span><i style="--key:#bd1945"></i>S波：後から到達</span><span>球面は波の到達範囲を表します</span></div>
   <div class="action-bar">
     <button class="btn btn-strain" onclick="startStrain()">① プレート沈み込み（ひずみ蓄積）</button>
     <button class="btn btn-earthquake" id="eqBtn" onclick="triggerEarthquake()" disabled>② プレート跳ね上がり（地震発生）</button>
@@ -389,7 +389,7 @@
 
     const seaGeo = new THREE.PlaneGeometry(50, 44);
     seaGeo.rotateX(-Math.PI / 2);
-    const seaMat = new THREE.MeshStandardMaterial({ color: 0x1583c4, transparent: true, opacity: 0.38, roughness: 0.14, metalness: 0.35 });
+    const seaMat = new THREE.MeshStandardMaterial({ color: 0x1583c4, transparent: true, opacity: 0.38, roughness: 0.7, metalness: 0 });
     const seaMesh = new THREE.Mesh(seaGeo, seaMat);
     seaMesh.position.set(39.5, 2.1, 0);
     scene.add(seaMesh);
@@ -401,21 +401,21 @@
     scene.add(epicenterMesh);
 
     const pWaveGeo = new THREE.SphereGeometry(1, 32, 32);
-    const pWaveMat = new THREE.MeshBasicMaterial({ color: 0x0b7fbf, transparent: true, opacity: 0.16, depthWrite:false });
+    const pWaveMat = new THREE.MeshBasicMaterial({ color: 0x005ca8, transparent: true, opacity: 0.16, depthWrite:false });
     pWaveMesh = new THREE.Mesh(pWaveGeo, pWaveMat);
     pWaveMesh.position.copy(hypocenter);
     pWaveMesh.visible = false;
     scene.add(pWaveMesh);
 
     const sWaveGeo = new THREE.SphereGeometry(1, 32, 32);
-    const sWaveMat = new THREE.MeshBasicMaterial({ color: 0xd33f5c, transparent: true, opacity: 0.18, depthWrite:false });
+    const sWaveMat = new THREE.MeshBasicMaterial({ color: 0xbd1945, transparent: true, opacity: 0.18, depthWrite:false });
     sWaveMesh = new THREE.Mesh(sWaveGeo, sWaveMat);
     sWaveMesh.position.copy(hypocenter);
     sWaveMesh.visible = false;
     scene.add(sWaveMesh);
 
-    stationAMesh = createStationPin(0x0b7fbf);
-    stationBMesh = createStationPin(0xd33f5c);
+    stationAMesh = createStationPin(0x005ca8);
+    stationBMesh = createStationPin(0xbd1945);
 
     quakeVisualInit(baseMesh,seaMesh);
     updateConfig();
@@ -675,7 +675,7 @@
     if (window[`arrivedS_${st}`]) {
       status.innerText = "主要動 (S波) 到達！強い揺れ";
       status.style.background = "#ffe4e6";
-      status.style.color = "#e11d48";
+      status.style.color = "#9f1239";
       
       // 実時間スケールに換算し、観測点ごとの震源距離に応じた正確な初期微動継続時間を算出
       const psTime = ((window[`timeS_${st}`] - window[`timeP_${st}`]) * 10).toFixed(1);
@@ -686,7 +686,7 @@
     } else if (window[`arrivedP_${st}`]) {
       status.innerText = "初期微動 (P波) 検知中";
       status.style.background = "#e0f2fe";
-      status.style.color = "#0284c7";
+      status.style.color = "#075985";
 
       const currentPs = ((waveTimer - window[`timeP_${st}`]) * 10).toFixed(1);
       psVal.innerText = `${currentPs} 秒`;
@@ -706,7 +706,7 @@
   function waveRims(mesh,color){
     const points=[];for(let i=0;i<128;i++){const a=i/128*Math.PI*2;points.push(new THREE.Vector3(Math.cos(a),Math.sin(a),0));}
     const geo=new THREE.BufferGeometry().setFromPoints(points);
-    for(let i=0;i<2;i++){const ring=new THREE.LineLoop(geo,new THREE.LineBasicMaterial({color,transparent:true,opacity:.7,depthWrite:false}));ring.rotation.y=i*Math.PI/2;mesh.add(ring);}
+    for(let i=0;i<2;i++){const ring=new THREE.LineLoop(geo,new THREE.LineBasicMaterial({color,transparent:true,opacity:1,depthWrite:false,toneMapped:false}));ring.rotation.y=i*Math.PI/2;mesh.add(ring);}
   }
   function quakeView(cut){
     quakeCut=cut;
@@ -722,9 +722,9 @@
     base.receiveShadow=true;oceanPlateMesh.castShadow=true;oceanPlateMesh.receiveShadow=true;
     landMesh.material.flatShading=false;landMesh.material.metalness=0;landMesh.material.roughness=.96;
     const pos=landMesh.geometry.attributes.position,colors=[];
-    for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);const c=new THREE.Color().setHSL(.27,.18,.42+.065*Math.sin(x*.24)*Math.cos(z*.19));colors.push(c.r,c.g,c.b);}
+    for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);const c=new THREE.Color().setHSL(.29,.46,.23+.045*Math.sin(x*.24)*Math.cos(z*.19));colors.push(c.r,c.g,c.b);}
     landMesh.geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));landMesh.material.vertexColors=true;landMesh.material.color.setHex(0xffffff);landMesh.material.needsUpdate=true;
-    waveRims(pWaveMesh,0x0b7fbf);waveRims(sWaveMesh,0xd33f5c);
+    waveRims(pWaveMesh,0x005ca8);waveRims(sWaveMesh,0xbd1945);
     [['陸のプレート',-28,5,-12],['海洋プレート',39,-.2,11],['震源',12,-7,8]].forEach(([text,x,y,z])=>{const l=Lab3D.label(text,'#294557',2);l.position.set(x,y,z);scene.add(l);});
     [[stationAMesh,'A'],[stationBMesh,'B']].forEach(([m,name])=>{const l=Lab3D.label(name,'#193d51',2.2);l.position.set(0,4,0);m.add(l);const halo=new THREE.Mesh(new THREE.RingGeometry(1.4,1.7,48),new THREE.MeshBasicMaterial({color:0x8aa9b7,transparent:true,opacity:.65,side:THREE.DoubleSide,depthWrite:false}));halo.rotation.x=-Math.PI/2;halo.position.y=.05;m.add(halo);m.userData.halo=halo;});
     document.getElementById('quakeCut').onclick=()=>quakeView(true);
@@ -736,8 +736,8 @@
   }
   function quakeVisualTick(){
     document.getElementById('strainReadout').textContent='ひずみ '+Math.round(strain*100)+'%';
-    [[pWaveMesh,waveRadiusP],[sWaveMesh,waveRadiusS]].forEach(([m,r])=>{m.children.forEach(c=>c.material.opacity=Math.min(.7,m.material.opacity*4));});
-    [[stationAMesh,'A'],[stationBMesh,'B']].forEach(([m,st])=>{if(!m.userData.halo)return;const p=window['arrivedP_'+st],s=window['arrivedS_'+st];m.userData.halo.material.color.setHex(s?0xd33f5c:p?0x0b7fbf:0x8aa9b7);m.userData.halo.scale.setScalar(isWaveSpreading&&(p||s)?1+.15*Math.sin(waveTimer*8):1);});
+    [[pWaveMesh,waveRadiusP],[sWaveMesh,waveRadiusS]].forEach(([m,r])=>{m.children.forEach(c=>c.material.opacity=isWaveSpreading ? .95 : 0);});
+    [[stationAMesh,'A'],[stationBMesh,'B']].forEach(([m,st])=>{if(!m.userData.halo)return;const p=window['arrivedP_'+st],s=window['arrivedS_'+st];m.userData.halo.material.color.setHex(s?0xbd1945:p?0x005ca8:0x8aa9b7);m.userData.halo.scale.setScalar(isWaveSpreading&&(p||s)?1+.15*Math.sin(waveTimer*8):1);});
   }
 
   window.onload = () => {
