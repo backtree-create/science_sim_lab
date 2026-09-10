@@ -60,3 +60,23 @@ body.visual-lab.instrument{--accent:#73d5e6;--text-faint:#a3b5c9;--text-dim:#c1c
 .visual-lab .metric-label,.visual-lab .station-dist{font-size:12px}
 .visual-lab .hint-panel{font-size:14px}
 @media(max-width:600px){.visual-lab #canvas-container{height:420px}.visual-lab .container{padding:16px 10px}.visual-lab .metrics-row{gap:6px}.visual-lab .control-label{flex-wrap:wrap}}
+/* Instructional contrast: quiet surfaces, explicit boundaries and readable annotations. */
+body.visual-lab{--text-faint:#475569;--text-dim:#334155}
+body.visual-lab.instrument{--text-faint:#b8c8da;--text-dim:#d2deeb}
+.visual-lab .lab-stage{background:#edf2f6}
+.weather-lab .canvas-mount{background:#e5edf5}
+.visual-lab #canvas-container{background:#edf2f6}
+.lab-caption,.lab-legend{background:#fff;color:#263b4e}
+.lab-stage-note{background:#fff;color:#263b4e;padding:6px 9px;border:1px solid #718398;border-radius:4px}
+.lab-toolbar{background:#e5ebf1;border-color:#8799ab}
+.lab-toolbar button,.lab-toolbar select,.weather-viewbar button{border-color:#718398}
+.lab-legend i{width:13px;height:13px;border:1px solid currentColor}
+.visual-lab .overlay-guide,.visual-lab .hud{background:#fff;color:#263b4e;border:1px solid #718398}
+.visual-lab.instrument .hud{background:#101e30;color:#e2ebf5;border-color:#718398}
+.visual-lab .lab-dark{background:#101e30;color:#e2ebf5}
+.visual-lab [data-phase][aria-current=step]{color:#fff;font-weight:800;text-decoration:underline;text-underline-offset:5px}
+.visual-lab .credit{color:#b8c8da}
+.weather-lab .panel-block h4,.weather-lab .legend .row,.weather-lab .readout,.weather-lab .info-text .note{color:#334155}
+.visual-lab button:focus-visible,.weather-lab button:focus-visible,.visual-lab input:focus-visible{outline:3px solid #0069b5;outline-offset:3px}
+.visual-lab.instrument button:focus-visible,.visual-lab.instrument input:focus-visible{outline-color:#ffdc74}
+.visual-lab [data-phase]{opacity:1;color:#b8c8da}

@@ -1,6 +1,6 @@
 /* Lightweight shared materials for scientific, live-rendered models. Three r128. */
 window.Lab3D = (() => {
-  function renderer(r){r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.12;return r;}
+  function renderer(r){r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=.9;return r;}
   function cloudTexture(){
     if(cloudTexture.cache)return cloudTexture.cache;
     const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
@@ -16,7 +16,7 @@ window.Lab3D = (() => {
   function strataTexture(){
     if(strataTexture.cache)return strataTexture.cache;
     const c=document.createElement('canvas');c.width=512;c.height=256;const g=c.getContext('2d');
-    const colors=['#9a7258','#c2a07b','#84624c','#d4b692','#9f7b59','#bd9775','#745646','#ae896b'];
+    const colors=['#70462e','#c29b64','#503628','#dbb97c','#795033','#b88751','#49352c','#a97443'];
     for(let y=0;y<256;y++){
       g.fillStyle=colors[Math.floor(y/32)%8];g.fillRect(0,y,512,1);
       g.fillStyle=`rgba(48,30,20,${.02+(Math.sin(y*5.37)+1)*.035})`;g.fillRect(0,y,512,1);
@@ -26,9 +26,9 @@ window.Lab3D = (() => {
   }
   function label(text,color='#243a4a',height=1.2){
     const c=document.createElement('canvas'),g=c.getContext('2d');g.font='600 28px sans-serif';c.width=Math.ceil(g.measureText(text).width)+32;c.height=54;
-    g.fillStyle='rgba(247,251,254,.94)';g.fillRect(0,0,c.width,54);g.font='600 28px sans-serif';g.fillStyle=color;g.textBaseline='middle';g.fillText(text,16,27);
+    g.fillStyle='#ffffff';g.fillRect(0,0,c.width,54);g.font='600 28px sans-serif';g.fillStyle=color;g.textBaseline='middle';g.fillText(text,16,27);
     const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
-    const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false}));s.scale.set(height*c.width/54,height,1);s.renderOrder=10;return s;
+    const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false,toneMapped:false}));s.scale.set(height*c.width/54,height,1);s.renderOrder=10;return s;
   }
   function dispose(group){group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){const a=Array.isArray(o.material)?o.material:[o.material];a.forEach(m=>{if(m.map&&!m.map._labShared)m.map.dispose();m.dispose();});}});group.clear();}
   return {renderer,cloudTexture,strataTexture,label,dispose};
