@@ -144,10 +144,12 @@
   }
 </style>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="visual-assets/vendor/three.min.js"></script>
+<script src="visual-assets/vendor/OrbitControls.js"></script>
+<link rel="stylesheet" href="visual-assets/lab.css">
+<script src="visual-assets/lab3d.js"></script>
 </head>
-<body>
+<body class="visual-lab">
 
 <div class="topbar">
   <a class="back" href="index.html">← ホームへ</a>
@@ -162,21 +164,23 @@
 
 <div class="container">
 
+  <div class="lab-toolbar"><button id="quakeCut" aria-pressed="true">地下断面・透過</button><button id="quakeSolid" aria-pressed="false">地表</button><button id="quakeFront">断面を正面から</button><button id="quakeHome">視点を戻す</button><span class="lab-spacer"></span><button id="quakePause">一時停止</button><span id="strainReadout">ひずみ 0%</span></div>
   <div id="canvas-container">
     <div class="overlay-guide">
-      🖱️ マウスドラッグ: 視点移動 | 🔍 ホイール: ズーム | 右ドラッグ: 平行移動
+       マウスドラッグ: 視点移動 |  ホイール: ズーム | 右ドラッグ: 平行移動
     </div>
   </div>
 
+  <div class="lab-legend"><span><i style="--key:#0b7fbf"></i>P波：先に到達</span><span><i style="--key:#d33f5c"></i>S波：後から到達</span><span>球面は波の到達範囲を表します</span></div>
   <div class="action-bar">
     <button class="btn btn-strain" onclick="startStrain()">① プレート沈み込み（ひずみ蓄積）</button>
     <button class="btn btn-earthquake" id="eqBtn" onclick="triggerEarthquake()" disabled>② プレート跳ね上がり（地震発生）</button>
-    <button class="btn btn-reset" onclick="resetSim()">🔄 シミュレーションリセット</button>
+    <button class="btn btn-reset" onclick="resetSim()"> シミュレーションリセット</button>
   </div>
 
   <div class="config-grid">
     <div class="panel-card">
-      <div class="panel-title">⚡ 地震規模＆揺れの強さ設定</div>
+      <div class="panel-title"> 地震規模＆揺れの強さ設定</div>
       <div class="control-group">
         <div class="control-label">
           <span>マグニチュード (M)</span>
@@ -194,7 +198,7 @@
     </div>
 
     <div class="panel-card">
-      <div class="panel-title" style="color: var(--accent-p);">📍 観測点 A（沿岸・震源近距離）</div>
+      <div class="panel-title" style="color: var(--accent-p);"> 観測点 A（沿岸・震源近距離）</div>
       <div class="control-group">
         <div class="control-label">
           <span>東西位置 (離隔距離)</span>
@@ -212,7 +216,7 @@
     </div>
 
     <div class="panel-card">
-      <div class="panel-title" style="color: var(--accent-s);">📍 観測点 B（内陸・震源遠距離）</div>
+      <div class="panel-title" style="color: var(--accent-s);"> 観測点 B（内陸・震源遠距離）</div>
       <div class="control-group">
         <div class="control-label">
           <span>東西位置 (離隔距離)</span>
@@ -277,7 +281,7 @@
   </div>
 
   <div class="hint-panel">
-    <strong>💡 観察と学習のヒント：</strong><br>
+    <strong> 観察と学習のヒント：</strong><br>
     ・<strong>黒っぽい茶色のプレート：</strong> 密度が大きく重い海洋プレート（玄武岩質）が陸のプレート（緑色の上面＋茶色の地層）の下に斜めに沈み込んでいます。<br>
     ・<strong>距離と震度の関係：</strong> マグニチュード（地震の全体のエネルギー）が一定でも、震源距離が遠くなるほど波が衰減するため震度（各地の揺れの強さ）は小さくなります。<br>
     ・<strong>初期微動継続時間（PS時間）：</strong> 観測点を遠くに移動させるほど初期微動継続時間（P波到着〜S波到着の時間差）が伸びることを確かめてみましょう。
@@ -383,11 +387,11 @@
     oceanPlateMesh.rotation.z = Math.PI / 9;
     scene.add(oceanPlateMesh);
 
-    const seaGeo = new THREE.PlaneGeometry(90, 44);
+    const seaGeo = new THREE.PlaneGeometry(50, 44);
     seaGeo.rotateX(-Math.PI / 2);
     const seaMat = new THREE.MeshStandardMaterial({ color: 0x1583c4, transparent: true, opacity: 0.38, roughness: 0.14, metalness: 0.35 });
     const seaMesh = new THREE.Mesh(seaGeo, seaMat);
-    seaMesh.position.set(5, 2.1, 0);
+    seaMesh.position.set(39.5, 2.1, 0);
     scene.add(seaMesh);
 
     const epiGeo = new THREE.SphereGeometry(1, 24, 24);
@@ -397,14 +401,14 @@
     scene.add(epicenterMesh);
 
     const pWaveGeo = new THREE.SphereGeometry(1, 32, 32);
-    const pWaveMat = new THREE.MeshBasicMaterial({ color: 0x0b7fbf, wireframe: true, transparent: true, opacity: 0.6 });
+    const pWaveMat = new THREE.MeshBasicMaterial({ color: 0x0b7fbf, transparent: true, opacity: 0.16, depthWrite:false });
     pWaveMesh = new THREE.Mesh(pWaveGeo, pWaveMat);
     pWaveMesh.position.copy(hypocenter);
     pWaveMesh.visible = false;
     scene.add(pWaveMesh);
 
     const sWaveGeo = new THREE.SphereGeometry(1, 32, 32);
-    const sWaveMat = new THREE.MeshBasicMaterial({ color: 0xd33f5c, wireframe: true, transparent: true, opacity: 0.7 });
+    const sWaveMat = new THREE.MeshBasicMaterial({ color: 0xd33f5c, transparent: true, opacity: 0.18, depthWrite:false });
     sWaveMesh = new THREE.Mesh(sWaveGeo, sWaveMat);
     sWaveMesh.position.copy(hypocenter);
     sWaveMesh.visible = false;
@@ -413,10 +417,11 @@
     stationAMesh = createStationPin(0x0b7fbf);
     stationBMesh = createStationPin(0xd33f5c);
 
+    quakeVisualInit(baseMesh,seaMesh);
     updateConfig();
     updateStations();
     window.addEventListener('resize', onWindowResize);
-    animate();
+    requestAnimationFrame(animate);
   }
 
   function createStationPin(color) {
@@ -501,6 +506,7 @@
       pos.setY(i, y);
     }
     pos.needsUpdate = true;
+    landMesh.geometry.computeVertexNormals();
   }
 
   function startStrain() {
@@ -512,6 +518,7 @@
     if (strain < 0.2 || isWaveSpreading) return;
     isAccumulating = false;
     isRebounding = true;
+    document.getElementById("eqBtn").disabled=true;
   }
 
   function resetSim() {
@@ -519,6 +526,7 @@
     isRebounding = false;
     isWaveSpreading = false;
     strain = 0;
+    oceanPlateMesh.position.set(24,-2,0);
     waveRadiusP = 0;
     waveRadiusS = 0;
     waveTimer = 0;
@@ -564,21 +572,23 @@
     return "0";
   }
 
-  function animate() {
+  function animate(now) {
     requestAnimationFrame(animate);
+    const frame=quakeLast?Math.min((now-quakeLast)/1000,.05)*60:0;quakeLast=now;
+    if(!quakePaused && !document.hidden){
 
     if (isAccumulating) {
       if (strain < 1.0) {
-        strain += 0.006;
+        strain = Math.min(1,strain+0.006*frame);
         updateLandDeformation();
-        oceanPlateMesh.position.x -= 0.005;
+        oceanPlateMesh.position.x -= 0.005*frame;
       } else {
         document.getElementById('eqBtn').disabled = false;
       }
     }
 
     if (isRebounding) {
-      strain -= 0.18;
+      strain -= 0.18*frame;
       if (strain <= 0) {
         strain = 0;
         isRebounding = false;
@@ -597,18 +607,18 @@
     }
 
     if (isWaveSpreading) {
-      waveTimer += 0.05;
-      waveRadiusP += speedP;
-      waveRadiusS += speedS;
+      waveTimer += 0.05*frame;
+      waveRadiusP += speedP*frame;
+      waveRadiusS += speedS*frame;
 
       const mag = parseFloat(document.getElementById('magSlider').value);
-      const maxLimitRadius = 20 + (mag - 6.5) * 18;
+      const maxLimitRadius = Math.max(20 + (mag - 6.5) * 18, hypocenter.distanceTo(posA)+15, hypocenter.distanceTo(posB)+15);
 
       pWaveMesh.scale.set(waveRadiusP, waveRadiusP, waveRadiusP);
       sWaveMesh.scale.set(waveRadiusS, waveRadiusS, waveRadiusS);
 
-      sWaveMesh.material.opacity = Math.max(0, 0.85 * (1 - waveRadiusS / maxLimitRadius));
-      pWaveMesh.material.opacity = Math.max(0, 0.7 * (1 - waveRadiusP / maxLimitRadius));
+      sWaveMesh.material.opacity = Math.max(0, 0.18 * (1 - waveRadiusS / maxLimitRadius));
+      pWaveMesh.material.opacity = Math.max(0, 0.16 * (1 - waveRadiusP / (maxLimitRadius*speedP/speedS)));
 
       updateLandDeformation();
 
@@ -621,6 +631,8 @@
       }
     }
 
+    }
+    quakeVisualTick();
     controls.update();
     renderer.render(scene, camera);
   }
@@ -687,6 +699,45 @@
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
+  }
+
+  let quakePaused=false,quakeCut=true,quakeBase=null,quakeSea=null,quakeLast=0;
+  const sectionPlane=new THREE.Plane(new THREE.Vector3(0,0,-1),0);
+  function waveRims(mesh,color){
+    const points=[];for(let i=0;i<128;i++){const a=i/128*Math.PI*2;points.push(new THREE.Vector3(Math.cos(a),Math.sin(a),0));}
+    const geo=new THREE.BufferGeometry().setFromPoints(points);
+    for(let i=0;i<2;i++){const ring=new THREE.LineLoop(geo,new THREE.LineBasicMaterial({color,transparent:true,opacity:.7,depthWrite:false}));ring.rotation.y=i*Math.PI/2;mesh.add(ring);}
+  }
+  function quakeView(cut){
+    quakeCut=cut;
+    if(quakeBase)quakeBase.material.clippingPlanes=cut?[sectionPlane]:[];
+    landMesh.material.transparent=cut;landMesh.material.opacity=cut?.55:1;landMesh.material.depthWrite=!cut;
+    landMesh.material.needsUpdate=true;
+    document.getElementById('quakeCut').setAttribute('aria-pressed',String(cut));
+    document.getElementById('quakeSolid').setAttribute('aria-pressed',String(!cut));
+  }
+  function quakeVisualInit(base,sea){
+    quakeBase=base;quakeSea=sea;Lab3D.renderer(renderer);renderer.localClippingEnabled=true;
+    base.material.map=Lab3D.strataTexture();base.material.color.setHex(0xffffff);base.material.needsUpdate=true;
+    base.receiveShadow=true;oceanPlateMesh.castShadow=true;oceanPlateMesh.receiveShadow=true;
+    landMesh.material.flatShading=false;landMesh.material.metalness=0;landMesh.material.roughness=.96;
+    const pos=landMesh.geometry.attributes.position,colors=[];
+    for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);const c=new THREE.Color().setHSL(.27,.18,.42+.065*Math.sin(x*.24)*Math.cos(z*.19));colors.push(c.r,c.g,c.b);}
+    landMesh.geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));landMesh.material.vertexColors=true;landMesh.material.color.setHex(0xffffff);landMesh.material.needsUpdate=true;
+    waveRims(pWaveMesh,0x0b7fbf);waveRims(sWaveMesh,0xd33f5c);
+    [['陸のプレート',-28,5,-12],['海洋プレート',39,-.2,11],['震源',12,-7,8]].forEach(([text,x,y,z])=>{const l=Lab3D.label(text,'#294557',2);l.position.set(x,y,z);scene.add(l);});
+    [[stationAMesh,'A'],[stationBMesh,'B']].forEach(([m,name])=>{const l=Lab3D.label(name,'#193d51',2.2);l.position.set(0,4,0);m.add(l);const halo=new THREE.Mesh(new THREE.RingGeometry(1.4,1.7,48),new THREE.MeshBasicMaterial({color:0x8aa9b7,transparent:true,opacity:.65,side:THREE.DoubleSide,depthWrite:false}));halo.rotation.x=-Math.PI/2;halo.position.y=.05;m.add(halo);m.userData.halo=halo;});
+    document.getElementById('quakeCut').onclick=()=>quakeView(true);
+    document.getElementById('quakeSolid').onclick=()=>quakeView(false);
+    document.getElementById('quakeFront').onclick=()=>{camera.position.set(-8,14,94);controls.target.set(-6,-1,0);};
+    document.getElementById('quakeHome').onclick=()=>{camera.position.set(5,45,80);controls.target.set(-5,0,0);};
+    document.getElementById('quakePause').onclick=function(){quakePaused=!quakePaused;this.textContent=quakePaused?'再生':'一時停止';this.setAttribute('aria-pressed',String(quakePaused));};
+    quakeView(true);
+  }
+  function quakeVisualTick(){
+    document.getElementById('strainReadout').textContent='ひずみ '+Math.round(strain*100)+'%';
+    [[pWaveMesh,waveRadiusP],[sWaveMesh,waveRadiusS]].forEach(([m,r])=>{m.children.forEach(c=>c.material.opacity=Math.min(.7,m.material.opacity*4));});
+    [[stationAMesh,'A'],[stationBMesh,'B']].forEach(([m,st])=>{if(!m.userData.halo)return;const p=window['arrivedP_'+st],s=window['arrivedS_'+st];m.userData.halo.material.color.setHex(s?0xd33f5c:p?0x0b7fbf:0x8aa9b7);m.userData.halo.scale.setScalar(isWaveSpreading&&(p||s)?1+.15*Math.sin(waveTimer*8):1);});
   }
 
   window.onload = () => {
