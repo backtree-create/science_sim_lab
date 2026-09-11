@@ -1,0 +1,187 @@
+/* Only these five lessons opt in; other lessons retain their theme. */
+body[data-lesson]{font-family:'Noto Sans JP','Yu Gothic',Meiryo,sans-serif;line-height:1.65}
+body[data-lesson] :where(button,select){font-size:14px;min-height:42px;touch-action:manipulation}
+body[data-lesson] :where(a,button,input,select,summary):focus-visible{outline:3px solid #e89b00;outline-offset:3px}
+body[data-lesson] :where(input[type=range]){min-height:30px;touch-action:pan-y}
+body[data-lesson] :where(.hint,.rule,.rule .t,.rule summary,.label-flex,.control label,.control-label,.card-desc,.legend,.legend-item,.badge span,.readout .item span,.readout .item b,.readout .item .v){font-size:14px;letter-spacing:0;line-height:1.65}
+body[data-lesson].instrument{--text:#f5f8ff;--text-dim:#d1dbe8;--text-faint:#b7c8db;--border:#52647a;--border-strong:#8ea6c1;background:#0d1521}
+body[data-lesson].instrument::before,body[data-lesson].instrument::after{display:none}
+body[data-lesson].instrument .sim-header{padding:16px 22px 8px;max-width:none}
+body[data-lesson].instrument .sim-header h1{font-size:27px;margin:2px 0 5px}
+body[data-lesson].instrument .sim-header p{max-width:none;font-size:14px;line-height:1.65}
+body[data-lesson].instrument .eyebrow{display:none}
+body[data-lesson].instrument .topbar{padding:8px 22px;min-height:44px}
+body[data-lesson].instrument .layout{padding:12px 22px 22px;gap:16px;max-width:none;align-items:start;grid-template-columns:minmax(0,1fr) 350px}
+body[data-lesson].instrument .panel{padding:14px;min-width:0}
+body[data-lesson].instrument .stage{padding:0;height:clamp(400px,65dvh,720px);aspect-ratio:auto;position:sticky;top:12px;border:1px solid #71849b}
+body[data-lesson].instrument .tabrow{justify-content:start;padding:0 22px;margin:6px 0}
+body[data-lesson].instrument .tabs{flex-wrap:wrap;gap:6px}
+body[data-lesson].instrument .tab{padding:8px 12px;font-size:14px}
+body[data-lesson].instrument .tab.on,body[data-lesson].instrument .tab.active{background:#38bdf8;color:#081a2d;border-color:#38bdf8;font-weight:800}
+body[data-lesson].instrument :where(.view-overlay,.legend-item,.hud,.badge span){background:#0b1728;color:#eff6ff;border-color:#61748d}
+body[data-lesson=magnet] .hud{top:60px;max-width:calc(100% - 24px);font-size:13px}
+body[data-lesson=magnet] .viewbar{left:10px;right:auto}
+body[data-lesson=magnet] .viewbar button{font-size:13px;color:#f5f8ff;border-color:#71849b;background:#15243a}
+body[data-lesson=magnet] .viewbar button.on{background:#38bdf8;color:#07131c}
+body[data-lesson=magnet] .badge{max-width:calc(100% - 24px)}
+body[data-lesson=magnet] .badge i{width:12px;height:12px;border:1px solid white}
+body[data-lesson=coriolis] #canvasContainer{background:#0b1422}
+body[data-lesson=coriolis] #canvas2d{object-fit:contain}
+body[data-lesson=coriolis] .view-overlay{font-size:13px;border-radius:6px}
+body[data-lesson=coriolis] .legend-item{font-size:12px;border-radius:5px;padding:3px 7px}
+body[data-lesson=coriolis] .label-flex,body[data-lesson=coriolis] .val-badge{font-size:14px}
+body[data-lesson=electric]{--text-dim:#344b5e;--panel-border:#8198aa;--panel-bg:#fff;--cyan:#075e85;--amber:#9b4700;--lcd-green:#087047}
+body[data-lesson=electric] #ui-panel{border-radius:12px;padding:16px;box-shadow:0 6px 24px #102c3e26}
+body[data-lesson=electric] .home-sub{letter-spacing:.03em;color:#344b5e}
+body[data-lesson=electric] .card{border:1px solid #8198aa;border-top:4px solid #075e85;border-radius:10px}
+body[data-lesson=electric] .card-desc{font-size:14px}
+body[data-lesson=electric] :where(.lcd-label,.param-label,.legend-item){font-size:14px}
+body[data-lesson=electric] #home-screen{overflow:auto}
+body[data-lesson=electric] .btn-secondary{color:white;background:#075e85}
+body[data-lesson=atom]{--line:#8297a9;--muted:#354b60;--panel:#fff}
+body[data-lesson=atom] #ui-panel{width:310px;max-height:calc(100dvh - 34px);overflow:auto;padding:16px}
+body[data-lesson=atom] #info-box{font-size:14px;color:#263c51;line-height:1.65}
+.particle-key{display:flex;flex-wrap:wrap;gap:7px;font-weight:800}
+.particle-key span{border:1px solid currentColor;border-radius:5px;padding:3px 6px;background:white}
+.particle-key .proton{color:#b2163e}.particle-key .electron{color:#0066a3}.particle-key .neutron{color:#394b5e}
+#particle-counts{font-weight:700;padding:9px 0;border-bottom:1px solid #98abba;margin-bottom:8px}
+body[data-lesson=ion]{--sub:#344a60;--line:#8298ad;--ink:#132b40;background:#edf3f8}
+body[data-lesson=ion] :where(.card h3,.card label,.chip,.li,.seg button,.subbtn,.eq,.view-hint){font-size:14px}
+body[data-lesson=ion] .chip.on{background:#075e78;color:white;border-color:#075e78}
+body[data-lesson=ion] .chip.ghost{color:#52657b}
+body[data-lesson=ion] .chip.ghost.on{background:#6334a3;color:white}
+body[data-lesson=ion] .li .dot{border:1px solid #233b4f;width:13px;height:13px}
+body[data-lesson=ion] .view-hint{color:#263c51;background:#fff}
+body[data-lesson=ion] footer{font-size:12px;color:#344a60;padding:4px 22px 8px;text-align:left}
+body[data-lesson=ion] .vtool{font-size:14px;min-height:42px}
+body[data-lesson=ion] aside{width:310px;flex-shrink:0}
+.classroom-note{font-size:14px;line-height:1.7;padding:10px 12px;margin-top:12px;border:1px solid #71859d;border-left:4px solid #1684b4;border-radius:6px;background:#f1f6fa;color:#18334b}
+.classroom-note summary{font-weight:800;cursor:pointer;min-height:32px}
+.classroom-note p{margin:7px 0 0}
+.render-message{position:absolute;z-index:8;inset:100px 16px auto;padding:18px;border:2px solid #d49100;border-radius:8px;background:#fff;color:#172c40;font-size:15px;line-height:1.7;max-width:520px;box-shadow:0 4px 20px #0003}
+body[data-lesson=atom]>.render-message{left:340px;top:90px}
+body[data-lesson=electric] .render-message{right:390px;left:24px;top:90px}
+@media(max-width:900px){
+ body[data-lesson].instrument .layout{grid-template-columns:minmax(0,1fr);padding:10px 14px}
+ body[data-lesson].instrument .stage{position:relative;top:0;height:48dvh;min-height:360px}
+ body[data-lesson].instrument .sim-header{padding:10px 14px 4px}
+ body[data-lesson].instrument .sim-header h1{font-size:24px}
+ body[data-lesson].instrument .tabrow{padding:0 14px}
+ body[data-lesson=ion] aside{width:100%}
+ body[data-lesson=ion] .mod-ui.show{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body[data-lesson=ion] .stage{height:48dvh}
+ body[data-lesson=atom] #ui-panel{width:290px}
+ body[data-lesson=atom]>.render-message{left:310px}
+}
+@media(max-width:600px){body[data-lesson=ion] .mod-ui.show{grid-template-columns:1fr}body[data-lesson] .render-message{inset:70px 12px auto;max-width:none}body[data-lesson=atom] #ui-panel{max-height:50dvh;top:auto;bottom:0;left:0;width:100%}body[data-lesson=atom]>.render-message{left:12px;top:60px}body[data-lesson=electric] .render-message{right:12px}}
+/* Keep the working diagram visible while longer explanations scroll independently. */
+@media(min-width:700px) and (min-height:700px){
+ body[data-lesson].instrument{height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+ body[data-lesson].instrument .topbar,body[data-lesson].instrument .sim-header,body[data-lesson].instrument .tabrow{flex:none;width:100%;margin:0}
+ body[data-lesson].instrument .layout{flex:1;min-height:0;width:100%;padding-top:8px;padding-bottom:12px;align-items:stretch}
+ body[data-lesson].instrument .layout>.panel{min-height:0;overflow:auto}
+ body[data-lesson].instrument .layout>.panel.flush{display:flex;flex-direction:column;padding:8px;overflow:hidden}
+ body[data-lesson].instrument .stage{flex:1;height:auto;min-height:0;position:relative;top:0}
+ body[data-lesson=magnet] .statusline{font-size:12px;padding:4px;flex:none}
+}
+@media(min-width:700px) and (max-width:900px) and (min-height:700px){
+ body[data-lesson].instrument .layout{grid-template-columns:1fr;grid-template-rows:minmax(300px,1.25fr) minmax(220px,1fr)}
+}
+body[data-lesson=atom] label,body[data-lesson=atom] #charge-status-title{font-size:14px;letter-spacing:0;color:#354b60}
+body[data-lesson=ion] .eqband .eq,body[data-lesson=ion] .eqband .eqnote{color:#eaf3ff;font-size:14px}
+body[data-lesson=ion] .cam-label{color:#263c51;background:#fff;font-size:12px}
+@media(min-width:700px) and (max-width:900px) and (min-height:700px){
+ body[data-lesson=ion]{height:100dvh;min-height:0;overflow:hidden}
+ body[data-lesson=ion] main{flex:1;min-height:0;overflow:hidden}
+ body[data-lesson=ion] .stage{flex:1.15;height:auto;min-height:280px}
+ body[data-lesson=ion] aside{flex:1;min-height:0;overflow:auto}
+ body[data-lesson=ion] .eqband{flex:none;margin:8px 12px;padding:8px 12px}
+}
+body[data-lesson=electric] #ui-panel :where(label,p,.legend,.legend-item,.desc,.note){font-size:14px;line-height:1.7;color:#243f53}
+body[data-lesson=electric] #ui-panel .legend-dot{width:11px;height:11px}
+body[data-lesson=ion] .eqband .dim{color:#d1e0ed}
+body[data-lesson=ion] .cam-note{color:#30495f;background:#fff;font-size:12px}
+/* Observation-first revision: one task at a time instead of long explanation columns. */
+.inquiry-question{margin:8px 0;padding:8px 10px;border-left:4px solid #0080b6;background:#edf6fc;color:#163a53;font-size:14px!important;line-height:1.55!important;font-weight:700}
+body[data-lesson].instrument .inquiry-question{background:#112e43;color:#f2f8ff;border-color:#38bdf8}
+body[data-lesson=coriolis] .hint.exp{padding:10px;margin:8px 0 0;font-size:14px;line-height:1.55}
+body[data-lesson=coriolis] .hint.exp p{margin:4px 0 0}
+body[data-lesson=coriolis] .hint-title{font-size:12px;color:#d0e3f2}
+body[data-lesson].instrument .panel h2{margin:0 0 8px}
+body[data-lesson].instrument .divider{margin:10px 0}
+body[data-lesson].instrument .control-group{gap:8px}
+body[data-lesson].instrument .control{margin-bottom:10px}
+body[data-lesson].instrument .readout .item{padding:7px 10px}
+body[data-lesson=ion] .headnote,body[data-lesson=ion] header .title p,body[data-lesson=ion] footer{display:none}
+body[data-lesson=ion] .stage>.inquiry-question{margin:0;border:0;border-bottom:1px solid #91a9bb;flex:none;padding:8px 12px}
+body[data-lesson=ion] .experiment-sections{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;flex:none}
+body[data-lesson=ion] .experiment-sections button{font-size:14px;min-height:38px;padding:5px 9px;border:1px solid #718da3;border-radius:6px;color:#18374e;background:#fff;font-weight:700}
+body[data-lesson=ion] .experiment-sections [aria-selected=true]{color:white;background:#075e78;border-color:#075e78}
+body[data-lesson=ion] .mod-ui.show{display:flex!important;flex-direction:column;gap:0}
+body[data-lesson=ion] .card[hidden]{display:none!important}
+body[data-lesson=ion] .card{margin:0;padding:12px}
+body[data-lesson=ion] .card h3{margin:0 0 8px}
+body[data-lesson=ion] .card .small,body[data-lesson=ion] .eqnote{display:none}
+body[data-lesson=ion] .eqband{margin:8px 12px;min-height:44px;padding:7px 12px}
+@media(min-width:700px) and (min-height:650px){
+ body[data-lesson=ion]{height:100dvh;min-height:0;overflow:hidden}
+ body[data-lesson=ion] main{flex:1;min-height:0}
+ body[data-lesson=ion] aside{overflow:auto}
+ body[data-lesson].instrument{height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+ body[data-lesson].instrument .layout{flex:1;min-height:0;align-items:stretch;width:100%}
+ body[data-lesson].instrument .layout>.panel{min-height:0;overflow:auto}
+ body[data-lesson].instrument .layout>.panel.flush{display:flex;flex-direction:column;overflow:hidden;padding:6px}
+ body[data-lesson].instrument .stage{flex:1;min-height:0;height:auto;position:relative;top:0}
+}
+@media(min-width:700px) and (max-width:900px) and (min-height:700px){
+ body[data-lesson=ion] main{flex-direction:column}
+ body[data-lesson=ion] .stage{flex:1;min-height:270px;height:auto}
+ body[data-lesson=ion] aside{flex:0 0 300px;width:100%;min-height:0}
+ body[data-lesson=ion] .card .chips{gap:6px}
+ body[data-lesson=ion] .card .bigbtn{padding:9px;min-height:40px}
+ body[data-lesson].instrument .layout{grid-template-rows:minmax(270px,1fr) minmax(300px,1fr)}
+ body[data-lesson=coriolis] .layout>.panel:last-child{display:flex;flex-direction:column}
+ body[data-lesson=coriolis] .control-group{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
+ body[data-lesson=coriolis] .control-group[style*="none"]{display:none!important}
+ body[data-lesson=coriolis] .hint.exp{flex:none}
+}
+@media(min-width:700px){
+ body[data-lesson=electric] #canvas-container{position:absolute;left:0;top:0;width:calc(100% - 390px);height:100dvh}
+ body[data-lesson=atom] #canvas-container{position:absolute;left:340px;top:0;width:calc(100% - 340px);height:100dvh}
+ body[data-lesson=electric] #ui-panel{width:360px;max-height:calc(100dvh - 32px)}
+ body[data-lesson=electric] .subhead{display:none}
+}
+@media(min-width:700px) and (max-width:900px){
+ body[data-lesson=electric] #canvas-container{width:100%;height:55dvh;left:0;top:0}
+ body[data-lesson=electric] #ui-panel{top:auto;bottom:0;left:10px;right:10px;width:auto;height:calc(45dvh - 10px);max-height:none;padding:10px;overflow:auto}
+ body[data-lesson=electric]:not([data-electric-mode=builder]) #controls-content{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+ body[data-lesson=electric] #controls-content>h2,body[data-lesson=electric] #controls-content>.inquiry-question{grid-column:1/-1;margin:0}
+ body[data-lesson=electric] .control-group{margin:0}
+ body[data-lesson=electric] #hint,body[data-lesson=electric] #brand{display:none}
+ body[data-lesson=atom] #canvas-container{left:0;top:0;width:100%;height:calc(100dvh - 370px)}
+ body[data-lesson=atom] #ui-panel{top:auto;bottom:10px;left:10px;width:calc(100% - 20px);height:350px;max-height:none;display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;padding:12px}
+ body[data-lesson=atom] #ui-panel>h1{grid-column:1/-1;margin:0}
+ body[data-lesson=atom] #info-box{grid-column:2;grid-row:2/5;margin:0;padding:8px;border:0}
+ body[data-lesson=atom] #ui-panel>.control-group,body[data-lesson=atom] #charge-status-card{margin:0}
+ body[data-lesson=atom] #ui-panel button{margin:0 0 4px;min-height:38px;padding:6px}
+}
+.model-key{font-size:12px;color:#d1dbe8;display:block;line-height:1.4}
+body[data-lesson=electric] #controls-content>.legend-row{grid-column:1/-1}
+@media(min-width:700px) and (max-width:900px){
+ body[data-lesson=atom] #ui-panel{height:370px}
+ body[data-lesson=atom] #canvas-container{height:calc(100dvh - 390px)}
+ body[data-lesson=electric]:not([data-electric-mode=builder]) #controls-content>.btn-action{align-self:start}
+}
+@media(min-width:700px) and (max-width:900px) and (min-height:700px){
+ body[data-lesson=magnet] .group.on{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+ body[data-lesson=magnet] .group>h2,body[data-lesson=magnet] .group>.segbtns,body[data-lesson=magnet] .group>.controls{grid-column:1/-1}
+ body[data-lesson=magnet] .controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 12px}
+ body[data-lesson=magnet] .controls>.checkrow{grid-column:1/-1}
+ body[data-lesson=magnet] .group>.divider,body[data-lesson=magnet] .group>h3{display:none}
+ body[data-lesson=magnet] .control{margin:0}
+ body[data-lesson=magnet] .control label{display:block;min-height:44px}
+ body[data-lesson=magnet] .control label .val{display:block;width:max-content;padding:0 6px;font-size:12px}
+ body[data-lesson=magnet] .inquiry-question{margin:0}
+ body[data-lesson=magnet] .segbtns{margin:0}
+ body[data-lesson=magnet] .group>.readout{margin:0;gap:6px}
+}
