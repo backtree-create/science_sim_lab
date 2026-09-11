@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>滑車：力と引く長さ</title><link href="styles.css" rel="stylesheet"/><link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script></head><body><nav class="topbar"><a class="back" href="index.html">← ホームへ</a><span>SCIENCE SIM LAB</span></nav><header class="sim-header"><h1>滑車：力と引く長さ</h1><p>荷物を同じ高さまで上げるには、ひもをどれだけ引く？</p></header><main class="layout"><section class="panel"><div class="stage"><canvas aria-label="滑車：力と引く長さの観察図" id="scene"></canvas></div><div class="legend">茶：1本のひも ／ 青枠：荷物と動く滑車 ／ 番号：支える区間</div><div aria-live="polite" class="statusline" id="status"></div></section><section class="panel"><h2>条件を変えて観察</h2><div class="control"><label for="rig">ひもの掛け方</label><select id="rig"><option value="fixed">定滑車 1個</option><option value="movable">動滑車 1個（上へ引く）</option><option value="pair">定滑車＋動滑車</option><option value="four">定滑車 2個＋動滑車 2個</option></select></div><div class="control"><label for="mass">荷物 <output id="massVal">10</output> kg</label><input id="mass" max="40" min="2" step="1" type="range" value="10"/></div><div class="control"><label for="height">上げる高さ <output id="heightVal">1</output> m</label><input id="height" max="1" min="0.2" step="0.1" type="range" value="1"/></div><div class="control"><label for="progress">引く操作 <output id="progressVal">0</output> %</label><input id="progress" max="100" min="0" step="0.1" type="range" value="0"/></div><div class="btnrow"><button class="btn primary" id="play">持ち上げる</button><button class="btn" id="reset">戻す</button></div><div class="readout" id="values"></div><button class="btn detail-open" data-dialog="notes">モデルについて</button></section></main><dialog id="notes"><button class="btn close">閉じる</button><p>ひもは伸びず、ひもと滑車の質量・摩擦を無視。ゆっくり一定の速さで引くので、同じひもの張力は等しい。番号は荷物側の動く部分を上向きに支える区間。動滑車2個は同じ荷物につながる組滑車で、別々のひもを使う多段式ではない。自由な追加方式を、ひもの経路と仕事が整合する4種類の構成に置き換えた。</p></dialog><script>
+<html lang="ja"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>滑車：力と引く長さ</title><link href="styles.css" rel="stylesheet"/><link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script></head><body><nav class="topbar"><a class="back" href="index.html">← ホームへ</a><span>SCIENCE SIM LAB</span></nav><header class="sim-header"><h1>滑車：力と引く長さ</h1><p>荷物を同じ高さまで上げるには、ひもをどれだけ引く？</p></header><main class="layout"><section class="panel"><div class="stage"><canvas aria-label="滑車：力と引く長さの観察図" id="scene"></canvas></div><div class="legend">茶：1本のひも ／ 青枠：荷物と動く滑車 ／ 番号：支える区間</div><div aria-live="polite" class="statusline" id="status"></div></section><section class="panel"><h2>条件を変えて観察</h2><div class="control"><label for="rig">ひもの掛け方</label><select id="rig"><option value="fixed">定滑車 1個</option><option value="movable">動滑車 1個（上へ引く）</option><option value="pair">定滑車＋動滑車</option><option value="four">定滑車 2個＋動滑車 2個</option></select></div><div class="control"><label for="mass">荷物 <output id="massVal">10</output> kg</label><input id="mass" max="40" min="2" step="1" type="range" value="10"/></div><div class="control"><label for="height">上げる高さ <output id="heightVal">1</output> m</label><input id="height" max="1" min="0.2" step="0.1" type="range" value="1"/></div><div class="control"><label for="progress">ひもを引く <output id="progressVal">0.00</output> m</label><input id="progress" max="100" min="0" step="0.1" type="range" value="0"/></div><div class="btnrow"><button class="btn primary" id="play">持ち上げる</button><button class="btn" id="reset">戻す</button></div><div class="readout" id="values"></div><button class="btn detail-open" data-dialog="notes">モデルについて</button></section></main><dialog id="notes"><button class="btn close">閉じる</button><p>ひもは伸びず、ひもと滑車の質量・摩擦を無視。ゆっくり一定の速さで引くので、同じひもの張力は等しい。番号は荷物側の動く部分を上向きに支える区間。動滑車2個は同じ荷物につながる組滑車で、別々のひもを使う多段式ではない。自由な追加方式を、ひもの経路と仕事が整合する4種類の構成に置き換えた。</p></dialog><script>
 const $=id=>document.getElementById(id);let playing=false,last=0,render;
 function draw(c,w,h){
  const rig=$('rig').value,n=rig==='four'?4:rig==='fixed'?1:2,m=+$('mass').value,goal=+$('height').value,p=+$('progress').value/100;
@@ -37,10 +37,32 @@ function draw(c,w,h){
  lab.line(c,loadX,loadY,loadX,blockY);c.fillStyle='#173e6d';c.fillRect(loadX-30,blockY,60,36);lab.text(c,m+' kg',loadX,blockY+24,'white','center');
  c.fillStyle='#a55000';c.beginPath();c.arc(handX,handY,6,0,Math.PI*2);c.fill();
  lab.arrow(c,handX+20,handY,handX+20,handY+(rig==='movable'?-34:34),'#a55000','引く');
- lab.line(c,loadX-80,base+(rig==='fixed'?36:71),loadX-45,base+(rig==='fixed'?36:71),'#61738b',[4,4]);
- lab.text(c,'上昇 '+lift.toFixed(2)+' m',20,h-48,'#145cb0');lab.text(c,'引いた長さ '+pull.toFixed(2)+' m',20,h-23,'#8b4800');
+ // Fixed starting references: distances are read from these, not from the moving objects.
+ const blockStart=base+(rig==='fixed'?0:35),handStart=rig==='movable'?base-55:base;
+ c.save();c.strokeStyle='#698099';c.lineWidth=1.5;c.setLineDash([5,4]);
+ c.strokeRect(loadX-30,blockStart,60,36);c.beginPath();c.arc(handX,handStart,7,0,Math.PI*2);c.stroke();c.restore();
+ function measure(mx,start,end,color,label){
+   lab.line(c,mx-6,start,mx+6,start,color);lab.line(c,mx-6,end,mx+6,end,color);
+   if(Math.abs(end-start)>1)lab.arrow(c,mx,start,mx,end,color);
+   lab.text(c,label,mx+(color==='#145cb0'?-10:12),(start+end)/2-7,color,color==='#145cb0'?'right':'left');
+ }
+ measure(loadX-55,blockStart,blockY,'#145cb0',lift.toFixed(2)+' m 上昇');
+ measure(handX+55,handStart,handY,'#8b4800',pull.toFixed(2)+' m 引く');
+ lab.text(c,'破線：開始位置',20,55,'#4e637b');
+ // Two equally scaled distance bars keep the ratio readable, including while paused.
+ const bx=135;
+ function distanceBar(yy,value,color,label){
+   lab.text(c,label,20,yy+5,color);
+   c.fillStyle=color;c.fillRect(bx,yy-6,value*k,12);
+   for(let i=0;i<=4;i++){lab.line(c,bx+i*k,yy-9,bx+i*k,yy+9,'#8092a6');}
+   lab.text(c,value.toFixed(2)+' m',bx+4*k+12,yy+5,color);
+ }
+ distanceBar(h-52,lift,'#145cb0','荷物の上昇');distanceBar(h-23,pull,'#8b4800','引いたひも');
+ lab.text(c,'1目盛り＝1 m',bx+4*k+85,h-23,'#4e637b');
+ $('progressVal').textContent=pull.toFixed(2);
+ $('progress').setAttribute('aria-valuetext',pull.toFixed(2)+' m 引いた');
  $('values').innerHTML=[['支えるひも',n+' 本'],['必要な力',force.toFixed(1)+' N'],['荷物の重さ',weight.toFixed(1)+' N'],['入力した仕事',(force*pull).toFixed(1)+' J'],['荷物の位置エネルギーの増加',(weight*lift).toFixed(1)+' J']].map(([a,b])=>'<div class="item"><div class="k">'+a+'</div><div class="v">'+b+'</div></div>').join('');
- $('status').textContent='ゆっくり引くモデル ／ ひもの長さの変化と荷物の移動は共通縮尺';
+ $('status').textContent='ひも全体の長さは一定 ／ 破線からの移動量と下の棒は共通縮尺';
  $('play').textContent=playing?'一時停止':'持ち上げる';
 }
 render=lab.canvas('scene',draw);
