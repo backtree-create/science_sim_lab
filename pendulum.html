@@ -1,12 +1,13 @@
 <!DOCTYPE html>
+
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>振り子とニュートンのゆりかご</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;family=Noto+Sans+JP:wght@400;500;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
 <style>
   :root{--accent:#c98bff;}
   #stage{width:100%;height:400px;}
@@ -38,123 +39,101 @@
     input[type=range]::-moz-range-thumb{width:26px;height:26px;}
   }
 </style>
-</head>
+<link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script></head>
 <body>
-
 <div class="topbar">
-  <a class="back" href="index.html">← ホームへ</a>
-  <span class="unit-title">05 ／ 振り子と衝突</span>
+<a class="back" href="index.html">← ホームへ</a>
+<span class="unit-title">05 ／ 振り子と衝突</span>
 </div>
-
 <div class="sim-header">
-  <span class="eyebrow">Pendulum &amp; Newton's Cradle</span>
-  <h1>振り子はなぜ揺れ続けるのか</h1>
-  <p>振り子には常に重力が働いているのに、なぜ一定のリズムで往復し続けるのか。重力を「引き戻す力」と「張力とつり合う力」に分解し、位置エネルギーと運動エネルギーが姿を変えながら保存される様子を見る。ニュートンのゆりかごでは、同じしくみが玉突きの衝突にどうつながるかを確かめる。</p>
+<span class="eyebrow">Pendulum &amp; Newton's Cradle</span>
+<h1>振り子はなぜ揺れ続けるのか</h1>
+<p>最下点と折り返し地点で、張力とエネルギーはどう変わる？</p>
 </div>
-
 <div class="layout">
-  <div class="panel">
-    <h2><span class="dot"></span>シミュレーション</h2>
-    <div class="modebar">
-      <button class="btn active" id="modeSingle">単振り子</button>
-      <button class="btn" id="modeCradle">ニュートンのゆりかご</button>
-    </div>
-    <div class="stage"><canvas id="stage"></canvas></div>
-
-    <div id="singleUI">
-      <div class="legend" style="margin-top:10px;">
-        <div class="item"><span class="sw" style="background:var(--force);"></span>重力 mg</div>
-        <div class="item"><span class="sw" style="background:var(--normal);"></span>張力 T</div>
-        <div class="item"><span class="sw" style="background:var(--highlight);"></span>復元力（接線方向）</div>
-      </div>
-      <div class="energybar"><div class="ke" id="keBar" style="width:0%;"></div><div class="pe" id="peBar" style="width:100%;"></div></div>
-      <div class="energylabel"><span>運動エネルギー KE</span><span>位置エネルギー PE</span></div>
-    </div>
-
-    <div id="cradleUI" style="display:none;">
-      <div class="legend" style="margin-top:10px;">
-        <div class="item"><span class="sw" style="background:var(--highlight);"></span>動いている球</div>
-        <div class="item"><span class="sw" style="background:var(--text-faint);"></span>静止している球</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h2><span class="dot"></span>パラメータ</h2>
-
-    <div class="controls" id="singleControls">
-      <div class="control">
-        <label>ひもの長さ L <span class="val"><span id="lVal">1.0</span> m</span></label>
-        <input type="range" id="length" min="0.3" max="2.0" value="1.0" step="0.05">
-      </div>
-      <div class="control">
-        <label>初期角度 θ₀ <span class="val"><span id="th0Val">40</span>°</span></label>
-        <input type="range" id="theta0" min="5" max="90" value="40" step="1">
-      </div>
-      <div class="control">
-        <label style="justify-content:flex-start;gap:8px;"><input type="checkbox" id="damping"> 現実的な減衰を含める（摩擦・空気抵抗）</label>
-      </div>
-    </div>
-
-    <div class="controls" id="cradleControls" style="display:none;">
-      <div class="control">
-        <label>引く球の数 k</label>
-        <div class="segrow">
-          <button class="segbtn active" data-k="1">1個</button>
-          <button class="segbtn" data-k="2">2個</button>
-          <button class="segbtn" data-k="3">3個</button>
-        </div>
-      </div>
-      <div class="control">
-        <label>引き上げ角度 <span class="val"><span id="pullVal">40</span>°</span></label>
-        <input type="range" id="pullAngle" min="10" max="70" value="40" step="1">
-      </div>
-      <div class="control">
-        <label style="justify-content:flex-start;gap:8px;"><input type="checkbox" id="cradleDamping"> 衝突ごとにわずかにエネルギーを失う（現実的）</label>
-      </div>
-    </div>
-
-    <div class="btnrow" style="margin-top:16px;">
-      <button class="btn primary" id="launchBtn">放す</button>
-      <button class="btn" id="resetBtn">リセット</button>
-    </div>
-
-    <h2 style="margin-top:22px;"><span class="dot"></span>読み取り値</h2>
-    <div class="readout" id="readoutSingle">
-      <div class="item"><div class="k">角度 θ</div><div class="v" id="rTheta">40.0°</div></div>
-      <div class="item"><div class="k">角速度 ω</div><div class="v velocity" id="rOmega">0.00 rad/s</div></div>
-      <div class="item"><div class="k">張力 T</div><div class="v normal" id="rT">— N</div></div>
-      <div class="item"><div class="k">復元力</div><div class="v force" id="rRestore">— N</div></div>
-      <div class="item"><div class="k">理論周期（小角近似）</div><div class="v" id="rT0">— s</div></div>
-      <div class="item"><div class="k">実測周期</div><div class="v" id="rTmeasured">— s</div></div>
-    </div>
-    <div class="readout" id="readoutCradle" style="display:none;">
-      <div class="item"><div class="k">現在動いている球</div><div class="v" id="rActive">なし</div></div>
-      <div class="item"><div class="k">直前の衝突速度</div><div class="v velocity" id="rCollV">— m/s</div></div>
-    </div>
-
-    <div class="explain" id="explainText">
-      振り子には常に重力 mg が働いていますが、そのうち<strong>ひもに沿った成分</strong>は張力とつり合い、<strong>ひもと垂直な成分（接線方向）</strong>だけが物体を中心（最下点）に引き戻す「復元力」として働きます。この復元力が振り子を往復させ続ける原動力です。
-      <div class="note">角度が小さいときは復元力がほぼ角度に比例し（sinθ≈θ）、周期はおもりの重さによらず T=2π√(L/g) で近似できます。角度が大きくなるとこの近似がずれ、実際の周期は理論値より少しだけ長くなります。</div>
-    </div>
-  </div>
+<div class="panel pendulumPanel">
+<h2><span class="dot"></span>シミュレーション</h2>
+<div class="modebar">
+<button class="btn active" id="modeSingle">単振り子</button>
+<button class="btn" id="modeCradle">ニュートンのゆりかご</button>
 </div>
-
-<footer class="source">
-  <h3>Reference</h3>
-  振り子の運動方程式 θ''=−(g/L)sinθ は非線形常微分方程式であり、本シミュレーターは小角近似を使わず数値積分（半陰的オイラー法）で解いている。小角近似での周期 T=2π√(L/g) は単振り子の標準的な近似公式（振幅が小さいほど正確）。張力は T=m(g cosθ+Lω²)（重力の半径方向成分＋向心力）で計算。ニュートンのゆりかごは、質量が等しい物体どうしの弾性衝突では運動量とエネルギーの保存則から入射側の速度がそのまま反対側の球へ伝わることに基づく、力学の標準的な連成衝突モデル。
-</footer>
-
+<div class="stage"><canvas id="stage"></canvas></div>
+<div id="singleUI">
+<div class="legend" style="margin-top:10px;">赤：重力　緑：張力　黄・紫：成分 / 抵抗</div>
+<div class="energybar"><div class="ke" id="keBar" style="width:0%;"></div><div class="pe" id="peBar" style="width:100%;"></div><div class="lost" id="lostBar"></div></div>
+<div class="energylabel">青：運動 ／ 赤：位置 ／ 斜線：散逸</div>
+</div>
+<div id="cradleUI" style="display:none;">
+<div class="legend" style="margin-top:10px;">
+<div class="item"><span class="sw" style="background:var(--highlight);"></span>動いている球</div>
+<div class="item"><span class="sw" style="background:var(--text-faint);"></span>静止している球</div>
+</div>
+</div>
+</div>
+<div class="panel pendulumPanel"><div class="settingsGroup">
+<h2><span class="dot"></span>パラメータ</h2>
+<div class="controls" id="singleControls">
+<div class="control">
+<label for="length">ひもの長さ L <span class="val"><span id="lVal">1.0</span> m</span></label>
+<input id="length" max="2.0" min="0.3" step="0.05" type="range" value="1.0"/>
+</div>
+<div class="control">
+<label for="theta0">初期角度 θ₀ <span class="val"><span id="th0Val">40</span>°</span></label>
+<input id="theta0" max="90" min="5" step="1" type="range" value="40"/>
+</div>
+<div class="control">
+<label style="justify-content:flex-start;gap:8px;"><input id="damping" type="checkbox"/> 現実的な減衰を含める（摩擦・空気抵抗）</label>
+</div>
+<label for="forceView">矢印の表示</label><select id="forceView"><option value="forces">おもりに働く力</option><option value="components">重力の分解</option></select></div>
+<div class="controls" id="cradleControls" style="display:none;">
+<div class="control">
+<label>引く球の数 k</label>
+<div class="segrow">
+<button class="segbtn active" data-k="1">1個</button>
+<button class="segbtn" data-k="2">2個</button>
+<button class="segbtn" data-k="3">3個</button>
+</div>
+</div>
+<div class="control">
+<label for="pullAngle">引き上げ角度 <span class="val"><span id="pullVal">40</span>°</span></label>
+<input id="pullAngle" max="70" min="10" step="1" type="range" value="40"/>
+</div>
+<div class="control">
+<label style="justify-content:flex-start;gap:8px;"><input id="cradleDamping" type="checkbox"/> 衝突ごとにわずかにエネルギーを失う（現実的）</label>
+</div>
+</div>
+<div class="btnrow" style="margin-top:16px;">
+<button class="btn primary" id="launchBtn">放す</button>
+<button class="btn" id="resetBtn">リセット</button>
+</div>
+</div><div class="readingsGroup"><h2 style="margin-top:22px;"><span class="dot"></span>読み取り値</h2>
+<div class="readout" id="readoutSingle">
+<div class="item"><div class="k">角度 θ</div><div class="v" id="rTheta">40.0°</div></div>
+<div class="item"><div class="k">角速度 ω</div><div class="v velocity" id="rOmega">0.00 rad/s</div></div>
+<div class="item"><div class="k">張力 T</div><div class="v normal" id="rT">— N</div></div>
+<div class="item"><div class="k">復元力の大きさ</div><div class="v force" id="rRestore">— N</div></div>
+<div class="item"><div class="k">理論周期（小角近似）</div><div class="v" id="rT0">— s</div></div>
+<div class="item"><div class="k">実測周期</div><div class="v" id="rTmeasured">— s</div></div>
+</div>
+<div class="readout" id="readoutCradle" style="display:none;">
+<div class="item"><div class="k">現在動いている球</div><div class="v" id="rActive">なし</div></div>
+<div class="item"><div class="k">直前の衝突速度</div><div class="v velocity" id="rCollV">— m/s</div></div>
+</div>
+<div class="explain" id="explainText">長さ・角度を1つずつ変えて、周期を比べよう。</div>
+<button class="btn" data-dialog="notes">モデルについて</button></div></div>
+</div>
+<dialog class="" id="notes"><button class="btn close">閉じる</button><p>単振り子は1 kgの質点と質量のないひものモデル。張力 T=m(g cosθ+Lω²)。運動中、張力と重力の半径方向成分の差が向心加速度を生む。減衰は速度に比例する接線方向の抵抗。位置エネルギーの基準は最下点。周期の理論値は小角近似。ゆりかごは同質量球の理想的な速度伝達モデルで、接触中の変形は省略。</p></dialog>
 <script>
 const canvas=document.getElementById('stage'), ctx=canvas.getContext('2d');
 function resize(){
-  canvas.style.height=''; // メディアクエリによる高さ変更をインラインスタイルが上書きしないよう一旦解除
+  canvas.style.height='100%'; // メディアクエリによる高さ変更をインラインスタイルが上書きしないよう一旦解除
   const r=canvas.parentElement.getBoundingClientRect();
   canvas.width=r.width*devicePixelRatio; canvas.height=r.height*devicePixelRatio;
   canvas.style.width=r.width+'px'; canvas.style.height=r.height+'px';
   ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
 }
 window.addEventListener('resize',resize);
+new ResizeObserver(resize).observe(canvas.parentElement);
 const g=9.8;
 
 let mode='single';
@@ -164,6 +143,8 @@ const singleControls=document.getElementById('singleControls'), cradleControls=d
 const readoutSingle=document.getElementById('readoutSingle'), readoutCradle=document.getElementById('readoutCradle');
 
 modeSingleBtn.onclick=()=>{
+  document.querySelector('.sim-header p').textContent='最下点と折り返し地点で、張力とエネルギーはどう変わる？';
+  document.getElementById('explainText').textContent='長さ・角度を1つずつ変えて、周期を比べよう。';
   mode='single'; modeSingleBtn.classList.add('active'); modeCradleBtn.classList.remove('active');
   singleUI.style.display=''; cradleUI.style.display='none';
   singleControls.style.display=''; cradleControls.style.display='none';
@@ -171,6 +152,8 @@ modeSingleBtn.onclick=()=>{
   resetSingle();
 };
 modeCradleBtn.onclick=()=>{
+  document.querySelector('.sim-header p').textContent='引く球の数を変えると、反対側の球はどう動く？';
+  document.getElementById('explainText').textContent='1個・2個・3個を引いて、衝突後を比べよう。';
   mode='cradle'; modeCradleBtn.classList.add('active'); modeSingleBtn.classList.remove('active');
   singleUI.style.display='none'; cradleUI.style.display='';
   singleControls.style.display='none'; cradleControls.style.display='';
@@ -199,9 +182,11 @@ function stepSingle(dt){
   const L=parseFloat(lengthEl.value);
   const alpha=-(g/L)*Math.sin(sTheta);
   const prevOmega=sOmega;
-  sOmega+=alpha*dt;
-  if(dampingEl.checked) sOmega*=(1-0.15*dt);
-  sTheta+=sOmega*dt;
+  const damp=dampingEl.checked?.15:0;
+  const a0=alpha-damp*sOmega;
+  const midTheta=sTheta+sOmega*dt/2, midOmega=sOmega+a0*dt/2;
+  sTheta+=midOmega*dt;
+  sOmega+=(-(g/L)*Math.sin(midTheta)-damp*midOmega)*dt;
   simTime+=dt;
   // 発射直後(静止からの立ち上がり)の見かけ上の符号反転だけを除外し、
   // それ以降の本物の折り返し(角速度の符号反転)はすべて検出する
@@ -220,7 +205,7 @@ function updateSingleReadouts(){
   document.getElementById('rTheta').textContent=(sTheta*180/Math.PI).toFixed(1)+'°';
   document.getElementById('rOmega').textContent=sOmega.toFixed(2)+' rad/s';
   document.getElementById('rT').textContent=T.toFixed(2)+' N';
-  document.getElementById('rRestore').textContent=restore.toFixed(2)+' N';
+  document.getElementById('rRestore').textContent=Math.abs(restore).toFixed(2)+' N';
   document.getElementById('rT0').textContent=T0.toFixed(2)+' s';
   if(turnPoints.length>=2){
     const measured=2*(turnPoints[turnPoints.length-1]-turnPoints[turnPoints.length-2]);
@@ -233,15 +218,16 @@ function updateSingleReadouts(){
   const PE=m*g*L*(1-Math.cos(sTheta));
   const total=Math.max(PEmax,0.0001);
   document.getElementById('keBar').style.width=Math.min(100,(KE/total)*100)+'%';
-  document.getElementById('peBar').style.width=Math.min(100,100-(KE/total)*100)+'%';
+  document.getElementById('peBar').style.width=Math.max(0,Math.min(100,PE/total*100))+'%';
+  document.getElementById('lostBar').style.width=Math.max(0,100-(KE+PE)/total*100)+'%';
 }
 
 function drawSingle(){
   const w=canvas.clientWidth,h=canvas.clientHeight;
   ctx.clearRect(0,0,w,h);
   const L=parseFloat(lengthEl.value);
-  const scale=Math.min((h-90)/2.0, 130);
-  const pivotX=w/2, pivotY=40;
+  const scale=Math.min((h-140)/2.0,(w-130)/4,160);
+  const pivotX=w/2, pivotY=65;
   ctx.strokeStyle='#3a4258'; ctx.lineWidth=4;
   ctx.beginPath();ctx.moveTo(pivotX-40,pivotY);ctx.lineTo(pivotX+40,pivotY);ctx.stroke();
   ctx.fillStyle='#dcdce4';
@@ -257,17 +243,19 @@ function drawSingle(){
   ctx.strokeStyle='#4a5268'; ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(pivotX,pivotY);ctx.lineTo(bx,by);ctx.stroke();
 
-  // force vectors: gravity mg, tension T (along string), tangential restoring force
-  arrowP(bx,by,bx,by+50,getCss('--force'),'mg');
-  const tx=pivotX-bx, ty=pivotY-by; const tl=Math.hypot(tx,ty)||1;
-  arrowP(bx,by,bx+tx/tl*40,by+ty/tl*40,getCss('--normal'),'T');
-  // tangential unit vector at angle theta (direction of increasing theta): (cos theta, -sin theta)
-  // tangential component of gravity = -mg sin(theta) along that direction -> restoring force vector:
-  const restScale=Math.min(Math.abs(Math.sin(sTheta))*55,48);
-  const sgn=-Math.sin(sTheta)>=0?1:-1;
-  const rx=Math.cos(sTheta)*sgn*restScale, ry=-Math.sin(sTheta)*sgn*restScale;
-  arrowP(bx,by,bx+rx,by+ry,getCss('--highlight'),'F');
-
+  const forceScale=5.2, T=g*Math.cos(sTheta)+L*sOmega*sOmega;
+  const components=document.getElementById('forceView').value==='components';
+  if(!components){
+    arrowP(bx,by,bx,by+g*forceScale,getCss('--force'),'mg');
+    arrowP(bx,by,bx-Math.sin(sTheta)*T*forceScale,by-Math.cos(sTheta)*T*forceScale,getCss('--normal'),'T');
+    if(dampingEl.checked)arrowP(bx,by,bx-.15*L*sOmega*Math.cos(sTheta)*forceScale,by+.15*L*sOmega*Math.sin(sTheta)*forceScale,'#72519c','抵抗');
+  }else{
+    ctx.setLineDash([5,4]);arrowP(bx,by,bx,by+g*forceScale,getCss('--force'),'mg');ctx.setLineDash([]);
+    const r=g*Math.cos(sTheta)*forceScale, t=-g*Math.sin(sTheta)*forceScale;
+    arrowP(bx,by,bx+Math.sin(sTheta)*r,by+Math.cos(sTheta)*r,'#7650a4','半径方向');
+    arrowP(bx,by,bx+Math.cos(sTheta)*t,by-Math.sin(sTheta)*t,getCss('--highlight'),'接線方向');
+  }
+  ctx.fillStyle='#33445a';ctx.font='14px sans-serif';ctx.fillText(components?'破線：もとの重力／実線：その成分':'おもり 1 kg ／ 矢印は共通縮尺',18,h-18);
   ctx.fillStyle='#232a3a'; ctx.strokeStyle='#c98bff'; ctx.lineWidth=2;
   ctx.beginPath(); ctx.arc(bx,by,16,0,Math.PI*2); ctx.fill(); ctx.stroke();
 }
@@ -281,7 +269,7 @@ function arrowP(x0,y0,x1,y1,color,label){
   ctx.lineTo(x1-headlen*Math.cos(ang-Math.PI/6),y1-headlen*Math.sin(ang-Math.PI/6));
   ctx.lineTo(x1-headlen*Math.cos(ang+Math.PI/6),y1-headlen*Math.sin(ang+Math.PI/6));
   ctx.closePath();ctx.fill();
-  if(label){ctx.font='600 12px "JetBrains Mono",monospace';ctx.fillStyle=color;ctx.fillText(label,x1+6,y1-6);}
+  if(label){ctx.font='600 12px "JetBrains Mono",monospace';ctx.fillStyle=color;ctx.textAlign=x1<x0?'right':'left';ctx.fillText(label,x1+(x1<x0?-8:8),y1-6);ctx.textAlign='left';}
 }
 
 /* ---------------- ニュートンのゆりかご ---------------- */
@@ -355,10 +343,10 @@ function drawCradle(){
   const w=canvas.clientWidth,h=canvas.clientHeight;
   ctx.clearRect(0,0,w,h);
   const pivotY=40, barY=pivotY;
-  const spacing=44;
+  const spacing=30;
   const totalW=spacing*(N_BALLS-1);
   const startX=w/2-totalW/2;
-  const scale=Math.min((h-100),240);
+  const scale=Math.min(h-100,(w-240)/1.9,240);
 
   ctx.strokeStyle='#3a4258'; ctx.lineWidth=4;
   ctx.beginPath();ctx.moveTo(startX-30,barY);ctx.lineTo(startX+totalW+30,barY);ctx.stroke();
@@ -382,8 +370,8 @@ function drawCradle(){
 
 /* ---------------- 共通ボタン・ループ ---------------- */
 document.getElementById('launchBtn').onclick=()=>{
-  if(mode==='single'){ sRunning=true; }
-  else { cRunning=true; }
+  if(mode==='single'){ sRunning=!sRunning; }
+  else { cRunning=!cRunning; }
 };
 document.getElementById('resetBtn').onclick=()=>{
   if(mode==='single'){ resetSingle(); }
@@ -393,8 +381,9 @@ document.getElementById('resetBtn').onclick=()=>{
 let last=performance.now();
 function loop(now){
   const dt=Math.min((now-last)/1000,0.02); last=now;
-  if(mode==='single'){ stepSingle(dt); updateSingleReadouts(); drawSingle(); }
+  if(mode==='single'){ for(let i=0;i<8;i++)stepSingle(dt/8); updateSingleReadouts(); drawSingle(); }
   else { stepCradle(dt); drawCradle(); }
+  document.getElementById('launchBtn').textContent=(mode==='single'?sRunning:cRunning)?'一時停止':'放す / 再開';
   requestAnimationFrame(loop);
 }
 resize();

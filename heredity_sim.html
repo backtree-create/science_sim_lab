@@ -1,13 +1,14 @@
 <!DOCTYPE html>
+
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>中3理科：遺伝の規則性シミュレーター</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;family=Noto+Sans+JP:wght@400;500;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
 <style>
   :root{--accent:var(--bio);--accent-soft:var(--bio-soft);}
   .layout{grid-template-columns:1.5fr 1fr;}
@@ -104,129 +105,98 @@
     .seg button{min-height:44px;}
   }
 </style>
-</head>
+<link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script><style>#stageCanvas{width:100%;height:100%;object-fit:contain}#cohorts{font-size:13px;line-height:1.2}.genopick{margin:5px 0}.genorow{padding:3px 0}.seg button{min-height:40px}.kv{margin:5px 0}.nudge{font-size:13px;padding:8px;margin:5px 0}.panel:nth-child(2)>.tabs{margin-bottom:6px!important}#convCanvas{max-width:100%;height:auto}dialog .hint{margin:8px 0}</style></head>
 <body>
-
 <div class="topbar">
-  <a class="back" href="index.html">← ホームへ</a>
-  <span class="unit-title">18 ／ 遺伝の規則性</span>
+<a class="back" href="index.html">← ホームへ</a>
+<span class="unit-title">18 ／ 遺伝の規則性</span>
 </div>
-
 <div class="sim-header">
-  <span class="eyebrow">Mendelian Inheritance · Law of Segregation</span>
-  <h1>遺伝の規則性を1000回試す</h1>
-  <p>教科書の「3：1」は、少ない数では現れません。個体数を増やしていくと実際の比がどう動くのかを、自分の手で確かめましょう。エンドウの形質とメンデルの実験値を使います。</p>
+<span class="eyebrow">Mendelian Inheritance · Law of Segregation</span>
+<h1>遺伝の規則性を1000回試す</h1>
+<p>同じ親の組み合わせでも、子の形質の割合は毎回同じになる？</p>
 </div>
-
 <div class="layout">
-
-  <div class="panel flush">
-    <div class="stage">
-      <canvas id="stageCanvas" width="720" height="560"></canvas>
-    </div>
-    <div class="stagebar" id="stageBar">かけ合わせを選んでください</div>
-  </div>
-
-  <div class="panel">
-    <h2><span class="dot"></span>かけ合わせの設定</h2>
-
-    <h3>形質を選ぶ</h3>
-    <div class="tabs" style="display:flex;width:100%;margin-bottom:18px;">
-      <button class="tab on-trait active" data-trait="seed">種子の形</button>
-      <button class="tab on-trait" data-trait="cotyledon">子葉の色</button>
-      <button class="tab on-trait" data-trait="height">草丈</button>
-    </div>
-
-    <h3>親の遺伝子型</h3>
-    <div class="genopick">
-      <div class="genorow">
-        <span class="who">親①</span>
-        <div class="seg" data-parent="0">
-          <button data-g="AA" class="on">AA</button>
-          <button data-g="Aa">Aa</button>
-          <button data-g="aa">aa</button>
-        </div>
-        <span class="phen" id="phen0">丸</span>
-      </div>
-      <div class="genorow">
-        <span class="who">親②</span>
-        <div class="seg" data-parent="1">
-          <button data-g="AA">AA</button>
-          <button data-g="Aa">Aa</button>
-          <button data-g="aa" class="on">aa</button>
-        </div>
-        <span class="phen" id="phen1">しわ</span>
-      </div>
-    </div>
-
-    <hr class="divider">
-
-    <h3>よく使うかけ合わせ</h3>
-    <div class="btnrow">
-      <button class="btn" data-preset="AA,aa">純系どうし</button>
-      <button class="btn" data-preset="Aa,Aa">子どうし</button>
-      <button class="btn" data-preset="Aa,aa">検定交雑</button>
-    </div>
-
-    <hr class="divider">
-
-    <h3>子を生まれさせる</h3>
-    <div class="btnrow">
-      <button class="btn primary" id="add1">＋1個体</button>
-      <button class="btn" id="add100">＋100</button>
-      <button class="btn" id="add1000">＋1000</button>
-      <button class="btn" id="resetBtn">やり直す</button>
-    </div>
-
-    <div class="nudge" id="nudge">
-      <b>子（F1）はすべて顕性形質になりました。</b><br>
+<div class="panel flush">
+<div class="stage">
+<canvas height="560" id="stageCanvas" width="720"></canvas>
+<div aria-live="polite" id="cohorts"></div></div>
+<div class="stagebar" id="stageBar">かけ合わせを選んでください</div><button class="btn" id="showIndividuals">個体の図に戻る</button>
+</div>
+<div class="panel">
+<h2><span class="dot"></span>かけ合わせの設定</h2>
+<div class="tabs" style="display:flex;width:100%;margin-bottom:18px;">
+<button class="tab on-trait active" data-trait="seed">種子の形</button>
+<button class="tab on-trait" data-trait="cotyledon">子葉の色</button>
+<button class="tab on-trait" data-trait="height">草丈</button>
+</div>
+<div class="genopick">
+<div class="genorow">
+<span class="who">親①</span>
+<div class="seg" data-parent="0">
+<button class="on" data-g="AA">AA</button>
+<button data-g="Aa">Aa</button>
+<button data-g="aa">aa</button>
+</div>
+<span class="phen" id="phen0">丸</span>
+</div>
+<div class="genorow">
+<span class="who">親②</span>
+<div class="seg" data-parent="1">
+<button data-g="AA">AA</button>
+<button data-g="Aa">Aa</button>
+<button class="on" data-g="aa">aa</button>
+</div>
+<span class="phen" id="phen1">しわ</span>
+</div>
+</div>
+<div class="btnrow">
+<button class="btn" data-preset="AA,aa">純系どうし</button>
+<button class="btn" data-preset="Aa,Aa">子どうし</button>
+<button class="btn" data-preset="Aa,aa">検定交雑</button>
+</div>
+<div class="btnrow">
+<button class="btn primary" id="add1">＋1個体</button>
+<button class="btn" id="add100">＋100</button>
+<button class="btn" id="add1000">＋1000</button>
+<button class="btn" id="resetBtn">やり直す</button>
+</div>
+<div class="nudge" id="nudge">
+<b>子（F1）はすべて顕性形質になりました。</b><br/>
       潜性形質は消えてしまったのでしょうか。この子どうしをかけ合わせると、どうなるでしょう。
       <button class="btn primary" id="toF2">この子どうしをかけ合わせる →</button>
-    </div>
-
-    <hr class="divider">
-
-    <h3>結果</h3>
-    <div class="ratiobar" id="ratioBar">
-      <div class="rb-dom" id="rbDom" style="width:0%"></div>
-      <div class="rb-rec" id="rbRec" style="width:0%"></div>
-    </div>
-    <div class="kv">
-      <div class="box"><div class="k">生まれた個体数</div><div class="v" id="kTotal">0</div></div>
-      <div class="box"><div class="k">実測の比</div><div class="v" id="kRatio">－</div></div>
-      <div class="box"><div class="k">理論上の比</div><div class="v sub" id="kTheory">－</div></div>
-      <div class="box"><div class="k">遺伝子型の内訳</div><div class="v sub" id="kGeno">－</div></div>
-    </div>
-
-    <hr class="divider">
-
-    <h3>顕性形質の割合の動き</h3>
-    <canvas id="convCanvas" width="600" height="230"></canvas>
-
-    <hr class="divider">
-
-    <h3>格子表（かけ合わせ）</h3>
-    <table class="punnett" id="punnett"></table>
-
-    <hr class="divider">
-
-    <h3>メンデルの実験値</h3>
-    <div class="mendel" id="mendelBox"></div>
-
-    <div class="hint" style="margin-top:18px">
-      <span class="hint-title">確かめたいこと</span>
-      <ul>
-        <li><strong>分離の法則：</strong>対になっている遺伝子は、生殖細胞ができるとき（減数分裂）に1つずつに分かれます。だから親①が <code>Aa</code> なら、A の生殖細胞と a の生殖細胞が半分ずつできます。</li>
-        <li><strong>顕性（優性）と潜性（劣性）：</strong>A と a が対になると A の形質だけが現れます。<code>Aa</code> は見た目では <code>AA</code> と区別がつきません。</li>
-        <li><strong>少ない数では比は合わない：</strong>10個体では 3：1 からかなりずれます。100、1000 と増やすほど理論の比に近づいていくことを、上のグラフで確かめましょう。</li>
-        <li><strong>検定交雑：</strong>顕性形質の個体が <code>AA</code> か <code>Aa</code> かを調べるには、<code>aa</code> とかけ合わせます。潜性形質の子が出れば <code>Aa</code> だったとわかります。</li>
-      </ul>
-    </div>
-  </div>
-
 </div>
-
-<script>
+<h3>結果</h3>
+<div class="ratiobar" id="ratioBar">
+<div class="rb-dom" id="rbDom" style="width:0%"></div>
+<div class="rb-rec" id="rbRec" style="width:0%"></div>
+</div>
+<div class="kv">
+<div class="box"><div class="k">生まれた個体数</div><div class="v" id="kTotal">0</div></div>
+<div class="box"><div class="k">実測の比</div><div class="v" id="kRatio">－</div></div>
+<div class="box"><div class="k">理論上の比</div><div class="v sub" id="kTheory">－</div></div>
+<div class="box"><div class="k">遺伝子型の内訳</div><div class="v sub" id="kGeno">－</div></div>
+</div>
+<div class="btnrow"><button class="btn" id="compareCohorts">同じ個体数で5回比べる</button><button class="btn" data-dialog="notes">グラフ・格子表</button></div></div>
+</div>
+<dialog id="notes"><button class="btn close">閉じる</button><h3>顕性形質の割合の動き</h3>
+<canvas height="230" id="convCanvas" width="600"></canvas>
+<hr class="divider"/>
+<h3>格子表（かけ合わせ）</h3>
+<table class="punnett" id="punnett"></table>
+<hr class="divider"/>
+<h3>メンデルの実験値</h3>
+<div class="mendel" id="mendelBox"></div>
+<div class="hint" style="margin-top:18px">
+<span class="hint-title">確かめたいこと</span>
+<ul>
+<li><strong>分離の法則：</strong>対になっている遺伝子は、生殖細胞ができるとき（減数分裂）に1つずつに分かれます。だから親①が <code>Aa</code> なら、A の生殖細胞と a の生殖細胞が半分ずつできます。</li>
+<li><strong>顕性（優性）と潜性（劣性）：</strong>A と a が対になると A の形質だけが現れます。<code>Aa</code> は見た目では <code>AA</code> と区別がつきません。</li>
+<li><strong>結果にはばらつきがある：</strong>少数でも理論の比と一致することはあります。個体数が多い集団では割合のばらつきが小さくなる傾向がありますが、追加するたびに理論値へ近づくとは限りません。</li>
+<li><strong>検定交雑：</strong>顕性形質の個体が <code>AA</code> か <code>Aa</code> かを調べるには、<code>aa</code> とかけ合わせます。潜性形質の子が出れば <code>Aa</code> だったとわかります。</li>
+</ul>
+</div>
+</dialog><script>
 "use strict";
 
 /* ============================================================
@@ -325,6 +295,7 @@ function ratioText(a, b) {
    個体を増やす
    ============================================================ */
 function addIndividuals(n) {
+  canvas.style.display="block";document.getElementById("cohorts").replaceChildren();
   const room = MAX_POP - population.length;
   const add = Math.min(n, room);
   if (add <= 0) return;
@@ -350,6 +321,8 @@ function addIndividuals(n) {
 }
 
 function resetAll() {
+  document.getElementById("cohorts").replaceChildren();
+  canvas.style.display="block";
   population = [];
   history = [];
   render();
@@ -725,6 +698,13 @@ render();
 window.addEventListener('resize', () => { setupCanvas(); render(); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 </script>
-
-</body>
+<script>
+document.getElementById('showIndividuals').onclick=()=>{canvas.style.display='block';document.getElementById('cohorts').replaceChildren()};
+document.getElementById('compareCohorts').onclick=()=>{
+ canvas.style.display='none';
+ const n=population.length||20,t=TRAITS[traitKey],rows=[];
+ for(let r=0;r<5;r++){let a=0;for(let i=0;i<n;i++)if(isDom(breed()))a++;rows.push([a,n-a]);}
+ document.getElementById('cohorts').innerHTML='<p>各 '+n+' 個体・同じ親 '+parents.join(' × ')+'</p>'+rows.map(([a,b],i)=>'<div style="display:flex;gap:8px;align-items:center;margin:16px 0"><span>'+(i+1)+'</span><span style="display:flex;width:50%;height:30px;background:'+t.rec.color+'"><span style="width:'+(a/n*100)+'%;background:'+t.dom.color+'"></span></span><span>'+t.dom.label+' '+a+' / '+t.rec.label+' '+b+'</span></div>').join('');
+};
+</script></body>
 </html>
