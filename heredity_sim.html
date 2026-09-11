@@ -105,7 +105,7 @@
     .seg button{min-height:44px;}
   }
 </style>
-<link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script><style>#stageCanvas{width:100%;height:100%;object-fit:contain}#cohorts{font-size:13px;line-height:1.2}.genopick{margin:5px 0}.genorow{padding:3px 0}.seg button{min-height:40px}.kv{margin:5px 0}.nudge{font-size:13px;padding:8px;margin:5px 0}.panel:nth-child(2)>.tabs{margin-bottom:6px!important}#convCanvas{max-width:100%;height:auto}dialog .hint{margin:8px 0}</style></head>
+<link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script><style>#inheritanceTrace{flex:none;padding:10px;background:#e8f0fc;border-left:4px solid #175bb4;color:#172438;font-size:15px;font-weight:bold;line-height:1.5}#inheritanceTrace[hidden]{display:none}.ratiobar{height:28px!important}.kv .v.sub{font-size:13px}.stagebar{margin-top:6px}#showIndividuals{display:none}.panel:has(#cohorts:not(:empty)) #showIndividuals{display:block}#cohorts:not(:empty){padding:12px!important}#stageCanvas{width:100%;height:100%;object-fit:contain}#cohorts{font-size:13px;line-height:1.2}.genopick{margin:5px 0}.genorow{padding:3px 0}.seg button{min-height:40px}.kv{margin:5px 0}.nudge{font-size:13px;padding:8px;margin:5px 0}.panel:nth-child(2)>.tabs{margin-bottom:6px!important}#convCanvas{max-width:100%;height:auto}dialog .hint{margin:8px 0}</style></head>
 <body>
 <div class="topbar">
 <a class="back" href="index.html">← ホームへ</a>
@@ -113,15 +113,15 @@
 </div>
 <div class="sim-header">
 <span class="eyebrow">Mendelian Inheritance · Law of Segregation</span>
-<h1>遺伝の規則性を1000回試す</h1>
+<h1>親から子へ、遺伝を確かめる</h1>
 <p>同じ親の組み合わせでも、子の形質の割合は毎回同じになる？</p>
 </div>
 <div class="layout">
 <div class="panel flush">
 <div class="stage">
-<canvas height="560" id="stageCanvas" width="720"></canvas>
+<canvas height="560" id="stageCanvas" width="720" aria-label="親、生殖細胞、子の集団の模式図"></canvas>
 <div aria-live="polite" id="cohorts"></div></div>
-<div class="stagebar" id="stageBar">かけ合わせを選んでください</div><button class="btn" id="showIndividuals">個体の図に戻る</button>
+<div id="inheritanceTrace" role="status">＋1個体で、親から受け継ぐ組み合わせを見る</div><div class="stagebar" id="stageBar">かけ合わせを選んでください</div><button class="btn" id="showIndividuals">個体の図に戻る</button>
 </div>
 <div class="panel">
 <h2><span class="dot"></span>かけ合わせの設定</h2>
@@ -173,8 +173,8 @@
 </div>
 <div class="kv">
 <div class="box"><div class="k">生まれた個体数</div><div class="v" id="kTotal">0</div></div>
-<div class="box"><div class="k">実測の比</div><div class="v" id="kRatio">－</div></div>
-<div class="box"><div class="k">理論上の比</div><div class="v sub" id="kTheory">－</div></div>
+<div class="box"><div class="k">今回の比（顕性：潜性）</div><div class="v" id="kRatio">－</div></div>
+<div class="box"><div class="k">理論の比（顕性：潜性）</div><div class="v sub" id="kTheory">－</div></div>
 <div class="box"><div class="k">遺伝子型の内訳</div><div class="v sub" id="kGeno">－</div></div>
 </div>
 <div class="btnrow"><button class="btn" id="compareCohorts">同じ個体数で5回比べる</button><button class="btn" data-dialog="notes">グラフ・格子表</button></div></div>
@@ -234,6 +234,7 @@ const MAX_POP = 6000;
 let traitKey = 'seed';
 let parents = ['AA', 'aa'];
 let population = [];          // 'AA' | 'Aa' | 'aa'
+let latestGametes = null;
 let history = [];             // {n, frac}
 
 const canvas = document.getElementById('stageCanvas');
@@ -295,6 +296,7 @@ function ratioText(a, b) {
    個体を増やす
    ============================================================ */
 function addIndividuals(n) {
+  document.getElementById("inheritanceTrace").hidden=false;
   canvas.style.display="block";document.getElementById("cohorts").replaceChildren();
   const room = MAX_POP - population.length;
   const add = Math.min(n, room);
@@ -303,7 +305,8 @@ function addIndividuals(n) {
   const step = Math.max(1, Math.floor(add / 120));
   let domCount = population.filter(isDom).length;
   for (let i = 0; i < add; i++) {
-    const g = breed();
+    latestGametes = parents.map(makeGamete);
+    const g = combine(...latestGametes);
     population.push(g);
     if (isDom(g)) domCount++;
     if (i % step === 0 || i === add - 1) {
@@ -321,6 +324,7 @@ function addIndividuals(n) {
 }
 
 function resetAll() {
+  latestGametes = null; document.getElementById("inheritanceTrace").hidden=false;
   document.getElementById("cohorts").replaceChildren();
   canvas.style.display="block";
   population = [];
@@ -444,7 +448,8 @@ function render() {
     const g = [...new Set(parents[i].split(''))];
     ctx.fillStyle = C_DIM;
     ctx.textAlign = 'center';
-    ctx.fillText('生殖細胞 ' + g.join(' / '), px, 156);
+    ctx.font = '600 16px ' + MONO;
+    ctx.fillText('生殖細胞 ' + (g.length === 1 ? g[0] + ' のみ' : 'A・a 各50%'), px, 156);
   });
 
   // ---- 色の凡例（どの色がどの形質か） ----
@@ -479,7 +484,7 @@ function render() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('「＋1個体」を押すと、子が1つずつ生まれます', BASE_W / 2, top + gh / 2);
   } else {
-    let cell = Math.sqrt(gw * gh / n);
+    let cell = Math.min(64, Math.sqrt(gw * gh / n));
     let cols = Math.max(1, Math.floor(gw / cell));
     let rows = Math.ceil(n / cols);
     let guard = 0;
@@ -496,6 +501,9 @@ function render() {
     }
   }
 
+  document.getElementById('inheritanceTrace').textContent = latestGametes
+    ? '直近の子：親①から ' + latestGametes[0] + ' ＋ 親②から ' + latestGametes[1] + ' → ' + combine(...latestGametes) + '（' + (isDom(combine(...latestGametes)) ? t.dom.label : t.rec.label) + '）'
+    : '＋1個体で、親から受け継ぐ組み合わせを見る';
   drawConvergence();
   updateUI();
 }
@@ -699,12 +707,12 @@ window.addEventListener('resize', () => { setupCanvas(); render(); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 </script>
 <script>
-document.getElementById('showIndividuals').onclick=()=>{canvas.style.display='block';document.getElementById('cohorts').replaceChildren()};
+document.getElementById('showIndividuals').onclick=()=>{canvas.style.display='block';document.getElementById('cohorts').replaceChildren();document.getElementById('inheritanceTrace').hidden=false};
 document.getElementById('compareCohorts').onclick=()=>{
- canvas.style.display='none';
+ canvas.style.display='none';document.getElementById('inheritanceTrace').hidden=true;
  const n=population.length||20,t=TRAITS[traitKey],rows=[];
  for(let r=0;r<5;r++){let a=0;for(let i=0;i<n;i++)if(isDom(breed()))a++;rows.push([a,n-a]);}
- document.getElementById('cohorts').innerHTML='<p>各 '+n+' 個体・同じ親 '+parents.join(' × ')+'</p>'+rows.map(([a,b],i)=>'<div style="display:flex;gap:8px;align-items:center;margin:16px 0"><span>'+(i+1)+'</span><span style="display:flex;width:50%;height:30px;background:'+t.rec.color+'"><span style="width:'+(a/n*100)+'%;background:'+t.dom.color+'"></span></span><span>'+t.dom.label+' '+a+' / '+t.rec.label+' '+b+'</span></div>').join('');
+ document.getElementById('cohorts').innerHTML='<p>別々の5集団を比較：各 '+n+' 個体</p><p>親 '+parents.join(' × ')+' ／ 棒全体＝100%</p>'+rows.map(([a,b],i)=>'<div style="display:flex;gap:8px;align-items:center;margin:16px 0"><span>'+(i+1)+'</span><span style="display:flex;width:50%;height:30px;background:'+t.rec.color+'"><span style="width:'+(a/n*100)+'%;background:'+t.dom.color+'"></span></span><span>'+t.dom.label+' '+a+' / '+t.rec.label+' '+b+'</span></div>').join('');
 };
 </script></body>
 </html>
