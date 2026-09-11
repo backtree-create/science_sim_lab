@@ -1,38 +1,60 @@
 <!DOCTYPE html>
-<html lang="ja"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>凸レンズとスクリーン</title><link href="styles.css" rel="stylesheet"/><link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script><link href="visual-assets/lens-layout.css" rel="stylesheet"/></head><body class="lensLesson"><nav class="topbar"><a class="back" href="index.html">← ホームへ</a><span>SCIENCE SIM LAB</span></nav><header class="sim-header"><h1>凸レンズとスクリーン</h1><p>物体を動かしたら、スクリーンはどこで鮮明になる？</p><div class="viewMode"><label for="mode">観察</label><select id="mode"><option value="object">物体から出る光</option><option value="parallel">平行な光</option></select></div></header><main class="lensWorkspace"><section class="lensDiagram"><div class="stage"><canvas aria-label="凸レンズとスクリーンの観察図" id="scene"></canvas></div><div class="diagramCaption"><div class="legend">青・緑・紫：同じ点から出た光 ／ 破線：後方延長</div><div aria-live="polite" class="statusline" id="status"></div></div></section><section class="screenPanel"><h2>スクリーンで観察</h2><div class="screenStage"><canvas aria-label="スクリーンに映る像の模式図" id="screenView"></canvas></div><div class="question" id="screenResult"></div><div class="readout" id="lensReadout"></div><p class="modelCaption">ぼけと大きさの模式図</p></section><section aria-label="実験の操作" class="lensControls"><div class="controlBlock"><h2>レンズを選ぶ</h2><div class="control"><label for="f">焦点距離 <output id="fVal">10</output> cm</label><input id="f" max="15" min="5" step="1" type="range" value="10"/></div><label><input checked="" id="rays" type="checkbox"/> 光線と像の位置を表示</label></div><div class="controlBlock"><h2>物体を動かす</h2><div class="control"><label for="a">物体からレンズ <output id="aVal">20</output> cm</label><input id="a" max="50" min="2" step="1" type="range" value="20"/></div><div class="btnrow"><button class="btn" id="at2f">2f に置く</button><button class="btn" id="atf">f に置く</button><button class="btn" id="inside">f の内側</button></div></div><div class="controlBlock"><h2>スクリーンを動かす</h2><div class="control"><label for="screen">スクリーンの距離 <output id="screenVal">30</output> cm</label><input id="screen" max="100" min="1" step="1" type="range" value="30"/></div><button class="btn detail-open" data-dialog="notes">モデルについて</button></div></section></main><dialog id="notes"><button class="btn close">閉じる</button><p>薄い凸レンズの近軸モデル。1/f=1/a+1/b。作図の基本3光線：①軸に平行に入って反対側の焦点を通る光、②レンズ中心を直進する光、③手前の焦点を通り出射後は軸に平行になる光。物体が焦点の内側なら③の入射光の後方延長が手前の焦点を通る。物体が焦点上なら③はレンズに到達しないため2本を表示。スクリーンの見え方は中心光線による投影と光線の広がりから作ったぼけの模式図。光線図のスクリーンは一部の光が透過する半透明板。回折・収差・レンズの有限口径は省略。焦点上では出射光が平行になり、有限距離のスクリーンに実像を結ばない。</p></dialog><script>
+<html lang="ja"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>凸レンズとスクリーン</title><link href="styles.css" rel="stylesheet"/><link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script><link href="visual-assets/lens-layout.css" rel="stylesheet"/></head><body class="lensLesson"><nav class="topbar"><a class="back" href="index.html">← ホームへ</a><span>SCIENCE SIM LAB</span></nav><header class="sim-header"><h1>凸レンズとスクリーン</h1><p>物体を動かしたら、スクリーンはどこで鮮明になる？</p><div class="viewMode"><label for="mode">観察</label><select id="mode"><option value="object">物体から出る光</option><option value="parallel">平行な光</option></select></div></header><main class="lensWorkspace"><section class="lensDiagram"><div class="stage"><canvas aria-label="凸レンズとスクリーンの観察図" id="scene"></canvas></div><div class="diagramCaption"><div class="legend">青・緑・紫：同じ点から出た光 ／ 破線：後方延長</div><div aria-live="polite" class="statusline" id="status"></div></div></section><section class="screenPanel"><h2>スクリーンで観察</h2><div class="screenStage"><canvas aria-label="スクリーンに映る像の模式図" id="screenView"></canvas></div><div class="question" id="screenResult"></div><div class="readout" id="lensReadout"></div><p class="modelCaption">ぼけ・表示サイズは模式表現</p></section><section aria-label="実験の操作" class="lensControls"><div class="controlBlock"><h2>レンズを選ぶ</h2><div class="control"><label for="f">焦点距離 <output id="fVal">10</output> cm</label><input id="f" max="15" min="5" step="1" type="range" value="10"/></div><label><input checked="" id="rays" type="checkbox"/> 光線と像の位置を表示</label></div><div class="controlBlock"><h2>物体を動かす</h2><div class="control"><label for="a">物体からレンズ <output id="aVal">20</output> cm</label><input id="a" max="50" min="2" step="1" type="range" value="20"/></div><div class="btnrow"><button class="btn" id="at2f">2f に置く</button><button class="btn" id="atf">f に置く</button><button class="btn" id="inside">f の内側</button></div></div><div class="controlBlock"><h2>スクリーンを動かす</h2><div class="control"><label for="screen">スクリーンの距離 <output id="screenVal">30</output> cm</label><input id="screen" max="100" min="1" step="1" type="range" value="30"/></div><button class="btn detail-open" data-dialog="notes">モデルについて</button></div></section></main><dialog id="notes"><button class="btn close">閉じる</button><p>薄い凸レンズの近軸モデル。1/f=1/a+1/b。作図の基本3光線：①軸に平行に入って反対側の焦点を通る光、②レンズ中心を直進する光、③手前の焦点を通り出射後は軸に平行になる光。物体が焦点の内側なら③の入射光の後方延長が手前の焦点を通る。物体が焦点上なら③はレンズに到達しないため2本を表示。図の座標変換は画面サイズだけで決まり、物体・スクリーン・焦点距離の変更で縮尺や原点は変わらない。画面サイズ変更時は描画領域に合わせて再配置する。レンズの外形は記号で、口径を表さない。スクリーンの見え方は中心光線の投影を用いた模式図で、ぼけや表示サイズは定量測定に使わない。ぼけ幅をcm単位で表示する機能は削除。像の位置・倍率の数値は薄レンズ式による。光線図のスクリーンは一部の光が透過する半透明板。回折・収差・レンズの有限口径は省略。焦点上では出射光が平行になり、有限距離のスクリーンに実像を結ばない。</p></dialog><script>
 const $=id=>document.getElementById(id);let render,renderScreen;
 function refresh(){render();renderScreen();}
+function lensViewport(w,h){return {k:(w-90)/160,x:45+55*(w-90)/160,y:h/2};}
 function draw(c,w,h){
  const f=+$('f').value,a=+$('a').value,s=+$('screen').value,parallel=$('mode').value==='parallel',show=$('rays').checked;
  document.querySelector('.legend').textContent=parallel?'青・緑・紫：軸に平行な光':'青：平行→焦点　緑：中心を直進　紫：焦点→平行';
  const b=parallel?f:(a===f?Infinity:f*a/(a-f));
- const extent=Math.max(2*f,a,s,Number.isFinite(b)?Math.min(Math.abs(b),100):0);
- const left=Math.max(2*f,a,b<0?Math.min(-b,100):0),right=Math.max(2*f,s,b>0&&Number.isFinite(b)?Math.min(b,100):0);
+ // The coordinate transform depends ONLY on viewport dimensions.
+ // The entire control range (-50 cm object, +100 cm screen) stays in one fixed view.
  const ho=6,third=parallel||a===f?null:ho*f/(f-a);
- const k=Math.min((w-100)/(left+right),12,(h-100)/(2*Math.max(ho,Math.abs(third||0)))),x=50+left*k+(w-100-(left+right)*k)/2,y=h/2;
+ const view=lensViewport(w,h),{k,x,y}=view;
  const X=v=>x+v*k,Y=v=>y-v*k;
- lab.line(c,20,y,w-20,y,'#8b98a8');
- c.fillStyle='#d5e9fc';c.strokeStyle='#145caf';c.lineWidth=2;c.beginPath();c.ellipse(x,y,10,Math.min(h/2-30,Math.max(ho*k+14,Math.abs(third||0)*k+14,65)),0,0,Math.PI*2);c.fill();c.stroke();
- [-2,-1,1,2].forEach(n=>{lab.line(c,X(n*f),y-5,X(n*f),y+5);lab.text(c,Math.abs(n)===2?'2f':'f',X(n*f),y+23,'#34465b','center')});
+ const plot={left:20,right:w-20,top:36,bottom:h-55};
+ lab.line(c,plot.left,y,plot.right,y,'#8392a4');
+ for(let v=-50;v<=100;v+=(w<550?20:10)){
+   lab.line(c,X(v),y-4,X(v),y+4,'#8392a4');
+   lab.text(c,String(v),X(v),y+22,'#34465b','center');
+ }
+ c.fillStyle='#d5e9fc';c.strokeStyle='#145caf';c.lineWidth=2;c.beginPath();
+ c.ellipse(x,y,10,Math.min(h*.30,85),0,0,Math.PI*2);c.fill();c.stroke();lab.text(c,'0',x,y+22,'#203e60','center');
+ [-2,-1,1,2].forEach(n=>{lab.line(c,X(n*f),y-7,X(n*f),y+7,'#203e60');lab.text(c,Math.abs(n)===2?'2f':'f',X(n*f),y-13,'#203e60','center')});
  $('a').disabled=parallel;['at2f','atf','inside'].forEach(id=>$(id).disabled=parallel);
  const heights=parallel?[-ho,0,ho]:(third===null?[ho,0]:[ho,0,third]);
  if(!parallel)lab.arrow(c,X(-a),y,X(-a),Y(ho),'#b83226','物体');
+ c.save();c.beginPath();c.rect(plot.left,plot.top,plot.right-plot.left,plot.bottom-plot.top);c.clip();
  if(show){heights.forEach((z,i)=>{const color=['#1261b0','#087447','#8147b2'][i],slope=parallel?-z/f:i===2?0:i===1?-ho/a:-ho/f;
- const start=parallel?-(extent): -a;lab.line(c,X(start),Y(parallel?z:ho),x,Y(z),color);
- const end=(w-22-x)/k;lab.line(c,x,Y(z),X(end),Y(z+slope*end),color);
- lab.arrow(c,X(end*.45),Y(z+slope*end*.45),X(end*.55),Y(z+slope*end*.55),color);
+ const start=parallel?(plot.left-x)/k:-a;
+ lab.line(c,X(start),Y(parallel?z:ho),x,Y(z),color);
+ const end=(plot.right-x)/k;
+ lab.line(c,x,Y(z),X(end),Y(z+slope*end),color);
+ // Put direction markers only on the visible part of the outgoing ray.
+ const limits=slope===0?[0,end]:[((y-plot.top)/k-z)/slope,((y-plot.bottom)/k-z)/slope];
+ const lo=Math.max(0,Math.min(...limits)),hi=Math.min(end,Math.max(...limits));
+ if(hi>lo){const mid=lo+(hi-lo)*.55;lab.arrow(c,X(mid),Y(z+slope*mid),X(Math.min(hi,mid+2)),Y(z+slope*Math.min(hi,mid+2)),color)}
  if(!parallel&&i===2&&a<f)lab.line(c,X(-f),Y(0),X(-a),Y(ho),color,[5,5]);
- if(b<0)lab.line(c,x,Y(z),X(Math.max(b,-extent)),Y(z+slope*Math.max(b,-extent)),color,[5,5]);
+ if(b<0)lab.line(c,x,Y(z),X(b),Y(z+slope*b),color,[5,5]);
  });
- if(!parallel&&Number.isFinite(b)&&Math.abs(b)<=extent){const ih=-ho*b/a;if(Math.abs(ih*k)<h*.4){lab.arrow(c,X(b),y,X(b),Y(ih),b>0?'#1261b0':'#8147b2',b>0?'実像':'虚像');}}
+ if(!parallel&&Number.isFinite(b)){
+   const ih=-ho*b/a;
+   lab.arrow(c,X(b),y,X(b),Y(ih),b>0?'#1261b0':'#8147b2',b>0?'実像':'虚像');
  }
+ }
+ c.restore();
+ if(show&&third!==null&&(Y(third)<plot.top||Y(third)>plot.bottom))
+   lab.text(c,'紫の屈折点・平行光は'+(third>0?'上方':'下方')+'の画面外',24,25,'#713992');
  lab.line(c,X(s),35,X(s),h-45,'#303c50');lab.text(c,'スクリーン',X(s),22,'#303c50','center');
  const spread=parallel?12*Math.abs(1-s/f):12*Math.abs(1+s/a-s/f);
  const focused=spread<.12;
  $('screenResult').textContent=focused?'スクリーン：鮮明': 'スクリーン：光が広がる';
- $('lensReadout').textContent='光の広がり '+spread.toFixed(2)+' cm'+(parallel?'（平行光）':'（物体の先端からの光）');
- $('status').textContent=show?(b===Infinity?'焦点上では紫の入射光がレンズに届かないため2本で表示。出射光は平行。':(Math.abs(b)>extent||(!parallel&&Math.abs(ho*b/a*k)>h*.4))?'像は表示範囲の外：レンズから '+Math.abs(b).toFixed(1)+' cm':b<0?'破線は光を後ろに延ばした線。光がそこへ進むわけではない。':'実線：光の進む道筋'):'スクリーンを動かして確かめよう';
- lab.text(c,'目盛り：cm ／ 自動縮尺',20,h-18);
+ $('lensReadout').textContent='レンズ → スクリーン：'+s.toFixed(1)+' cm';
+ const imageOutside=Number.isFinite(b)&&(X(b)<plot.left||X(b)>plot.right||Y(-ho*b/a)<plot.top||Y(-ho*b/a)>plot.bottom);
+ $('status').textContent=!show?'スクリーンを動かして確かめよう':parallel?'平行光は右 '+f+' cm の焦点へ':b===Infinity?'焦点上：紫の光はレンズへ届かないため2本表示。出射光は平行。':
+   (b<0?'虚像：左 ':'実像：右 ')+Math.abs(b).toFixed(1)+' cm ／ '+(b<0?'正立 ':'倒立 ')+Math.abs(b/a).toFixed(2)+'倍'+(imageOutside?'（像は画面外）':'');
+ lab.text(c,'位置 x（cm）／ レンズが0・縮尺固定',20,h-15);
+
 }
 function drawScreen(c,w,h){
  const f=+$('f').value,a=+$('a').value,s=+$('screen').value,parallel=$('mode').value==='parallel';
