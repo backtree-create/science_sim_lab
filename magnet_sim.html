@@ -10,8 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="visual-assets/vendor/three.min.js"></script>
+<script src="visual-assets/vendor/OrbitControls.js"></script>
 
 <style>
   body.instrument{--accent:#38bdf8;}
@@ -146,8 +146,10 @@
     .stage{height:400px;}
   }
 </style>
+<link rel="stylesheet" href="visual-assets/classroom-visibility.css">
+<script src="visual-assets/classroom-visibility.js"></script>
 </head>
-<body class="instrument">
+<body data-lesson="magnet" class="instrument">
 
 <div class="topbar">
   <a class="back" href="index.html">← ホームへ</a>
@@ -156,8 +158,7 @@
 
 <div class="sim-header">
   <span class="eyebrow">Magnetic Field · Biot–Savart · 3D</span>
-  <h1>電流と磁界 3D</h1>
-  <p>磁力線は絵ではなく、<strong>ビオ・サバールの法則で磁界を計算し、その向きをたどって空間に引いています</strong>。線の上を流れる粒は磁界が強いところほど速く動くので、強さが目で見てわかります。視点は自由に回せ、磁石もコイルも直接つかんで動かせます。</p>
+  <h1>電流と磁界 3D</h1><span class="model-key">磁力線上の粒は、向きを示す目印</span>
 </div>
 
 <div class="tabrow">
@@ -213,7 +214,7 @@
           <input type="range" id="magRotB" min="-180" max="180" step="5" value="0">
         </div>
         <div class="control">
-          <label for="magFlow">流れの速さ<span class="val" id="magFlowV">1.0x</span></label>
+          <label for="magFlow">目印の再生速度<span class="val" id="magFlowV">1.0x</span></label>
           <input type="range" id="magFlow" min="0" max="2.5" step="0.1" value="1">
         </div>
         <div class="checkrow">
@@ -227,13 +228,7 @@
         <div class="item"><span>磁束密度</span><b id="magB">—</b></div>
         <div class="item"><span>磁石からの距離</span><b id="magR">—</b></div>
       </div>
-      <details class="rule">
-        <summary>つかんで動かす</summary>
-        <div class="rule-body">
-        <b>磁石</b>と<b>黄色い調べる点</b>はドラッグできます。「磁石の向き」のスライダーで<b>磁石を回す</b>と、磁界も丸ごといっしょに回ります。何もない所をドラッグすると視点が回ります。
-        磁力線は<b>N極から出てS極に入り</b>、線がこんでいるところほど粒が速く流れます。
-      </div>
-      </details>
+      <div class="inquiry-question">磁石を逆向きにすると、磁針と磁力線の向きはどうなる？</div>
     </div>
 
     <!-- ② -->
@@ -263,13 +258,7 @@
         <div class="item"><span>調べる点の磁束密度</span><b id="curB">—</b></div>
         <div class="item"><span>電流の向き</span><b id="curDir">—</b></div>
       </div>
-      <details class="rule">
-        <summary>右ねじの法則</summary>
-        <div class="rule-body">
-        右ねじを<b>電流の向きに進める</b>ように回すと、回す向きが磁界の向き。
-        電流のスライダーをマイナス側にすると、<b>粒の流れがそっくり逆</b>になります。
-      </div>
-      </details>
+      <div class="inquiry-question">電流を逆向きにすると、磁界の向きはどうなる？</div>
     </div>
 
     <!-- ③ -->
@@ -298,13 +287,7 @@
         <div class="item"><span>力の大きさ F=BIL</span><b id="frcF">—</b></div>
         <div class="item"><span id="frcLbl">力の向き</span><b id="frcDir">—</b></div>
       </div>
-      <details class="rule">
-        <summary>フレミングの左手の法則</summary>
-        <div class="rule-body">
-        中指＝電流、人さし指＝磁界、親指＝力。<b>どちらか一方</b>を逆にすると力も逆、<b>両方</b>逆なら元のまま。
-        モーターでは<b>コイルを直接つかんで回せます</b>。手で回して、力の向きがどこで変わるか確かめましょう。
-      </div>
-      </details>
+      <div class="inquiry-question">電流だけ、磁界だけ、両方を逆にすると力はどうなる？</div>
     </div>
 
     <!-- ④ -->
@@ -332,17 +315,7 @@
         <div class="item"><span>コイルにできる極</span><b id="indLenz">—</b></div>
         <div class="item" style="grid-column:1/-1;"><span>誘導電流の向き</span><b id="indCur">—</b></div>
       </div>
-      <details class="rule">
-        <summary>レンツの法則とグラフの読み方</summary>
-        <div class="rule-body">
-        誘導電流は<b>磁束の変化をさまたげる向き</b>に流れます。動かしているあいだ、コイルに
-        <b>N極・S極が現れる</b>のを見てください。近づけるときは同じ極どうしで<b>反発</b>し、
-        遠ざけるときは逆の極になって<b>引きとめ</b>ます。赤い矢印が、磁石が受けるその力です。
-        <br><br>
-        グラフは水色が<b>磁束Φ</b>、緑が<b>起電力V</b>。Φの<b>かたむきが急なところほどVが大きく</b>、
-        Φが山や谷（かたむき0）のところでVは0になります。これが V = −N ΔΦ/Δt です。
-      </div>
-      </details>
+      <div class="inquiry-question">近づける・止める・遠ざける。誘導電流はいつ、どちら向きに流れる？</div>
     </div>
     <hr class="divider">
     <details class="rule" id="hintBox">
@@ -516,7 +489,7 @@ FlowLines.prototype.build = function(traces, opt){
   var showLines = opt.showLines !== false;
   var self = this;
   var density = opt.density || 90;      /* 1mあたりの粒の数 */
-  traces.forEach(function(tr){
+  traces.forEach(function(tr, traceIndex){
     if (tr.pts.length < 2) return;
     var cum = [0], total = 0;
     for (var i = 1; i < tr.pts.length; i++){
@@ -530,8 +503,15 @@ FlowLines.prototype.build = function(traces, opt){
     if (showLines){
       var g = new THREE.BufferGeometry().setFromPoints(tr.pts);
       var m = new THREE.LineBasicMaterial({
-        color: opt.lineColor || 0x2f6fae, transparent:true, opacity: opt.lineOpacity || 0.42 });
+        color: opt.lineColor || 0x60bfff, transparent:true, opacity: opt.lineOpacity ?? 0.78 });
       self.group.add(new THREE.Line(g, m));
+      // Static arrowheads keep the field direction readable without following particles.
+      if (!opt.flat && traceIndex % 3 === 0 && tr.pts.length > 4) {
+        var mid = Math.floor(tr.pts.length / 2);
+        var tangent = tr.pts[mid+1].clone().sub(tr.pts[mid-1]).normalize();
+        self.group.add(new THREE.ArrowHelper(tangent, tr.pts[mid], 0.010,
+          opt.lineColor || 0x60bfff, 0.005, 0.003));
+      }
     }
     var n = Math.max(2, Math.round(total * density));
     for (var k = 0; k < n; k++) self.parts.push({ line:rec, s: total * k / n });
@@ -865,7 +845,7 @@ mods.magnet = (function(){
       }
     }
     flow.build(traces, { showLines: document.getElementById('magLines').checked,
-      lineColor:0x36638f, partColor:0x6fb4e0, hotColor:0xd8ecff,
+      lineColor:0x60bfff, partColor:0x6fb4e0, hotColor:0xd8ecff,
       size:0.0042, density: fast ? 55 : 80 });
     /* 1本のときは磁力線ごと磁石について動かす（回転も同じ） */
     if (single && magA){ flow.group.position.copy(magA.position); flow.group.rotation.z = st.rot[0]; }
@@ -919,7 +899,7 @@ mods.magnet = (function(){
     },
     exit: function(){ root.remove(g); },
     setArr: function(v){ st.arr = v; rebuildMagnets(); rebuild(false); },
-    /* 強さを変えても磁力線の形は同じ。引き直さず、流れの速さだけ変える */
+    /* 強さを変えても磁力線の形は同じ。引き直さず、目印の再生速度だけ変える */
     setM: function(v){ st.M = 2.4e5*v; buildSegs(false, 'exact'); flow.gain = v; },
     /* 磁石を回す。1本なら磁界も丸ごと回るので、線を引き直さずに向きを変えるだけ */
     setRot: function(i, deg){
@@ -1127,7 +1107,7 @@ mods.current = (function(){
     curArrows.children.forEach(function(a){ a.renderOrder = 5; });
     g.add(curArrows);
 
-    flow.build(traces, { showLines:true, lineColor:0x2f6fae,
+    flow.build(traces, { showLines:true, lineColor:0x60bfff,
       partColor:0x6fb4e0, hotColor:0xd8ecff, size:0.0036, density:70 });
     /* 線そのものが磁界の向きに沿って作られているので、速さは正のままでよい。
        ここで符号を掛けると二重に反転してしまう。 */
@@ -1258,7 +1238,7 @@ mods.force = (function(){
       }
       traces.push({ pts:pts, mags:mags });
     }
-    fieldFlow.build(traces, { showLines:true, lineColor:0x2f587f, lineOpacity:0.42,
+    fieldFlow.build(traces, { showLines:true, lineColor:0x60bfff, lineOpacity:0.78,
       partColor:0x6fb4e0, hotColor:0xcfe6fb, size:0.0032, density:110 });
     g.add(fieldFlow.group);
   }
@@ -1539,7 +1519,7 @@ mods.induce = (function(){
         traces.push({ pts:bb.pts.concat(ff.pts), mags:bb.mags.concat(ff.mags) });
       }
     }
-    magFlow.build(traces, { showLines:true, lineColor:0x2f587f, lineOpacity:0.422,
+    magFlow.build(traces, { showLines:true, lineColor:0x60bfff, lineOpacity:0.78,
       partColor:0x6fb4e0, hotColor:0xd8ecff, size:0.0034, density:60 });
     g.add(magFlow.group);
 

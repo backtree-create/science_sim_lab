@@ -10,8 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="visual-assets/vendor/three.min.js"></script>
+<script src="visual-assets/vendor/OrbitControls.js"></script>
 
 <style>
   body.instrument{--accent:#38bdf8;}
@@ -92,8 +92,10 @@
     .btn{min-height:46px;}
   }
 </style>
+<link rel="stylesheet" href="visual-assets/classroom-visibility.css">
+<script src="visual-assets/classroom-visibility.js"></script>
 </head>
-<body class="instrument">
+<body data-lesson="coriolis" class="instrument">
 
 <div class="topbar">
   <a class="back" href="index.html">← ホームへ</a>
@@ -103,7 +105,6 @@
 <div class="sim-header">
   <span class="eyebrow">Coriolis Effect · Rotating Frame</span>
   <h1>コリオリの力シミュレーター</h1>
-  <p>回転している地球の上では、まっすぐ進んでいるはずのものが曲がって見えます。4つの実験で、その「見かけの力」の正体を確かめましょう。</p>
 </div>
 
 <div class="layout">
@@ -147,7 +148,7 @@
       </div>
       <div class="btn-grid">
         <button class="btn btn-primary" onclick="fireParticle1()">ボール発射</button>
-        <button class="btn btn-secondary" onclick="clearPaths1()">軌跡クリア</button>
+        <button class="btn btn-secondary" onclick="clearPaths1()">軌跡クリア</button><button class="btn" onclick="pauseDisk(this)" aria-pressed="false">一時停止</button>
       </div>
     </div>
 
@@ -220,43 +221,13 @@
     <hr class="divider">
 
     <!-- 解説 -->
-    <div class="hint exp on" id="exp-mode1">
-      <span class="hint-title">この実験でわかること</span>
-      <ul>
-        <li>回転する円盤の中心から、まわりの的をねらってボールを投げます。</li>
-        <li><strong>宇宙固定視点</strong>で見ると、ボールはまっすぐ進んでいます。力は何も働いていません。</li>
-        <li>ところが<strong>回転地面視点</strong>（円盤に乗った人の目線）に切り替えると、同じボールが横にそれて見えます。この見かけの曲がりが<strong>コリオリの力</strong>です。</li>
-        <li>この円盤は北極の上から見た地球と同じ向き（反時計回り）に回しています。だからボールは進行方向に対して<strong>右</strong>へそれます。南半球では逆に左へそれます。</li>
-      </ul>
-    </div>
+    <div class="hint exp on" id="exp-mode1"><span class="hint-title">比べて考えよう</span><p>同じ発射を止めて視点を切り替えると、軌跡はどう見える？</p></div>
 
-    <div class="hint exp" id="exp-mode2">
-      <span class="hint-title">この実験でわかること</span>
-      <ul>
-        <li>長い振り子は、いったん振り始めると<strong>同じ面の中で振れ続けよう</strong>とします。</li>
-        <li>ところが地面のほうが自転で回っているため、床の上から見ると、振れる向きがゆっくり回っていくように見えます（<strong>フーコーの振り子</strong>）。</li>
-        <li>回る速さは<strong>緯度によって変わり</strong>、北極でいちばん速く（およそ24時間で1周）、緯度が低くなるほど遅くなり、<strong>赤道では回りません</strong>。</li>
-        <li>スライダーで緯度を変え、床のピンが倒れていく速さのちがいを比べてみましょう。</li>
-      </ul>
-    </div>
+    <div class="hint exp" id="exp-mode2"><span class="hint-title">比べて考えよう</span><p>緯度を変えると、床に対する振れる向きの変化はどうなる？</p></div>
 
-    <div class="hint exp" id="exp-mode3">
-      <span class="hint-title">この実験でわかること</span>
-      <ul>
-        <li>赤道から北へ向かって空気を出すと、<strong>自転あり</strong>では進むほど東へそれていきます（北半球では進行方向の右へ）。</li>
-        <li><strong>自転を止める</strong>と、空気は南北にまっすぐ進みます。曲がりの原因が自転であることが確かめられます。</li>
-        <li>そらされる大きさは緯度が高いほど大きくなります。この曲がりが積み重なって、緯度15°付近の<strong>貿易風（東寄りの風）</strong>や緯度45°付近の<strong>偏西風（西寄りの風）</strong>という地球規模の風の帯ができます。</li>
-      </ul>
-    </div>
+    <div class="hint exp" id="exp-mode3"><span class="hint-title">比べて考えよう</span><p>自転を止めたときと回したときで、空気の進路はどう違う？</p></div>
 
-    <div class="hint exp" id="exp-mode4">
-      <span class="hint-title">この実験でわかること</span>
-      <ul>
-        <li>日本付近の上空には<strong>偏西風</strong>が西から東へ吹いています。低気圧・高気圧はこれに流されるため、天気は<strong>西から東へ</strong>変わります。</li>
-        <li>南の海上で発生した<strong>台風</strong>は、はじめ太平洋高気圧のふちに沿って北西へ進み、偏西風帯に入ると進路を<strong>東寄りに変えます</strong>（転向）。</li>
-        <li>偏西風の強さと蛇行の大きさを変えると、台風の曲がり方がどう変わるか確かめてみましょう。</li>
-      </ul>
-    </div>
+    <div class="hint exp" id="exp-mode4"><span class="hint-title">比べて考えよう</span><p>偏西風の強さを変えると、低気圧や台風の進路はどう変わる？</p></div>
 
   </div>
 </div>
@@ -279,7 +250,7 @@ let geojsonData = null;
 
 // --- 初期化 ---
 window.onload = () => {
-  initThreeJS();
+  try { initThreeJS(); } catch (error) { renderer = null; }
   resize2d();
   resizeRenderer();
   loadExternalMap();
@@ -325,6 +296,11 @@ function loadExternalMap() {
 }
 
 function setMode(mode) {
+  if ((mode === 2 || mode === 3) && !renderer) {
+    window.classroomRenderingMessage?.('この端末では3D表示を開始できません。的当て・日本マップは利用できます。');
+    return;
+  }
+  document.querySelector('.render-message')?.remove();
   currentMode = mode;
   document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i+1 === mode));
   
@@ -408,6 +384,8 @@ function initThreeJS() {
 // ==========================================
 // モード1: 的当て (2D Canvas)
 // ==========================================
+let diskPaused = false;
+function pauseDisk(button){diskPaused=!diskPaused;button.textContent=diskPaused?"再生":"一時停止";button.setAttribute("aria-pressed",String(diskPaused));}
 let viewEarth1 = false;
 let rotSpeed1 = 0.015;
 let angle1 = 0;
@@ -450,8 +428,9 @@ function updateSpeed(m) {
 }
 
 function fireParticle1() {
+  if(particles1.length >= 12) particles1.shift();
   particles1.push({
-    x: 0, y: 0, vx: 0, vy: -2.8,
+    x: 0, y: 0, vx: Math.sin(angle1)*2.8, vy: -Math.cos(angle1)*2.8,
     pathSpace: [{x:0, y:0}], pathEarth: [{x:0, y:0}]
   });
 }
@@ -461,7 +440,7 @@ function drawMode1() {
   const cx = 290, cy = 290;
   // 北極の上から見た地球と同じ「反時計回り」に回す
   // （canvas の rotate は正の値で時計回りなので符号を反転させる）
-  angle1 -= rotSpeed1;
+  if(!diskPaused) angle1 -= rotSpeed1;
   ctx2d.save();
   ctx2d.translate(cx, cy);
 
@@ -477,7 +456,7 @@ function drawMode1() {
   for (let i = 0; i < 12; i++) {
     ctx2d.beginPath(); ctx2d.moveTo(0, 0);
     ctx2d.lineTo(220 * Math.cos(i * Math.PI / 6), 220 * Math.sin(i * Math.PI / 6));
-    ctx2d.strokeStyle = (i % 3 === 0) ? '#334155' : '#1e293b'; ctx2d.stroke();
+    ctx2d.strokeStyle = (i % 3 === 0) ? '#94a3b8' : '#475569'; ctx2d.stroke();
   }
 
   // ターゲット (的)
@@ -489,23 +468,22 @@ function drawMode1() {
   ctx2d.restore();
 
   particles1.forEach(p => {
-    p.x += p.vx; p.y += p.vy;
+    if(!diskPaused){p.x += p.vx; p.y += p.vy;}
     const cosA = Math.cos(-angle1), sinA = Math.sin(-angle1);
     const ex = p.x * cosA - p.y * sinA;
     const ey = p.x * sinA + p.y * cosA;
 
-    p.pathSpace.push({x: p.x, y: p.y});
-    p.pathEarth.push({x: ex, y: ey});
+    if(!diskPaused && Math.hypot(p.x,p.y)<280){p.pathSpace.push({x:p.x,y:p.y});p.pathEarth.push({x:ex,y:ey});}
 
     const activePath = viewEarth1 ? p.pathEarth : p.pathSpace;
 
     ctx2d.beginPath();
-    ctx2d.strokeStyle = viewEarth1 ? '#10b981' : '#c084fc'; ctx2d.lineWidth = 3;
+    ctx2d.strokeStyle = viewEarth1 ? '#34e4bb' : '#dfb5ff'; ctx2d.lineWidth = 4;
     activePath.forEach((pt, i) => { if (i === 0) ctx2d.moveTo(pt.x, pt.y); else ctx2d.lineTo(pt.x, pt.y); });
     ctx2d.stroke();
 
     const head = activePath[activePath.length - 1];
-    ctx2d.fillStyle = '#facc15'; ctx2d.beginPath(); ctx2d.arc(head.x, head.y, 6, 0, Math.PI * 2); ctx2d.fill();
+    if(Math.hypot(p.x,p.y)<280){ctx2d.fillStyle = '#facc15'; ctx2d.beginPath(); ctx2d.arc(head.x, head.y, 6, 0, Math.PI * 2); ctx2d.fill();}
   });
 
   ctx2d.restore();

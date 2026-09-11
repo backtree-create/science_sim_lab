@@ -369,10 +369,12 @@
             }
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="visual-assets/vendor/three.min.js"></script>
+    <script src="visual-assets/vendor/OrbitControls.js"></script>
+<link rel="stylesheet" href="visual-assets/classroom-visibility.css">
+<script src="visual-assets/classroom-visibility.js"></script>
 </head>
-<body>
+<body data-lesson="electric">
     <div id="canvas-container"></div>
     <div id="atmosphere"></div>
 
@@ -394,7 +396,7 @@
             <div class="card" onclick="switchMode('flow')">
                 <div class="card-idx">03</div>
                 <div class="card-title">電流と電子の運動</div>
-                <div class="card-desc">マス目に沿った綺麗な回路内で、電流（＋→－）と電子（－→＋）の逆向き運動を観察。</div>
+                <div class="card-desc">回路内で、電流（＋→－）と電子（－→＋）の逆向き運動を観察。</div>
             </div>
             <div class="card" onclick="switchMode('ohm')">
                 <div class="card-idx">04</div>
@@ -404,7 +406,7 @@
             <div class="card" onclick="switchMode('circuit')">
                 <div class="card-idx">05</div>
                 <div class="card-title">直列回路と並列回路</div>
-                <div class="card-desc">整列された回路構造で、各抵抗を流れる分流のようすを可視化。</div>
+                <div class="card-desc">直列・並列の回路で、各抵抗を流れる分流のようすを可視化。</div>
             </div>
             <div class="card" style="border-color: var(--cyan); background: rgba(15,125,158,0.06);" onclick="switchMode('builder')">
                 <div class="card-idx" style="color:var(--lcd-green);">06 [NEW]</div>
@@ -531,10 +533,7 @@
                         電子の速さ: ${state.realisticDrift ? '実際のドリフト速度（ほぼ進まない）' : '観察用（速く動かす）'}
                     </button>
                     <div style="font-size:0.7rem; color:var(--text-dim); margin-top:6px; line-height:1.6;">
-                        導線の中の電子は、熱運動で細かく震えながら、全体としては
-                        1秒に0.1mm程度しか進みません（ドリフト速度）。
-                        それでもスイッチを入れた瞬間に電球が光るのは、電流をはたらかせる
-                        電気の作用が導線全体をほぼ光の速さで伝わるためです。
+                        電子の速さと、スイッチを入れて電球が光るまでの時間は同じ意味だろうか？
                     </div>`;
         }
 
@@ -647,7 +646,7 @@
             const el = document.getElementById('err-banner');
             if (!el) return;
             el.style.display = 'block';
-            el.textContent = '描画に問題が発生しました: ' + msg;
+            el.textContent = /WebGL/.test(msg) ? 'このブラウザーでは3D表示を開始できません。WebGL対応のブラウザーで開き直してください。' : '描画に問題が発生しました: ' + msg;
         }
 
         function init() {
@@ -658,14 +657,14 @@
             }
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xffffff);
-            scene.fog = new THREE.FogExp2(0xffffff, 0.005);
+            scene.fog = null; // Keep distant wires and labels readable.
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(45, document.getElementById('canvas-container').clientWidth / document.getElementById('canvas-container').clientHeight, 0.1, 1000);
             camera.position.set(0, 25, 25);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(document.getElementById('canvas-container').clientWidth, document.getElementById('canvas-container').clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setClearColor(0xffffff, 1);
             container.appendChild(renderer.domElement);
 
@@ -755,9 +754,9 @@
         }
 
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = document.getElementById('canvas-container').clientWidth / document.getElementById('canvas-container').clientHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(document.getElementById('canvas-container').clientWidth, document.getElementById('canvas-container').clientHeight);
             if (currentMode === 'builder') initBuilder2DCanvas();
         }
 
@@ -770,6 +769,7 @@
 
         function switchMode(mode) {
             currentMode = mode;
+            document.body.dataset.electricMode=mode;
             const homeScr = document.getElementById('home-screen');
             const uiPanel = document.getElementById('ui-panel');
             const backBtn = document.getElementById('btn-home-return');
@@ -854,11 +854,7 @@
                         <span><span class="legend-dot green"></span>陰極線（蛍光する光の筋）</span>
                         <span><span class="legend-dot cyan"></span>電子</span>
                     </div>
-                    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:6px; line-height:1.6;">
-                        真空中の電子は、導線の中とは違ってじゃまをする原子がないため、
-                        高電圧で一気に加速され、秒速数千km以上という猛烈な速さで飛びます。
-                        （導線の中の電子は1秒に0.1mm程度しか進みません）
-                    </div>
+                    
                 `;
             } else if (currentMode === 'shadow') {
                 const M = (SH_SCREEN_X - SH_CATHODE_X) / (state.s_crossX - SH_CATHODE_X);
@@ -872,7 +868,7 @@
                     <div class="control-group">
                         <label>十字板の位置 <span class="value-display">${state.s_crossX > 0 ? '+' : ''}${state.s_crossX}</span></label>
                         <input type="range" min="-9" max="9" step="0.5" value="${state.s_crossX}" oninput="updateParam('s_crossX', this.value)">
-                        <div style="font-size:0.68rem; color:var(--text-dim); margin-top:2px;">左（陰極寄り）ほど影は大きく、右（蛍光板寄り）ほど小さくなります</div>
+                        
                     </div>
                     <button class="btn-action ${state.s_switchOn ? '' : 'toggle-off'}" onclick="toggleShadowSwitch()">
                         高圧電源: ${state.s_switchOn ? 'ON（通電中）' : 'OFF（停止）'}
@@ -885,10 +881,7 @@
                         <div class="lcd-value">×${M.toFixed(2)}</div>
                         <div class="lcd-sub">影の倍率 ＝ 陰極から蛍光板までの距離 ÷ 陰極から十字板までの距離</div>
                     </div>
-                    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:8px; line-height:1.6;">
-                        真空中を飛ぶ電子は秒速数千km以上と非常に速く、まっすぐ進みます。
-                        だからこそ十字板のかげがはっきりと影として映ります。
-                    </div>
+                    
                 `;
             } else if (currentMode === 'flow') {
                 const isAC = state.f_source === 'ac';
@@ -927,11 +920,7 @@
                         <span><span class="legend-dot cyan"></span>電子：導線内の青い粒</span>
                         <span><span class="legend-dot amber"></span>電流の向き：橙の矢印</span>
                     </div>
-                    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:6px; line-height:1.6;">
-                        ${isAC
-                            ? '交流では電子は行ったり来たりをくり返すだけで、ほとんど移動しません。それでも電流は流れ、電球は光ります。'
-                            : '電流の向きは、電子の実際の動きとは逆向きに定められています。'}
-                    </div>
+                    
                     ${driftPanelHtml()}
                 `;
             } else if (currentMode === 'ohm') {
@@ -1000,9 +989,7 @@
                         <span><span class="legend-dot cyan"></span>電子（－→＋）</span>
                         <span><span class="legend-dot amber"></span>電流（＋→－）</span>
                     </div>
-                    <div style="font-size:0.7rem; color:var(--text-dim); margin-top:6px; line-height:1.6;">
-                        ${isSeries ? '直列：どこでも電流の大きさは同じです。' : '並列：抵抗が小さい枝ほど多くの電流が流れます（矢印の速さを見比べてください）。'}
-                    </div>
+                    
                     ${driftPanelHtml()}
                 `;
             } else if (currentMode === 'builder') {
@@ -1051,7 +1038,8 @@
                     <div id="selected-node-props" style="margin-top:10px;"></div>
                 `;
             }
-            c.innerHTML = html;
+            const questions={crookes:'極性を入れかえると、電子線はどちらへ曲がる？',shadow:'十字板を動かすと、影の大きさはどう変わる？',flow:'電流の向きと電子の移動する向きは同じ？',ohm:'電圧を2倍にしたときと抵抗を2倍にしたとき、電流はどうなる？',circuit:'直列と並列では、枝分かれする前後の電流はどうなる？',builder:'予想した電流になる回路を作れる？'};
+            c.innerHTML = `<p class="inquiry-question">${questions[currentMode]||''}</p>`+html;
 
             if (currentMode === 'builder') {
                 setTimeout(() => { initBuilder2DCanvas(); updateSelectedPropsUI(); }, 30);
@@ -2257,20 +2245,20 @@
 
         function add3DLabel(text, x, y, z, parent = scene) {
             const canvas = document.createElement('canvas');
-            canvas.width = 160; canvas.height = 64;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'rgba(255,255,255,0.94)';
-            ctx.fillRect(0, 0, 160, 64);
-            ctx.strokeStyle = '#15607a'; ctx.lineWidth = 4;
-            ctx.strokeRect(2, 2, 156, 60);
-            ctx.fillStyle = '#12222e';
-            ctx.font = 'bold 22px sans-serif';
+            ctx.font = 'bold 28px sans-serif';
+            canvas.width = Math.max(180, Math.ceil(ctx.measureText(text).width + 32));
+            canvas.height = 64;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, 64);
+            ctx.strokeStyle = '#24475e'; ctx.lineWidth = 3;
+            ctx.strokeRect(2, 2, canvas.width-4, 60);
+            ctx.fillStyle = '#12222e'; ctx.font = 'bold 28px sans-serif';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(text, 80, 32);
-
+            ctx.fillText(text, canvas.width/2, 32);
             const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthTest: false }));
             sprite.renderOrder = 6;
-            sprite.scale.set(2.8, 1.12, 1.0);
+            sprite.scale.set(canvas.width / 64 * 1.12, 1.12, 1.0);
             sprite.position.set(x, y, z);
             parent.add(sprite);
         }

@@ -6,7 +6,7 @@
 <title>イオン3D LAB — 化学変化とイオン</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@400;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="visual-assets/vendor/three.min.js"></script>
 <style>
   :root{
     --ink:#1c2430; --sub:#5b6a7d; --line:#e3e9f0; --bg:#f6f8fb; --panel:#ffffff;
@@ -258,8 +258,10 @@
     input[type=range]{height:28px;}
   }
 </style>
+<link rel="stylesheet" href="visual-assets/classroom-visibility.css">
+<script src="visual-assets/classroom-visibility.js"></script>
 </head>
-<body>
+<body data-lesson="ion">
 
 <header>
   <div class="logo">
@@ -269,7 +271,7 @@
       <p>中3化学 — 化学変化とイオン</p>
     </div>
   </div>
-  <div class="headnote">実験を自分で操作して、目に見えないイオンの世界を観察しよう</div>
+  <div class="headnote">粒子の色だけでなく、化学式と＋・−の符号を見て比べよう</div>
   <a class="back-lab" href="index.html">← SCIENCE SIM LAB</a>
 </header>
 
@@ -470,7 +472,7 @@
   <span class="eqnote" id="eqNote"></span>
 </div>
 
-<footer>イオン3D LAB v1.0 — 実験操作型シミュレーター(Three.js)</footer>
+<footer>粒子の色・大きさ・数・速さは模式表現です。実際の水溶液の色と粒子の色は別です。</footer>
 
 <script>
 'use strict';
@@ -635,6 +637,7 @@ function makeTextSprite(text, opt={}){
   c2.font=`700 ${fs}px Outfit, "Zen Kaku Gothic New", sans-serif`;
   c2.textAlign='center'; c2.textBaseline='middle';
   c2.fillStyle=opt.color||'#ffffff';
+  if(!opt.bg){c2.strokeStyle='#10202b';c2.lineWidth=6;c2.lineJoin='round';c2.strokeText(text,cvs.width/2,cvs.height/2+2);}
   c2.fillText(text, cvs.width/2, cvs.height/2+2);
   const tex=new THREE.CanvasTexture(cvs);
   tex.minFilter=THREE.LinearFilter;
@@ -708,7 +711,7 @@ function makeBeaker(R=6, H=8, opt={}){
   const g=new THREE.Group();
   const glassMat=new THREE.MeshPhysicalMaterial({
     color:0xaecfe4, roughness:0.06, metalness:0,
-    transparent:true, opacity:0.13, side:THREE.DoubleSide, depthWrite:false
+    transparent:true, opacity:0.09, side:THREE.DoubleSide, depthWrite:false
   });
   const wall=new THREE.Mesh(new THREE.CylinderGeometry(R,R,H,40,1,true), glassMat);
   wall.position.y=H/2; g.add(wall);
@@ -921,7 +924,7 @@ MODULES.m1=(()=>{
     wireR=makeWire([new THREE.Vector3( 3.4,10.2,0), new THREE.Vector3( 3.4,12.3,0), new THREE.Vector3( 1.6,12.9,0), new THREE.Vector3( 0.25,12.95,0)], 0x9fb0c0, 0.16);
     elecGroup.add(wireL, wireR);
     bulb=new THREE.Mesh(sphereGeo(0.9),
-      new THREE.MeshStandardMaterial({color:0x5f6f7d, emissive:0xf5c518, emissiveIntensity:0, roughness:.25, transparent:true, opacity:.5}));
+      new THREE.MeshBasicMaterial({color:0x253747, transparent:false, opacity:1}));
     bulb.position.set(0,14.1,0); elecGroup.add(bulb);
     const base=new THREE.Mesh(new THREE.CylinderGeometry(0.36,0.44,0.9,12),
       new THREE.MeshStandardMaterial({color:0xb9c6d2, metalness:.7, roughness:.35}));
@@ -978,10 +981,9 @@ MODULES.m1=(()=>{
   }
 
   function updateBulb(){
-    const on = electrodesIn && dissolved && SUBS[dissolved].elec && ions.length>0;
-    bulb.material.emissiveIntensity = on?1.2:0;
-    bulb.material.color.set(on?0xfff2b0:0x5f6f7d);   /* 消灯時は暗いガラス玉 */
-    bulb.material.opacity = on?0.95:0.5;
+    const on = Boolean(electrodesIn && dissolved && SUBS[dissolved].elec && ions.length>0);
+    bulb.material.color.set(on?0xfff2b0:0x253747);
+    bulb.material.opacity = 1; // Opaque, unlit material: room lights cannot mimic a glow.
     bulbLight.intensity = on?1.6:0;
     bulbGlow.visible = on;
     const t=$('#m1bulb');
@@ -1051,9 +1053,7 @@ MODULES.m1=(()=>{
       w.rotation.y+=dt*0.6;
       brown(w, dt, speed*0.7, i=>clampCyl(i,0,0,R-0.7,LIQ_Y0+0.3,surfY-0.2));
     });
-    if(bulb.material.emissiveIntensity>0){
-      bulb.material.emissiveIntensity=1.1+Math.sin(clock.elapsedTime*6)*0.15;
-    }
+
   }
 
   function dispose(){ scene.remove(root); disposeGroup(root); ions=[]; waters=[]; crystal=null; }
@@ -1093,7 +1093,7 @@ MODULES.m2=(()=>{
   };
   let root, beaker, ions=[], bubbles, deposit, depositN=0;
   let sol='CuCl2', on=false, volt=3, swap=false; /* swap=false: 左=+極 */
-  let elecL, elecR, plusLbl, minusLbl, psBox, psTxt, electrons=[], wl, wr;
+  let elecL, elecR, plusLbl, minusLbl, psBox, psTxt, electrons=[], wl, wr, terminalLabels=[];
   let gasCount={cathode:0, anode:0};
   const R=6.4, LIQ_H=5.2, LIQ_Y0=0.2;
   const EX=3.6; /* electrode |x| */
@@ -1156,6 +1156,9 @@ MODULES.m2=(()=>{
     minusLbl.position.set(cathodeX()*1.32, 11.6, 0);
     wl.material.color.set(swap?0x2563eb:0xe0533d);
     wr.material.color.set(swap?0xe0533d:0x2563eb);
+    terminalLabels.forEach(label=>{psBox.remove(label);disposeGroup(label);});
+    const terminals=[[-2.4,swap?"−":"＋"],[2.4,swap?"＋":"−"]].map(([x,text])=>{const label=makeTextSprite(text,{color:"#ffffff",bg:text==="＋"?"#a12d26":"#174db0",scale:.7,depthTest:false});label.position.set(x,0,0.7);psBox.add(label);return label;});
+    terminalLabels=terminals;
     deposit.position.set(cathodeX(), LIQ_Y0+0.6, 0);
   }
 
@@ -1171,7 +1174,8 @@ MODULES.m2=(()=>{
 
   function makeElectron(){
     const e=makeIon('e-',{labelScale:0.4});
-    e.userData.t=Math.random();
+    e.userData.t=0;
+    e.userData.branch=electrons.length % 2 === 0 ? "cathode" : "anode";
     electrons.push(e); root.add(e);
   }
 
@@ -1226,14 +1230,12 @@ MODULES.m2=(()=>{
         e.userData.t+=dt*(0.12+volt*0.05);
         if(e.userData.t>1) e.userData.t-=1;
         const t=e.userData.t;
-        /* path: cathode-side wire up, across supply, down anode-side wire */
+        // Each wire curve runs electrode (0) -> power terminal (1).
+        // No free-electron path is drawn through the solution or across the power supply.
         const cw = (cathodeX()<0)? wl.userData.curve : wr.userData.curve;
         const aw = (cathodeX()<0)? wr.userData.curve : wl.userData.curve;
-        let p;
-        if(t<0.4){ p=cw.getPoint(1-t/0.4); }           /* electrode → supply */
-        else if(t<0.6){ const k=(t-0.4)/0.2;           /* across supply */
-          p=cw.getPoint(0).clone().lerp(aw.getPoint(0), k); }
-        else { p=aw.getPoint((t-0.6)/0.4); }           /* supply → anode…実際は−極から出る向き */
+        const p = e.userData.branch === 'cathode' ? cw.getPoint(1-t) : aw.getPoint(t);
+        e.scale.setScalar(Math.min(1, t*12, (1-t)*12));
         e.position.copy(p).add(new THREE.Vector3(0,0,0.35));
       });
     }else{
@@ -1286,7 +1288,7 @@ MODULES.m2=(()=>{
 
   function dispose(){
     scene.remove(root); disposeGroup(root);
-    ions=[]; electrons=[]; if(bubbles) bubbles.list.length=0;
+    ions=[]; electrons=[]; terminalLabels=[]; if(bubbles) bubbles.list.length=0;
     depositN=0; gasCount={cathode:0,anode:0};
   }
 
@@ -1307,6 +1309,7 @@ MODULES.m2=(()=>{
     if(on&&volt===0) toast('電圧が0Vです — スライダーを上げよう');
   });
   $('#m2swap').addEventListener('click', ()=>{
+    electrons.forEach(e=>{root.remove(e);disposeGroup(e);});electrons=[];
     swap=!swap; placePolarity();
     toast('+−を入れかえました — 反応する電極も入れかわる');
   });

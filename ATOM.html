@@ -234,14 +234,16 @@
         }
     </style>
     <!-- Three.js & OrbitControls -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="visual-assets/vendor/three.min.js"></script>
+    <script src="visual-assets/vendor/OrbitControls.js"></script>
+<link rel="stylesheet" href="visual-assets/classroom-visibility.css">
+<script src="visual-assets/classroom-visibility.js"></script>
 </head>
-<body>
+<body data-lesson="atom">
     <a class="back-home" href="index.html">← ホームへ</a>
 
     <div id="ui-panel">
-        <h1>Atom Model</h1>
+        <h1>原子の構造と帯電</h1>
 
         <div class="control-group">
             <label>元素選択</label>
@@ -259,13 +261,13 @@
         </div>
 
         <div class="control-group">
-            <button id="btn-rub" class="btn-primary">紙で擦り取る</button>
-            <button id="btn-reset" class="btn-secondary">放電（電子リセット）</button>
+            <button id="btn-rub" class="btn-primary">電子を移す（模式）</button>
+            <button id="btn-reset" class="btn-secondary">電子を戻して中性にする</button>
             <button id="btn-force" class="btn-secondary">引力ライン表示 切替</button>
         </div>
 
         <div id="info-box">
-            明瞭なカラーモデルにより、白背景下でも電子の挙動や原子核構造を高コントラストで観察可能です。
+            <div class="particle-key"><span class="proton">＋ 陽子</span><span class="neutron">0 中性子</span><span class="electron">− 電子</span></div><p id="particle-counts" aria-live="polite">陽子 6個 ／ 中性子 6個 ／ 電子 6個</p><p class="inquiry-question">電子が移る前と後で、陽子と電子の数はどう変わる？</p><details><summary>モデルについて</summary><p>円は配置の案内線。実際の電子の軌道や寸法比ではありません。</p></details>
         </div>
     </div>
 
@@ -277,11 +279,11 @@
         scene.background = new THREE.Color(0xf8fafc);
         scene.fog = new THREE.FogExp2(0xf8fafc, 0.0012);
 
-        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 1000);
         camera.position.set(0, 10, 24);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -495,10 +497,10 @@
                     points.push(new THREE.Vector3(Math.cos(theta) * radius, 0, Math.sin(theta) * radius));
                 }
                 orbitGeo.setFromPoints(points);
-                shellGroup.add(new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({ color: 0x64748b, opacity: 0.45, transparent: true })));
+                shellGroup.add(new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({ color: 0x475569, opacity: 0.8, transparent: true })));
 
                 for(let i=0; i<count; i++) {
-                    const eMesh = new THREE.Mesh(new THREE.SphereGeometry(0.25, 32, 32), electronMat);
+                    const eMesh = new THREE.Mesh(new THREE.SphereGeometry(0.36, 32, 32), electronMat);
                     shellGroup.add(eMesh);
 
                     const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
@@ -523,6 +525,8 @@
 
         function updateChargeUI() {
             const valEl = document.getElementById('charge-status-val');
+            const atom = elements[currentElement];
+            document.getElementById('particle-counts').textContent = `陽子 ${atom.p}個 ／ 中性子 ${atom.n}個 ／ 電子 ${atom.p-escapedElectronsCount}個 ／ 移った電子 ${escapedElectronsCount}個`;
             const cardEl = document.getElementById('charge-status-card');
 
             if (escapedElectronsCount === 0) {
@@ -623,8 +627,9 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2(-100, -100);
         function updatePointer(x, y) {
-            mouse.x = (x / window.innerWidth) * 2 - 1;
-            mouse.y = -(y / window.innerHeight) * 2 + 1;
+            const rect=renderer.domElement.getBoundingClientRect();
+            mouse.x = ((x-rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((y-rect.top) / rect.height) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObject(nucleusOuterShell);
             if (intersects.length > 0) {
@@ -693,10 +698,10 @@
         animate();
 
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(container.clientWidth, container.clientHeight);
         });
     </script>
 </body>
