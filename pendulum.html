@@ -39,7 +39,7 @@
     input[type=range]::-moz-range-thumb{width:26px;height:26px;}
   }
 </style>
-<link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script></head>
+<link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script><style>[hidden]{display:none!important}#stage{min-height:0}.pendulumPanel .readout .v{font-size:15px}.pendulumPanel .readout{gap:5px}.pendulumPanel .controls{gap:6px}.pendulumPanel .control label{line-height:1.3}.pendulumPanel input[type=range]{min-height:26px}#explainText{display:none}.pendulumPanel .btnrow{margin:4px 0!important}.pendulumPanel .btn{min-height:36px;padding:6px 9px}</style></head>
 <body>
 <div class="topbar">
 <a class="back" href="index.html">← ホームへ</a>
@@ -74,7 +74,7 @@
 <h2><span class="dot"></span>パラメータ</h2>
 <div class="controls" id="singleControls">
 <div class="control">
-<label for="length">ひもの長さ L <span class="val"><span id="lVal">1.0</span> m</span></label>
+<label for="length">振り子の長さ L <span class="val"><span id="lVal">1.0</span> m</span></label>
 <input id="length" max="2.0" min="0.3" step="0.05" type="range" value="1.0"/>
 </div>
 <div class="control">
@@ -82,7 +82,7 @@
 <input id="theta0" max="90" min="5" step="1" type="range" value="40"/>
 </div>
 <div class="control">
-<label style="justify-content:flex-start;gap:8px;"><input id="damping" type="checkbox"/> 現実的な減衰を含める（摩擦・空気抵抗）</label>
+<label style="justify-content:flex-start;gap:8px;"><input id="damping" type="checkbox"/> 摩擦・空気抵抗を含める</label>
 </div>
 <label for="forceView">矢印の表示</label><select id="forceView"><option value="forces">おもりに働く力</option><option value="components">重力の分解</option></select></div>
 <div class="controls" id="cradleControls" style="display:none;">
@@ -120,9 +120,9 @@
 <div class="item"><div class="k">直前の衝突速度</div><div class="v velocity" id="rCollV">— m/s</div></div>
 </div>
 <div class="explain" id="explainText">長さ・角度を1つずつ変えて、周期を比べよう。</div>
-<button class="btn" data-dialog="notes">モデルについて</button></div></div>
+<div class="btnrow" id="measurementButtons"><button class="btn" id="saveMeasurement" disabled>周期を記録</button><button class="btn" data-dialog="measurements">記録を見る</button></div><button class="btn" data-dialog="notes">モデルについて</button></div></div>
 </div>
-<dialog class="" id="notes"><button class="btn close">閉じる</button><p>単振り子は1 kgの質点と質量のないひものモデル。張力 T=m(g cosθ+Lω²)。運動中、張力と重力の半径方向成分の差が向心加速度を生む。減衰は速度に比例する接線方向の抵抗。位置エネルギーの基準は最下点。周期の理論値は小角近似。ゆりかごは同質量球の理想的な速度伝達モデルで、接触中の変形は省略。</p></dialog>
+<dialog id="measurements"><button class="btn close">閉じる</button><h2>測定の記録</h2><p>条件を1つずつ変えて比べよう。</p><table style="border-collapse:collapse;width:100%;font-size:15px"><thead><tr><th>長さ</th><th>初期角度</th><th>減衰</th><th>1往復</th></tr></thead><tbody id="measurementRows"></tbody></table><p id="recordStatus">まだ記録はありません。</p></dialog><dialog class="" id="notes"><button class="btn close">閉じる</button><p>単振り子は1 kgの質点と質量のないひものモデル。長さは支点からおもりの中心まで。おもりの丸は拡大記号。張力 T=m(g cosθ+Lω²)。運動中、張力と重力の半径方向成分の差が向心加速度を生む。減衰は速度に比例する接線方向の抵抗。位置エネルギーの基準は最下点。周期の理論値は小角近似。ゆりかごは同質量球の理想的な速度伝達モデルで、接触中の変形は省略。</p></dialog>
 <script>
 const canvas=document.getElementById('stage'), ctx=canvas.getContext('2d');
 function resize(){
@@ -145,6 +145,7 @@ const readoutSingle=document.getElementById('readoutSingle'), readoutCradle=docu
 modeSingleBtn.onclick=()=>{
   document.querySelector('.sim-header p').textContent='最下点と折り返し地点で、張力とエネルギーはどう変わる？';
   document.getElementById('explainText').textContent='長さ・角度を1つずつ変えて、周期を比べよう。';
+  document.getElementById('measurementButtons').hidden=false;
   mode='single'; modeSingleBtn.classList.add('active'); modeCradleBtn.classList.remove('active');
   singleUI.style.display=''; cradleUI.style.display='none';
   singleControls.style.display=''; cradleControls.style.display='none';
@@ -154,6 +155,7 @@ modeSingleBtn.onclick=()=>{
 modeCradleBtn.onclick=()=>{
   document.querySelector('.sim-header p').textContent='引く球の数を変えると、反対側の球はどう動く？';
   document.getElementById('explainText').textContent='1個・2個・3個を引いて、衝突後を比べよう。';
+  document.getElementById('measurementButtons').hidden=true;
   mode='cradle'; modeCradleBtn.classList.add('active'); modeSingleBtn.classList.remove('active');
   singleUI.style.display='none'; cradleUI.style.display='';
   singleControls.style.display='none'; cradleControls.style.display='';
@@ -172,10 +174,11 @@ let simTime=0;
 
 function resetSingle(){
   sTheta=parseFloat(theta0El.value)*Math.PI/180;
-  sOmega=0; sRunning=false; turnPoints=[]; simTime=0;
+  sOmega=0; sRunning=false; turnPoints=[0]; simTime=0;
   updateSingleReadouts();
 }
 resetSingle();
+dampingEl.addEventListener('change',resetSingle);
 
 function stepSingle(dt){
   if(!sRunning)return;
@@ -191,7 +194,7 @@ function stepSingle(dt){
   // 発射直後(静止からの立ち上がり)の見かけ上の符号反転だけを除外し、
   // それ以降の本物の折り返し(角速度の符号反転)はすべて検出する
   if(simTime>0.05 && Math.sign(prevOmega)!==Math.sign(sOmega)){
-    turnPoints.push(simTime);
+    turnPoints.push(simTime-dt+dt*Math.abs(prevOmega)/(Math.abs(prevOmega)+Math.abs(sOmega)));
     if(turnPoints.length>4)turnPoints.shift();
   }
 }
@@ -207,12 +210,13 @@ function updateSingleReadouts(){
   document.getElementById('rT').textContent=T.toFixed(2)+' N';
   document.getElementById('rRestore').textContent=Math.abs(restore).toFixed(2)+' N';
   document.getElementById('rT0').textContent=T0.toFixed(2)+' s';
-  if(turnPoints.length>=2){
-    const measured=2*(turnPoints[turnPoints.length-1]-turnPoints[turnPoints.length-2]);
+  if(turnPoints.length>=3){
+    const measured=turnPoints[turnPoints.length-1]-turnPoints[turnPoints.length-3];
     document.getElementById('rTmeasured').textContent=measured.toFixed(2)+' s';
   } else {
-    document.getElementById('rTmeasured').textContent='計測中…';
+    document.getElementById('rTmeasured').textContent=simTime===0?'放すと計測':sRunning?'1往復を計測中':'計測を中断中';
   }
+  document.getElementById('saveMeasurement').disabled=turnPoints.length<3;
   const KE=0.5*m*(L*sOmega)*(L*sOmega);
   const PEmax=m*g*L*(1-Math.cos(parseFloat(theta0El.value)*Math.PI/180));
   const PE=m*g*L*(1-Math.cos(sTheta));
@@ -236,11 +240,17 @@ function drawSingle(){
   const bx=pivotX+Math.sin(sTheta)*L*scale;
   const by=pivotY+Math.cos(sTheta)*L*scale;
 
+  // Fixed metric ruler: changing L or angle never changes the scale.
+  const rulerX=28;
+  lab.line(ctx,rulerX,pivotY,rulerX,pivotY+2*scale,'#64758b');
+  for(let i=0;i<=4;i++){const y=pivotY+i*.5*scale;lab.line(ctx,rulerX,y,rulerX+7,y,'#64758b');lab.text(ctx,(i*.5).toFixed(1)+' m',rulerX+11,y+5)}
+  ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle='#64758b';ctx.beginPath();ctx.moveTo(pivotX,pivotY);ctx.lineTo(pivotX,pivotY+L*scale);ctx.stroke();ctx.restore();
+  lab.text(ctx,'支点 → おもりの中心：'+L.toFixed(2)+' m',18,24);
   // guide arc
   ctx.strokeStyle='rgba(20,20,30,.10)'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.arc(pivotX,pivotY,L*scale,Math.PI/2-1.6,Math.PI/2+1.6); ctx.stroke();
 
-  ctx.strokeStyle='#4a5268'; ctx.lineWidth=2;
+  ctx.strokeStyle='#243b53'; ctx.lineWidth=3;
   ctx.beginPath();ctx.moveTo(pivotX,pivotY);ctx.lineTo(bx,by);ctx.stroke();
 
   const forceScale=5.2, T=g*Math.cos(sTheta)+L*sOmega*sOmega;
@@ -380,12 +390,21 @@ document.getElementById('resetBtn').onclick=()=>{
 
 let last=performance.now();
 function loop(now){
-  const dt=Math.min((now-last)/1000,0.02); last=now;
-  if(mode==='single'){ for(let i=0;i<8;i++)stepSingle(dt/8); updateSingleReadouts(); drawSingle(); }
-  else { stepCradle(dt); drawCradle(); }
+  const dt=Math.min((now-last)/1000,0.1); last=now;
+  if(mode==='single'){ const steps=Math.max(1,Math.ceil(dt/.002));for(let i=0;i<steps;i++)stepSingle(dt/steps); updateSingleReadouts(); drawSingle(); }
+  else {const steps=Math.max(1,Math.ceil(dt/.002));for(let i=0;i<steps;i++)stepCradle(dt/steps);drawCradle();}
   document.getElementById('launchBtn').textContent=(mode==='single'?sRunning:cRunning)?'一時停止':'放す / 再開';
   requestAnimationFrame(loop);
 }
+let measurements=[];
+document.getElementById('saveMeasurement').onclick=()=>{
+ if(turnPoints.length<3)return;
+ measurements.push([Number(lengthEl.value).toFixed(2)+' m',theta0El.value+'°',dampingEl.checked?'あり':'なし',(turnPoints.at(-1)-turnPoints.at(-3)).toFixed(2)+' s']);
+ if(measurements.length>12)measurements.shift();
+ document.getElementById('measurementRows').innerHTML=measurements.map(row=>'<tr>'+row.map(v=>'<td style="padding:10px;border-bottom:1px solid #aebdcd;text-align:center">'+v+'</td>').join('')+'</tr>').join('');
+ document.getElementById('recordStatus').textContent=measurements.length+'件（直近12件まで）';
+ document.getElementById('saveMeasurement').textContent='記録済み '+measurements.length;
+};
 resize();
 requestAnimationFrame(loop);
 </script>

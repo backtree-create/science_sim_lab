@@ -13,7 +13,7 @@
   #simCanvas{display:block;width:100%;height:auto;touch-action:manipulation;}
   .stage{padding:0;}
 </style>
-</head>
+<link rel="stylesheet" href="visual-assets/inquiry-five.css"><script src="visual-assets/inquiry-five.js"></script><style>#simCanvas{width:100%;height:100%;object-fit:contain}.angleReadings{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}.angleReadings div{padding:7px;background:#eef3f9;border:1px solid #bac8d8;border-radius:8px}.angleReadings b{display:block;font-size:22px;color:#172438}.legend{line-height:1.5}.controls{gap:10px}#criticalControls p{font-size:14px;margin:4px 0}.panel .divider{margin:5px 0}[hidden]{display:none!important}</style></head>
 <body>
 
 <div class="topbar">
@@ -23,7 +23,7 @@
 
 <div class="sim-header">
   <span class="eyebrow">Reflection · Refraction · Total Internal Reflection</span>
-  <h1>光の反射と屈折（全反射）</h1>
+  <h1>光の反射と屈折</h1><p>入射角を大きくすると、屈折した光はどこへ進む？</p>
 </div>
 
 <div class="layout">
@@ -32,7 +32,7 @@
     <div class="stage">
       <canvas id="simCanvas" width="600" height="400"></canvas>
     </div>
-    <div class="statusline" id="statusText"></div>
+    <div class="legend">赤：入射光 ／ 黄褐色：反射光 ／ 青：屈折光<br>角度は法線から測る。線の太さは光の強さを表さない。</div><div aria-live="polite" class="statusline" id="statusText"></div>
   </div>
 
   <div class="panel">
@@ -51,25 +51,22 @@
 
       <div class="control">
         <label for="angleSlider">入射角<span class="val"><span id="angleVal">45</span>°</span></label>
-        <input type="range" id="angleSlider" min="0" max="85" value="45" oninput="render()">
+        <input type="range" id="angleSlider" min="0" max="85" step="0.1" value="45" oninput="render()">
       </div>
     </div>
 
     <hr class="divider">
 
-    <div class="hint">
-      <span class="hint-title">学習の重要ポイント</span>
-      <ul>
-        <li><strong>角度の測り方：</strong> 入射角・反射角・屈折角はすべて「境界線」ではなく<strong>「法線（点線）」との間の角度</strong>です。</li>
-        <li><strong>反射の法則：</strong> 入射角と反射角は常に等しくなります（入射角 ＝ 反射角）。</li>
-        <li><strong>全反射：</strong> 水やガラスから空気中へ光が進むとき、入射角を大きくしていくと屈折光がなくなり、すべて反射する現象が起きます。</li>
-      </ul>
-    </div>
+    <div class="angleReadings"><div>入射角<b id="readI"></b></div><div>反射角<b id="readR"></b></div><div>屈折角<b id="readT"></b></div><div>臨界角<b id="readC"></b></div></div>
+    <div class="btnrow"><button class="btn" id="normalButton">垂直に入れる</button><button class="btn" id="angle45">45°に戻す</button></div>
+    <div id="criticalControls"><p>全反射の境目を比べる</p><div class="btnrow"><button class="btn" id="beforeCritical">境目の手前</button><button class="btn" id="afterCritical">境目の先</button></div></div>
+    <button class="btn" data-dialog="notes">モデルについて</button>
+
   </div>
 
 </div>
 
-<script>
+<dialog id="notes"><button class="btn close">閉じる</button><p>均一な物質どうしの平面境界。屈折率は空気1.00、水1.33、ガラス1.50とする。角度は法線から測り、スネルの法則で計算。臨界角では屈折角が90°に近づき、それを超えると全反射する。線の太さや色は光の強度・波長を表さない。</p></dialog><script>
   const canvas = document.getElementById('simCanvas');
   const ctx = canvas.getContext('2d');
 
@@ -79,9 +76,9 @@
   // 描画色はデザイントークンから読み出す
   const css = getComputedStyle(document.documentElement);
   const tok = (n, f) => (css.getPropertyValue(n).trim() || f);
-  const C_IN     = tok('--force',     '#e2503a'); // 入射光
-  const C_REF    = tok('--highlight', '#c98708'); // 反射光
-  const C_REFR   = tok('--water',     '#1f7fd0'); // 屈折光
+  const C_IN     = '#bb3326'; // 入射光
+  const C_REF    = '#956000'; // 反射光
+  const C_REFR   = '#0068b5'; // 屈折光
   const C_INK    = tok('--text',      '#111726');
   const C_DIM    = tok('--text-dim',  '#5a6478');
   const C_FAINT  = tok('--text-faint','#98a1b4');
@@ -124,10 +121,16 @@
 
     // 屈折角の計算 (スネルの法則: n1 * sin(i) = n2 * sin(r))
     const sinR = (n1 / n2) * Math.sin(iRad);
-    const isTIR = sinR > 1.0; // 全反射 (Total Internal Reflection)
-    const rRad = isTIR ? 0 : Math.asin(sinR);
+    const isTIR = sinR > 1.0+1e-12; // 全反射 (Total Internal Reflection)
+    const rRad = isTIR ? 0 : Math.asin(Math.min(1,sinR));
     const rDeg = isTIR ? 0 : (rRad * 180 / Math.PI);
 
+    const critical=n1>n2?Math.asin(n2/n1)*180/Math.PI:null;
+    document.getElementById('readI').textContent=iDeg.toFixed(1)+'°';
+    document.getElementById('readR').textContent=iDeg.toFixed(1)+'°';
+    document.getElementById('readT').textContent=isTIR?'屈折光なし':rDeg.toFixed(1)+'°';
+    document.getElementById('readC').textContent=critical===null?'なし':critical.toFixed(2)+'°';
+    document.getElementById('criticalControls').hidden=critical===null;
     // 画面クリア(論理座標 600x400 に変換してから描画)
     const scale = canvas.width / LOGICAL_W;
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
@@ -195,8 +198,9 @@
     // ② 反射光（オレンジ）
     const refX = originX + rayLength * Math.sin(iRad);
     const refY = midY - rayLength * Math.cos(iRad);
-    drawRay(originX, midY, refX, refY, isTIR ? C_IN : C_REF, isTIR ? 4.5 : 3);
+    drawRay(originX, midY, refX, refY, C_REF, 3);
 
+    if(iDeg===0)drawRay(inX,inY,originX,midY,C_IN,1.5);
     // ③ 屈折光（青）
     if (!isTIR) {
       const refrX = originX + rayLength * Math.sin(rRad);
@@ -228,12 +232,12 @@
 
     const statusEl = document.getElementById('statusText');
     if (isTIR) {
-      statusEl.innerText = '⚡ 全反射が発生中！（屈折光はなく、すべて反射）';
+      statusEl.innerText = '全反射：屈折光は現れない';
       statusEl.classList.add('on');
     } else {
-      statusEl.innerText = '';
+      statusEl.innerText = iDeg===0?'垂直入射：入射光と反射光は同じ道を逆向きに進む':'反射光と屈折光が現れる';
       statusEl.classList.remove('on');
-      if (iDeg > 0) {
+      {
         drawArc(originX, midY, 44, Math.PI / 2 - rRad, Math.PI / 2, C_REFR);
         label(originX + 22, midY + 40, `屈折角 ${rDeg.toFixed(1)}°`, C_REFR);
       }
@@ -306,8 +310,9 @@
     ctx.restore();
 
     // 光線上の矢印（進行方向）
-    const midX = (fromX + toX) / 2;
-    const midY = (fromY + toY) / 2;
+    const arrowAt = color === C_IN ? .15 : .55;
+    const midX = fromX+(toX-fromX)*arrowAt;
+    const midY = fromY+(toY-fromY)*arrowAt;
     const angle = Math.atan2(toY - fromY, toX - fromX);
     const headlen = 13;
 
@@ -340,6 +345,12 @@
     ctx.restore();
   }
 
+  function setAngle(v){document.getElementById('angleSlider').value=v;render()}
+  document.getElementById('normalButton').onclick=()=>setAngle(0);
+  document.getElementById('angle45').onclick=()=>setAngle(45);
+  function nearCritical(after){const [a,b]=document.getElementById('mediumSelect').value.split('-');const critical=Math.asin(indices[b]/indices[a])*180/Math.PI;setAngle(after?Math.ceil(critical*10)/10:Math.floor(critical*10)/10)}
+  document.getElementById('beforeCritical').onclick=()=>nearCritical(false);
+  document.getElementById('afterCritical').onclick=()=>nearCritical(true);
   resizeCanvas();
   render();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);

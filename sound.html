@@ -40,8 +40,8 @@
     .stage.wave{height:190px;}
   }
 </style>
-</head>
-<body class="instrument">
+<link rel="stylesheet" href="visual-assets/inquiry-five.css"><style>.panel:first-child .stage{flex:1;min-height:190px}.stage .caption{font-size:13px;letter-spacing:0;color:#243b53}.control-group{gap:4px}.control .ticks{font-size:12px}.soundNote{font-size:14px;margin-top:12px;line-height:1.5}@media(min-width:601px){.layout{min-height:0}}@media(max-width:850px) and (orientation:portrait){.panel:nth-child(2){columns:2}}</style></head>
+<body>
 
 <div class="topbar">
   <a class="back" href="index.html">← ホームへ</a>
@@ -51,19 +51,19 @@
 <div class="sim-header">
   <span class="eyebrow">Monochord · Pitch and Loudness</span>
   <h1>モノコードシミュレーター</h1>
-  <p>弦の条件を変えて「弦をはじく」と、音の高さと大きさがどう変わるかを、波形と音で同時に確かめられます。</p>
+  <p>長さ・張る力・太さを1つずつ変えると、音はどう変わる？</p>
 </div>
 
 <div class="layout">
 
   <div class="panel flush">
     <div class="canvas-container stage mono">
-      <span class="caption">Monochord</span>
+      <span class="caption">弦の動き（拡大・スロー表示）</span>
       <canvas id="monochordCanvas"></canvas>
     </div>
 
     <div class="canvas-container stage wave">
-      <span class="caption">Waveform</span>
+      <span class="caption">はじいた直後の波形（模式図・静止表示）</span>
       <canvas id="waveCanvas"></canvas>
     </div>
   </div>
@@ -101,7 +101,7 @@
       </div>
     </div>
 
-    <hr class="divider">
+    <p class="soundNote">同じ材質の弦・基本振動のモデル。波形の縦軸は相対値。音量は端末の設定にも左右されます。</p><hr class="divider">
 
     <div class="btnrow">
       <button class="btn primary" id="pluckBtn" style="flex:1">弦をはじく</button>
@@ -120,7 +120,7 @@
     // 描画色はテーマトークンから読み出す
     const _cs = getComputedStyle(document.body);
     const tok = (n, f) => (_cs.getPropertyValue(n).trim() || f);
-    const C_TRACE = tok('--accent', '#2fd6c3');   // 波形
+    const C_TRACE = '#075eaa';   // 波形
     const C_AMP   = tok('--force',  '#ff6b5a');   // 振幅（音の大きさ）
     const C_WAVE  = tok('--normal', '#4ade80');   // 波長（音の高さ）
     const C_DIMLN = tok('--border-strong', '#3a4757');
@@ -160,6 +160,7 @@
     let isVibrating = false;
     let startTime = 0;
     let currentAmplitude = 0; 
+    let waveSample = null;
     let currentFreq = 220;    
 
     // 中学1年理科の学習用語に合わせた表示定義
@@ -182,13 +183,13 @@
         let baseFreq = 220; // 基準振動数 (A3)
 
         // 弦の長さ：短いほど高音
-        const lengthFactor = [1.0, 1.33, 2.0][lengthSlider.value - 1];
+        const lengthFactor = [1.0, 4/3, 2.0][lengthSlider.value - 1];
 
         // 弦を張る力（おもりの数）：強いほど高音
-        const tensionFactor = [0.8, 1.0, 1.25][tensionSlider.value - 1];
+        const tensionFactor = Math.sqrt(Number(tensionSlider.value)/2);
 
         // 弦の太さ：細いほど高音
-        const thicknessFactor = [1.2, 1.0, 0.8][thicknessSlider.value - 1];
+        const thicknessFactor = [1.25, 1.0, 0.8][thicknessSlider.value - 1];
 
         const freq = baseFreq * lengthFactor * tensionFactor * thicknessFactor;
         const ampBase = [25, 50, 75][pluckSlider.value - 1];
@@ -233,7 +234,8 @@
     [pluckSlider, lengthSlider, tensionSlider, thicknessSlider].forEach(slider => {
         slider.addEventListener('input', () => {
             updateLabels();
-            playPreviewSound();
+            waveSample=null;isVibrating=false;currentAmplitude=0;
+            if(currentOsc){try{currentOsc.stop()}catch(e){}}
         });
     });
     updateLabels();
@@ -247,6 +249,7 @@
 
         const { freq, ampBase } = calculatePhysics();
         currentFreq = freq;
+        waveSample={freq,amp:ampBase};
 
         if (currentOsc) {
             try { currentOsc.stop(); } catch(e) {}
@@ -324,7 +327,7 @@
 
         // 駒（ことじ）の位置
         const lengthVal = parseInt(lengthSlider.value);
-        const bridgeRatio = [0.8, 0.6, 0.4][lengthVal - 1];
+        const bridgeRatio = [0.2, 0.4, 0.6][lengthVal - 1];
         const activeBridgeX = marginX + (pulleyX - marginX) * bridgeRatio;
 
         ctxM.beginPath();
@@ -395,7 +398,7 @@
         const midX = (activeBridgeX + pulleyX) / 2;
         if (isVibrating) {
             ctxM.shadowColor = C_AMP;
-            ctxM.shadowBlur = 14;
+            ctxM.shadowBlur = 0;
         }
         ctxM.beginPath();
         ctxM.moveTo(activeBridgeX, bridgeY - 15);
@@ -419,105 +422,30 @@
         ctxM.font = '500 10px "JetBrains Mono", monospace';
         ctxM.textAlign = 'center';
         ctxM.textBaseline = 'bottom';
+        ctxM.font='14px sans-serif';
         ctxM.fillText('振動する長さ', (activeBridgeX + pulleyX) / 2, bridgeY - 38);
         ctxM.restore();
     }
 
     // 波形描画（オシロスコープ）
     function drawWave(now) {
-        const w = waveCanvas.clientWidth;
-        const h = waveCanvas.clientHeight;
-        const centerY = h / 2;
-        ctxW.clearRect(0, 0, w, h);
-
-        // 方眼線の描画
-        ctxW.strokeStyle = 'rgba(47,214,195,.10)';
-        ctxW.lineWidth = 1;
-        ctxW.beginPath();
-        for (let y = 0; y < h; y += 25) {
-            ctxW.moveTo(0, y + .5); ctxW.lineTo(w, y + .5);
-        }
-        for (let x = 0; x < w; x += 40) {
-            ctxW.moveTo(x + .5, 0); ctxW.lineTo(x + .5, h);
-        }
-        ctxW.stroke();
-
-        // センター軸
-        ctxW.strokeStyle = 'rgba(47,214,195,.32)';
-        ctxW.beginPath();
-        ctxW.moveTo(0, centerY + .5); ctxW.lineTo(w, centerY + .5);
-        ctxW.stroke();
-
-        // 弦をはじいていない場合は直線（波形なし）のみ表示
-        const displayAmp = isVibrating ? currentAmplitude * 0.8 : 0;
-        const time = now * 0.003;
-
-        // 時間範囲（横軸）を調整し、高音でも波形が潰れすぎない波長に設定
-        const wavelength = 16000 / currentFreq;
-
-        if (displayAmp > 0) {
-            // 振幅ガイドライン（赤点線）
-            ctxW.setLineDash([4, 4]);
-            ctxW.strokeStyle = C_AMP + '99';
-            ctxW.lineWidth = 1.5;
-            ctxW.beginPath();
-            ctxW.moveTo(0, centerY - displayAmp); ctxW.lineTo(w, centerY - displayAmp);
-            ctxW.moveTo(0, centerY + displayAmp); ctxW.lineTo(w, centerY + displayAmp);
-            ctxW.stroke();
-            ctxW.setLineDash([]);
-
-            // 振幅矢印（縦矢印）
-            const arrowX = 30;
-            ctxW.strokeStyle = C_AMP;
-            ctxW.lineWidth = 2;
-            ctxW.beginPath();
-            ctxW.moveTo(arrowX, centerY - displayAmp);
-            ctxW.lineTo(arrowX, centerY + displayAmp);
-            ctxW.stroke();
-            
-            ctxW.fillStyle = C_AMP;
-            ctxW.beginPath();
-            ctxW.moveTo(arrowX - 5, centerY - displayAmp + 8);
-            ctxW.lineTo(arrowX + 5, centerY - displayAmp + 8);
-            ctxW.lineTo(arrowX, centerY - displayAmp);
-            ctxW.fill();
-
-            ctxW.beginPath();
-            ctxW.moveTo(arrowX - 5, centerY + displayAmp - 8);
-            ctxW.lineTo(arrowX + 5, centerY + displayAmp - 8);
-            ctxW.lineTo(arrowX, centerY + displayAmp);
-            ctxW.fill();
-
-            // 波長ガイド（横矢印）
-            const arrowY = h - 20;
-            const waveStartX = w / 2;
-            ctxW.strokeStyle = C_WAVE;
-            ctxW.beginPath();
-            ctxW.moveTo(waveStartX, arrowY);
-            ctxW.lineTo(waveStartX + wavelength, arrowY);
-            ctxW.stroke();
-
-            ctxW.fillStyle = C_WAVE;
-            ctxW.fillRect(waveStartX, arrowY - 6, 2, 12);
-            ctxW.fillRect(waveStartX + wavelength, arrowY - 6, 2, 12);
-        }
-
-        // 波形（サイン波または基準直線）の描画
-        ctxW.beginPath();
-        ctxW.lineWidth = 3;
-        ctxW.strokeStyle = isVibrating ? C_TRACE : C_DIMLN;
-
-        for (let x = 0; x < w; x++) {
-            const angle = (x / wavelength) * Math.PI * 2 - (isVibrating ? time * 10 : 0);
-            const y = centerY + Math.sin(angle) * displayAmp;
-
-            if (x === 0) {
-                ctxW.moveTo(x, y);
-            } else {
-                ctxW.lineTo(x, y);
-            }
-        }
-        ctxW.stroke();
+      const w=waveCanvas.clientWidth,h=waveCanvas.clientHeight;
+      ctxW.clearRect(0,0,w,h);
+      const l=52,r=w-24,t=48,b=h-48,cy=(t+b)/2;
+      const line=(x,y,X,Y,color)=>{ctxW.strokeStyle=color;ctxW.lineWidth=1;ctxW.beginPath();ctxW.moveTo(x,y);ctxW.lineTo(X,Y);ctxW.stroke()};
+      ctxW.font='13px sans-serif';ctxW.fillStyle='#243b53';
+      for(let ms=0;ms<=20;ms+=5){const x=l+(r-l)*ms/20;line(x,t,x,b,'#bbc9d6');ctxW.fillText(ms+'',x-4,b+18)}
+      line(l,cy,r,cy,'#64758b');
+      ctxW.fillText('時間 ms',r-48,h-8);
+      if(!waveSample){ctxW.fillText('弦をはじくと、波形をここに残します',l,cy-16);return}
+      const {freq,amp}=waveSample,A=amp/75*(b-t)*.4,period=1000/freq;
+      ctxW.strokeStyle=C_TRACE;ctxW.lineWidth=2.5;ctxW.beginPath();
+      for(let x=l;x<=r;x++){const y=cy-A*Math.sin(2*Math.PI*freq*.020*(x-l)/(r-l));if(x===l)ctxW.moveTo(x,y);else ctxW.lineTo(x,y)}ctxW.stroke();
+      line(l-18,cy,l-18,cy-A,'#b52e22');line(l-22,cy,l-14,cy,'#b52e22');line(l-22,cy-A,l-14,cy-A,'#b52e22');
+      ctxW.save();ctxW.translate(l-26,cy);ctxW.rotate(-Math.PI/2);ctxW.fillStyle='#b52e22';ctxW.fillText('振幅',0,0);ctxW.restore();
+      const X=l+(r-l)*period/20;
+      line(l,t,l+(r-l)*period/20,t,'#087747');line(l,t-4,l,t+4,'#087747');line(X,t-4,X,t+4,'#087747');
+      ctxW.fillStyle='#243b53';ctxW.fillText(freq.toFixed(1)+' Hz ／ 1周期 '+period.toFixed(2)+' ms',l,b+36);
     }
 
     // アニメーションループ

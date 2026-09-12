@@ -24,7 +24,7 @@
     text-align:center;margin-top:12px;
   }
 </style>
-</head>
+<link rel="stylesheet" href="visual-assets/inquiry-five.css"><style>.panel .stage{display:grid;place-items:center}#simCanvas{touch-action:none;flex:none}.draghint{font-size:14px;color:#34465b}.hint{display:none}#forceStatus{font-size:15px;line-height:1.6;margin-top:12px;padding:12px;background:#edf3fa;border-left:4px solid #175bb4}[hidden]{display:none!important}</style></head>
 <body>
 
 <div class="topbar">
@@ -34,7 +34,7 @@
 
 <div class="sim-header">
   <span class="eyebrow">Vector Composition · Parallelogram Law</span>
-  <h1>力の合成と分解（平行四辺形の法則）</h1>
+  <h1>力の合成と分解</h1><p>2つの力の向きを変えると、合力はどう変わる？</p>
 </div>
 
 <div class="layout">
@@ -43,7 +43,7 @@
     <div class="stage">
       <canvas id="simCanvas" width="650" height="420"></canvas>
     </div>
-    <div class="draghint">丸い先端をドラッグして操作します</div>
+    <div class="draghint">丸い先端をドラッグ ／ 1目盛り＝1 N（固定縮尺）</div>
   </div>
 
   <div class="panel">
@@ -61,7 +61,7 @@
 
     <hr class="divider">
 
-    <h3>凡例</h3>
+<div id="presets" class="btnrow"><button class="btn" data-preset="same">同方向</button><button class="btn" data-preset="opposite">逆方向</button><button class="btn" data-preset="right">直角</button></div><button class="btn" id="resetAxes">分解の方向を戻す</button><div id="forceStatus" role="status"></div><h3>凡例</h3>
     <div class="legend">
       <div class="item"><span class="sw dot" style="background:#1f7fd0;"></span>分力 A</div>
       <div class="item"><span class="sw dot" style="background:#219a5d;"></span>分力 B</div>
@@ -84,6 +84,7 @@
   const BASE_W = 650, BASE_H = 420;
   function setupCanvas() {
     const dpr = window.devicePixelRatio || 1;
+    const box=canvas.parentElement.getBoundingClientRect(),size=Math.min(box.width,box.height*BASE_W/BASE_H);canvas.style.width=size+"px";canvas.style.height=size*BASE_H/BASE_W+"px";
     canvas.width = BASE_W * dpr;
     canvas.height = BASE_H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -120,8 +121,8 @@
   // 矢印描画関数
   function drawArrow(fromX, fromY, toX, toY, color, width = 3) {
     const len = Math.hypot(toX - fromX, toY - fromY);
-    if (len < 5) return;
-    const headlen = 16;
+    if (len < .01) return;
+    const headlen = Math.min(16,len*.45);
     const angle = Math.atan2(toY - fromY, toX - fromX);
     // 軸は矢じりの根元で止め、線と三角形の重なりを防ぐ
     const shaftX = toX - headlen * 0.82 * Math.cos(angle);
@@ -234,14 +235,19 @@
     ctx.stroke();
     ctx.restore();
 
-    const showValues = document.getElementById('chkValues').checked;
+    const showValues = false; // Numerical values have a fixed panel position; labels never hide arrows.
 
+    document.getElementById('presets').hidden=mode!=='combine';
+    document.getElementById('resetAxes').hidden=mode!=='resolve';
+    const status=document.getElementById('forceStatus');status.hidden=!document.getElementById('chkValues').checked;
     if (mode === 'combine') {
       // --- 【合成モード】 ---
       const pA = { x: origin.x + vA.x, y: origin.y + vA.y };
       const pB = { x: origin.x + vB.x, y: origin.y + vB.y };
       const pRes = { x: origin.x + vA.x + vB.x, y: origin.y + vA.y + vB.y };
 
+      status.textContent="A "+(Math.hypot(vA.x,vA.y)/20).toFixed(1)+" N ／ B "+(Math.hypot(vB.x,vB.y)/20).toFixed(1)+" N ／ 合力 "+(Math.hypot(vA.x+vB.x,vA.y+vB.y)/20).toFixed(1)+" N";
+      if(pRes.x<0||pRes.x>BASE_W||pRes.y<0||pRes.y>BASE_H)status.textContent+=" ／ 合力の先端は画面外";
       // 平行四辺形 (点線)
       ctx.beginPath();
       ctx.setLineDash([5, 5]);
@@ -280,7 +286,7 @@
       // vResult = cA * uA + cB * uB
       const det = uA.x * uB.y - uA.y * uB.x;
       let cA = 0, cB = 0;
-      if (Math.abs(det) > 0.001) {
+      if (Math.abs(det) > 1e-10) {
         cA = (vResult.x * uB.y - vResult.y * uB.x) / det;
         cB = (uA.x * vResult.y - uA.y * vResult.x) / det;
       }
@@ -315,6 +321,12 @@
       drawHandle(handleA.x, handleA.y, '#1f7fd0');
       drawHandle(handleB.x, handleB.y, '#219a5d');
 
+      if(Math.abs(det)<=1e-10){
+        status.hidden=false;status.textContent=Math.abs(vResult.x*uA.y-vResult.y*uA.x)<1e-8?'2方向が平行です。分力の組み合わせは1つに決まりません。':'2方向が平行なため、この力をその2方向に分解できません。';
+        drawArrow(origin.x,origin.y,pRes.x,pRes.y,'#e2503a',5);drawHandle(pRes.x,pRes.y,'#e2503a');return;
+      }
+      status.textContent='分力A '+(Math.abs(cA)/20).toFixed(1)+' N ／ 分力B '+(Math.abs(cB)/20).toFixed(1)+' N';
+      if([pA,pB].some(p=>p.x<0||p.x>BASE_W||p.y<0||p.y>BASE_H))status.textContent+=' ／ 分力の先端は画面外';
       // 矢印描画
       drawArrow(origin.x, origin.y, pA.x, pA.y, '#1f7fd0', 4); // 分力A
       drawArrow(origin.x, origin.y, pB.x, pB.y, '#219a5d', 4); // 分力B
@@ -406,6 +418,11 @@
   canvas.addEventListener('pointercancel', onEnd);
   window.addEventListener('pointerup', onEnd);
 
+  document.querySelectorAll('[data-preset]').forEach(button=>button.onclick=()=>{
+   setMode('combine');vA={x:80,y:0};vB=button.dataset.preset==='same'?{x:120,y:0}:button.dataset.preset==='opposite'?{x:-80,y:0}:{x:0,y:-60};render();
+  });
+  document.getElementById('resetAxes').onclick=()=>{angleAxisA=-Math.PI/4;angleAxisB=-3*Math.PI/4;render()};
+  new ResizeObserver(()=>{setupCanvas();render()}).observe(canvas.parentElement);
   setupCanvas();
   render();
   window.addEventListener('resize', function() { setupCanvas(); render(); });

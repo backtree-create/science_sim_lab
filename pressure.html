@@ -1,16 +1,32 @@
 <!DOCTYPE html>
-<html lang="ja"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>大気圧と水圧を比べる</title><link href="styles.css" rel="stylesheet"/><link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script></head><body><nav class="topbar"><a class="back" href="index.html">← ホームへ</a><span>SCIENCE SIM LAB</span></nav><header class="sim-header"><h1>大気圧と水圧を比べる</h1><p>同じ深さなら、押す向きを変えても圧力は変わる？</p></header><main class="layout"><section class="panel"><div class="stage"><canvas aria-label="大気圧と水圧を比べるの観察図" id="scene"></canvas></div><div class="legend">青の矢印：圧力（共通縮尺） ／ 茶の点：現在の条件</div><div aria-live="polite" class="statusline" id="status"></div></section><section class="panel"><h2>条件を変えて観察</h2><label for="medium">観察する場所</label><select id="medium"><option value="water">水中の断面</option><option value="air">大気中</option></select><div class="control"><label for="depth">水面からの深さ <output id="depthVal">10</output> m</label><input id="depth" max="30" min="0" step="0.5" type="range" value="10"/></div><div class="control"><label for="alt">海面からの高度 <output id="altVal">0</output> m</label><input id="alt" max="12000" min="0" step="100" type="range" value="0"/></div><label for="basis">水中の圧力表示</label><select id="basis"><option value="gauge">水による増加分</option><option value="absolute">大気圧を含む全体</option></select><label><input checked="" id="compare" type="checkbox"/> 同じ高さの点を比較</label><div class="readout" id="values"></div><button class="btn detail-open" data-dialog="notes">モデルについて</button></section></main><dialog id="notes"><button class="btn close">閉じる</button><p>水中は密度1000 kg/m³、g=9.8 m/s²、水面上は101.325 kPaとして Δp=ρgh。大気中はスケールハイト8000 mの等温近似 p=p₀ exp(−h/H)、ρ=p/(gH)。気象条件による変動は省略。丸印は小さな観測点の拡大記号で、物体の大きさを表さない。矢印は同一点の方向別の圧力で、有限の物体の上下面に同じ圧力が働くという意味ではない。</p></dialog><script>
+<html lang="ja"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>大気圧と水圧を比べる</title><link href="styles.css" rel="stylesheet"/><link href="visual-assets/inquiry-five.css" rel="stylesheet"/><script src="visual-assets/inquiry-five.js"></script><style>[hidden]{display:none!important}.pressureControls .control{margin:10px 0}.pressureControls .readout{grid-template-columns:1fr 1fr}.pressureControls .readout .v{font-size:21px}.pressureControls .readout .k{font-size:14px}@media(min-width:851px) and (max-height:650px){.layout{min-height:0;height:calc(100dvh - 132px)}.pressureControls{padding:10px}.pressureControls .control{margin:3px 0}.pressureControls>label{margin:4px 0!important}.pressureControls select{margin-bottom:3px!important;min-height:36px;padding:5px}.pressureControls input[type=range]{min-height:26px}.pressureControls .detail-open{margin-top:4px;min-height:34px;padding:5px}.panel .stage{min-height:200px}} </style></head><body><nav class="topbar"><a class="back" href="index.html">← ホームへ</a><span>SCIENCE SIM LAB</span></nav><header class="sim-header"><h1>大気圧と水圧を比べる</h1><p>AとBの位置を変えると、圧力はどう変わる？</p></header><main class="layout"><section class="panel"><div class="stage"><canvas aria-label="大気圧と水圧を比べるの観察図" id="scene"></canvas></div><div class="legend">青の矢印：圧力（共通縮尺） ／ グラフの丸：A ／ 四角：B</div><div aria-live="polite" class="statusline" id="status"></div></section><section class="panel pressureControls"><h2>条件を変えて観察</h2><label for="medium">観察する場所</label><select id="medium"><option value="water">水中の断面</option><option value="air">大気中</option></select><div class="control"><label for="depth">A：水面からの深さ <output id="depthVal">10</output> m</label><input id="depth" max="30" min="0" step="0.5" type="range" value="10"/></div><div class="control"><label for="alt">A：海面からの高度 <output id="altVal">0</output> m</label><input id="alt" max="12000" min="0" step="100" type="range" value="0"/></div><label for="basis">水中の圧力表示</label><select id="basis"><option value="gauge">水による増加分</option><option value="absolute">大気圧を含む全体</option></select><label><input checked="" id="compare" type="checkbox"/> A・Bを同じ高さにする</label><div class="control"><label for="positionB">B：<span id="bLabel">深さ</span> <output id="positionBVal">10</output> m</label><input id="positionB" type="range" min="0" max="30" step="0.5" value="20"/></div><div class="readout" id="values"></div><button class="btn detail-open" data-dialog="notes">モデルについて</button></section></main><dialog id="notes"><button class="btn close">閉じる</button><p>水中は密度1000 kg/m³、g=9.8 m/s²、水面上は101.325 kPaとして Δp=ρgh。大気中はスケールハイト8000 mの等温近似 p=p₀ exp(−h/H)、ρ=p/(gH)。気象条件による変動は省略。丸印は小さな観測点の拡大記号で、物体の大きさを表さない。矢印は同一点の方向別の圧力で、有限の物体の上下面に同じ圧力が働くという意味ではない。</p></dialog><script>
 const $=id=>document.getElementById(id),P0=101.325;let render;
 function draw(c,w,h){
  const water=$('medium').value==='water',d=+$('depth').value,alt=+$('alt').value,abs=$('basis').value==='absolute';
  const pAir=P0*Math.exp(-alt/8000),p=water?9.8*d+(abs?P0:0):pAir;
+ const same=$('compare').checked,position=water?d:alt;
+ const bInput=$('positionB');
+ const max=water?30:12000,step=water?0.5:100;
+ if(bInput.max!==String(max)){bInput.max=max;bInput.step=step;bInput.value=water?20:6000}
+ const b=same?position:+bInput.value,pB=water?9.8*b+(abs?P0:0):P0*Math.exp(-b/8000);
+ $('positionBVal').textContent=b;$('bLabel').textContent=water?'水面からの深さ':'海面からの高度';bInput.disabled=same;if(same)bInput.value=b;
  const left=22,right=w*.55,top=85,bottom=h-120;
  c.fillStyle=water?'#dbeefa':'#eef2f7';c.fillRect(left,water?top:top-40,right-left,h-55-(water?top:top-40));lab.line(c,left,top,right,top,'#166aa4');lab.text(c,water?'水面（大気圧 101.3 kPa）':'高度 12,000 m',left,top-17);
  const cy=water?top+d/30*(bottom-top):bottom-alt/12000*(bottom-top),cx=(left+right)/2;
- const len=p/400*52,blue='#085ca8';
- function probe(x,y,label){c.fillStyle='white';c.strokeStyle=blue;c.lineWidth=2;c.beginPath();c.arc(x,y,8,0,Math.PI*2);c.fill();c.stroke();if(len>0){[[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>lab.arrow(c,x+dx*(11+len),y+dy*(11+len),x+dx*11,y+dy*11,blue))}lab.text(c,label,x+18,y-9,blue,'left')}
- if($('compare').checked){probe(cx-70,cy,'A');probe(cx+70,cy,'B');lab.line(c,left,cy,right,cy,'#536c85',[3,4])}else probe(cx,cy,'A');
- lab.text(c,water?'深さ '+d+' m':'高度 '+alt+' m',left,h-39);lab.text(c,'点での圧力（方向別）',left,h-15);
+ const blue='#085ca8';
+ function probe(x,y,label,pressure){const len=pressure/400*52;c.fillStyle='white';c.strokeStyle=blue;c.lineWidth=2;c.beginPath();c.arc(x,y,8,0,Math.PI*2);c.fill();c.stroke();if(len>0){[[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>pressureArrow(x+dx*(11+len),y+dy*(11+len),x+dx*11,y+dy*11,len))}lab.text(c,label,x+18,y-9,blue,'left')}
+ function pressureArrow(x,y,X,Y,len){
+   lab.line(c,x,y,X,Y,blue);
+   const a=Math.atan2(Y-y,X-x),head=Math.min(7,len*.45);
+   c.beginPath();c.moveTo(X,Y);c.lineTo(X-head*Math.cos(a-.5),Y-head*Math.sin(a-.5));c.lineTo(X-head*Math.cos(a+.5),Y-head*Math.sin(a+.5));c.closePath();c.fillStyle=blue;c.fill();
+ }
+ const by=water?top+b/30*(bottom-top):bottom-b/12000*(bottom-top);
+ lab.line(c,left,cy,right,cy,'#72869a',[3,4]);
+ if(!same)lab.line(c,left,by,right,by,'#72869a',[3,4]);
+ probe(cx-65,cy,'A',p);probe(cx+65,by,'B',pB);
+ for(let i=0;i<=3;i++){const yy=top+(bottom-top)*i/3;lab.line(c,left,yy,left+7,yy);lab.text(c,water?i*10+' m':(12000-i*4000)+' m',left+10,yy+18)}
+ 
+ lab.text(c,(water?'深さ':'高度')+' A：'+position+' m ／ B：'+b+' m',left,h-39);lab.text(c,'点での圧力（方向別）',left,h-15);
  // Same pressure scale in both modes, with actual units and tick labels.
  const gx=w*.65,gy=top,gw=w*.30,gh=bottom-top;
  lab.line(c,gx,gy,gx,gy+gh);lab.line(c,gx,gy+gh,gx+gw,gy+gh);
@@ -20,9 +36,13 @@ function draw(c,w,h){
  lab.text(c,water?'深さ m':'高度 m',gx,gy-18);
  c.strokeStyle=blue;c.lineWidth=3;c.beginPath();for(let i=0;i<=100;i++){const f=i/100,q=water?9.8*30*f+(abs?P0:0):P0*Math.exp(-(1-f)*12000/8000);const x=gx+q/400*gw,y=gy+f*gh;if(!i)c.moveTo(x,y);else c.lineTo(x,y)}c.stroke();
  c.fillStyle='#b54800';c.beginPath();c.arc(gx+p/400*gw,cy,5,0,Math.PI*2);c.fill();
- $('values').innerHTML='<div class="item"><div class="k">'+(water?(abs?'全体の圧力':'水による増加分'):'大気圧')+'</div><div class="v">'+p.toFixed(1)+' kPa</div></div><div class="item"><div class="k">'+(water?'水の密度':'空気の密度')+'</div><div class="v">'+(water?'1000':(P0*1000/(9.8*8000)*Math.exp(-alt/8000)).toFixed(3))+' kg/m³</div></div>';
- $('status').textContent=water?(abs?'水面でも大気圧が加わる。':'0 m で水による増加分は 0。'):'等温大気の近似。高度10 kmの圧力は海面の約29%。';
- $('depth').disabled=!water;$('alt').disabled=water;$('basis').disabled=!water;
+ c.fillRect(gx+pB/400*gw-4,by-4,8,8);lab.text(c,same?'A・B':'A',gx+p/400*gw+(p>330?-9:9),cy+(cy<top+20?20:-9),'#963d00',p>330?'right':'left');if(!same)lab.text(c,'B',gx+pB/400*gw+(pB>330?-9:9),by+(by<top+20?20:-9),'#963d00',pB>330?'right':'left');
+ $('values').innerHTML=[['A',p],['B',pB]].map(([name,value])=>'<div class="item"><div class="k">'+name+' の圧力</div><div class="v">'+value.toFixed(1)+' kPa</div></div>').join('');
+ 
+ $('status').textContent=(water?(abs?'大気圧を含む全体':'水による増加分'):'大気圧')+' ／ AとBの差 '+Math.abs(p-pB).toFixed(1)+' kPa';
+ $('depth').closest('.control').hidden=!water;$('alt').closest('.control').hidden=water;
+ $('basis').hidden=!water;document.querySelector('label[for="basis"]').hidden=!water;
+ 
 }
 render=lab.canvas('scene',draw);document.querySelectorAll('input,select').forEach(e=>e.addEventListener('input',()=>{if($(e.id+'Val'))$(e.id+'Val').textContent=e.value;render()}));
 </script></body></html>
