@@ -6,6 +6,16 @@ let elapsed=0,mass=100,running=false,last=0,yaw=-.55,pitch=.24,drag=null,phase=M
 const C={ice:'#0076b8',water:'#007c9b',gas:'#803daf',ink:'#193b53'};
 // A fixed net 1000 W supplies 1 kJ per second to the existing energy model.
 function stateAt(seconds){return M.phase(seconds,mass)}
+// Volume model: mL, g, Celsius. Liquid density: USGS table, linear interpolation.
+function volumeState(p,m){
+ const table=[[0,.99987],[4,1],[10,.99975],[21,.99802],[37.8,.99318],[60,.98338],[82.2,.97056],[100,.95865]];
+ const t=Math.max(0,Math.min(100,p.t));let i=0;while(i<table.length-2&&t>table[i+1][0])i++;
+ const a=table[i],b=table[i+1],rho=a[1]+(b[1]-a[1])*(t-a[0])/(b[0]-a[0]);
+ const ice=m*p.s/.917,water=m*p.l/rho,gas=m*p.g*461.5*(p.t+273.15)/101.325;
+ const waterHeight=.008*water,iceHeight=.008*ice,gasHeight=.008*gas/800;
+ return{ice,water,gas,total:ice+water+gas,waterHeight,iceHeight,gasHeight,lid:.06+waterHeight+iceHeight+gasHeight};
+}
+// End volume model.
 function clock(seconds){const n=Math.round(seconds);return `${Math.floor(n/60)}分${String(n%60).padStart(2,'0')}秒`}
 function tickLabel(seconds){return seconds%60===0?`${seconds/60}分`:seconds<60?`${seconds}秒`:`${Math.floor(seconds/60)}分${seconds%60}秒`}
 function fit(canvas,set){const r=canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d);const c=canvas.getContext('2d');c.setTransform(d,0,0,d,0,0);set.w=r.width;set.h=r.height}
@@ -17,11 +27,11 @@ function cylinder(radius,bottom,top,color,alpha=1,caps=true){const n=36;let topR
 function ring(radius,y,color){const ps=Array.from({length:49},(_,i)=>project([radius*Math.cos(i/48*Math.PI*2),y,radius*Math.sin(i/48*Math.PI*2)]));return{ps,color}}
 function label(p,text,color=C.ink){const q=project(p);ctx.font='12px Arial,sans-serif';const tw=ctx.measureText(text).width;let x=Math.min(w-tw-9,Math.max(7,q.x));let y=Math.max(22,Math.min(h-27,q.y));ctx.fillStyle='#ffffffee';ctx.fillRect(x-4,y-14,tw+8,20);ctx.fillStyle=color;ctx.fillText(text,x,y)}
 box(0,-.38,0,2.9,.22,2.5,['#415b70','#2f465b','#57778e','#294459','#738da0']);cylinder(1.16,-.16,.04,running?'#d66217':'#8c6952');
-const fillHeight=.8*mass/100*phase.l,lid=1.9+2.1*phase.g;
+const volume=volumeState(phase,mass),fillHeight=volume.waterHeight,lid=volume.lid;
 // Tank walls are lightly transparent; their fixed height is a schematic scale.
 cylinder(1.04,.04,4.3,'#77a8c6',.08,false);
 if(phase.l>1e-6)cylinder(.98,.06,.06+fillHeight,'#078ab5',.74);
-if(phase.s>1e-6){let size=1.38*Math.cbrt(mass/100*phase.s),y=.06+Math.max(0,fillHeight-size*.917);box(0,y,0,size,size,size,['#8cd6f5','#56a6d0','#b1e9fc','#4c98c3','#dbf7ff']);}
+if(phase.s>1e-6)cylinder(.98,.06+fillHeight,.06+fillHeight+volume.iceHeight,'#a1dbf3',.97);
 // Gas space is intentionally not filled with white fog.
 cylinder(1.04,lid,lid+.1,'#748fa2',.82);box(0,lid+.1,0,.10,.4,.10,['#6d899a','#aec0cd']);
 const bubbles=[];if(phase.g>0&&phase.l>0){const t=elapsed;for(let i=0;i<12;i++){const angle=i*2.4,rad=.3+(i%3)*.2,bottom=.13,top=.06+fillHeight,y=bottom+((t*.22+i*.173)%1)*Math.max(0,top-bottom);const p=project([Math.cos(angle)*rad,y,Math.sin(angle)*rad]);bubbles.push({p,z:p.z})}}
@@ -29,7 +39,7 @@ for(const b of bubbles)faces.push({bubble:b.p,z:b.z});
 faces.sort((a,b)=>a.z-b.z);for(const f of faces){if(f.bubble){const p=f.bubble;ctx.beginPath();ctx.arc(p.x,p.y,Math.max(2,p.s*.045),0,2*Math.PI);ctx.fillStyle='#dcf7ff';ctx.fill();ctx.strokeStyle='#267793';ctx.lineWidth=1;ctx.stroke();continue}ctx.globalAlpha=f.alpha;ctx.beginPath();f.p.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fillStyle=f.color;ctx.fill();if(f.stroke){ctx.strokeStyle=f.stroke;ctx.lineWidth=.6;ctx.stroke()}}
 ctx.globalAlpha=1;for(const r of [ring(1.04,.04,'#5686a1'),ring(1.04,4.3,'#7399ad')]){ctx.beginPath();r.ps.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle=r.color;ctx.lineWidth=1.3;ctx.stroke()}
 for(const a of [Math.PI*.25,Math.PI*1.25]){const p=project([1.04*Math.cos(a),.04,1.04*Math.sin(a)]),q=project([1.04*Math.cos(a),4.3,1.04*Math.sin(a)]);ctx.strokeStyle='#789bb2';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}
-label([1.1,lid+.2,0],'可動ふた');if(phase.g>.02)label([.6,(lid+fillHeight)/2,0],'水蒸気（透明）',C.gas);if(phase.l>.02)label([.85,.06+fillHeight*.4,0],'水',C.water);if(phase.s>.02)label([-1.5,.8,0],'氷',C.ice);
+label([1.1,lid+.2,0],'可動ふた');if(phase.g>.02)label([.6,.06+fillHeight+volume.iceHeight+volume.gasHeight*.5,0],'水蒸気（透明）',C.gas);if(phase.l>.02)label([.85,.06+fillHeight*.4,0],'水',C.water);if(phase.s>.02)label([-1.5,.06+fillHeight+volume.iceHeight*.5,0],'氷',C.ice);
 }
 function drawChart(){const c=chart.getContext('2d'),{w,h}=chartSize;if(!w||!h)return;c.clearRect(0,0,w,h);const max=+$('chartRange').value,L=47,R=w-16,T=32,B=h-36,x=t=>L+t/max*(R-L),y=t=>B-(t+20)/140*(B-T);c.font='12px Arial,sans-serif';c.textBaseline='alphabetic';
 function line(x1,y1,x2,y2,color,width=1,dash=[]){c.beginPath();c.setLineDash(dash);c.moveTo(x1,y1);c.lineTo(x2,y2);c.strokeStyle=color;c.lineWidth=width;c.stroke();c.setLineDash([])}
@@ -41,7 +51,7 @@ if(elapsed<=max){line(x(elapsed),T,x(elapsed),B,'#b25000',1.5,[4,4]);c.beginPath
 if(elapsed<=max){c.font='bold 12px Arial,sans-serif';const label=clock(elapsed),width=c.measureText(label).width+12,xx=Math.max(L,Math.min(R-width,x(elapsed)-width/2));c.fillStyle='#fff0dc';c.fillRect(xx,16,width,16);c.fillStyle='#884400';c.textAlign='left';c.fillText(label,xx+6,28)}
 $('showAll').hidden=elapsed<=max;$('chartMessage').textContent=elapsed>max?`現在 ${clock(elapsed)}：表示範囲の右側です`:'縦：温度（℃）　横：加熱時間（分・秒）';
 }
-function update(){phase=stateAt(elapsed);$('temperature').textContent=phase.t.toFixed(1)+' ℃';$('state').textContent=phase.state;$('clock').textContent=clock(elapsed);$('elapsedOut').textContent=clock(elapsed);$('massOut').textContent=mass+' g';$('elapsed').max=phase.max.toFixed(2);$('elapsed').value=elapsed.toFixed(2);$('elapsed').setAttribute('aria-valuetext',clock(elapsed));$('fractions').innerHTML=[['氷',phase.s,C.ice],['水',phase.l,C.water],['水蒸気',phase.g,C.gas]].map(([n,f,col])=>`<span style="--c:${col};color:${col}">${n} ${(f*mass).toFixed(1)} g</span>`).join('');$('sceneCaption').textContent=phase.s>0&&phase.l>0?'融解中：氷が小さくなる':phase.l>0&&phase.g>0?'沸騰中：水が水蒸気になる':phase.s>0?'氷を加熱':phase.l>0?'水の温度が上がる':'すべて水蒸気';$('status').textContent=elapsed>=phase.max-.001?'加熱の記録はここまで。前の時刻と比べよう。':running?'加熱を再生中。温度と中の様子を見比べよう。':'再生するか、観察する時刻を動かそう。';$('play').disabled=running||elapsed>=phase.max-.001;$('pause').disabled=!running;draw3d();drawChart()}
+function update(){phase=stateAt(elapsed);const volume=volumeState(phase,mass);$('volumeLabel').textContent='容器内の体積：'+(volume.total<1000?volume.total.toFixed(1)+' mL':(volume.total/1000).toFixed(1)+' L');$('temperature').textContent=phase.t.toFixed(1)+' ℃';$('state').textContent=phase.state;$('clock').textContent=clock(elapsed);$('elapsedOut').textContent=clock(elapsed);$('massOut').textContent=mass+' g';$('elapsed').max=phase.max.toFixed(2);$('elapsed').value=elapsed.toFixed(2);$('elapsed').setAttribute('aria-valuetext',clock(elapsed));$('fractions').innerHTML=[['氷',phase.s,C.ice],['水',phase.l,C.water],['水蒸気',phase.g,C.gas]].map(([n,f,col])=>`<span style="--c:${col};color:${col}">${n} ${(f*mass).toFixed(1)} g</span>`).join('');$('sceneCaption').textContent=phase.s>0&&phase.l>0?'融解中：氷が小さくなる':phase.l>0&&phase.g>0?'沸騰中：水が水蒸気になる':phase.s>0?'氷を加熱':phase.l>0?'水の温度が上がる':'すべて水蒸気';$('status').textContent=elapsed>=phase.max-.001?'加熱の記録はここまで。前の時刻と比べよう。':running?'加熱を再生中。温度と中の様子を見比べよう。':'再生するか、観察する時刻を動かそう。';$('play').disabled=running||elapsed>=phase.max-.001;$('pause').disabled=!running;draw3d();drawChart()}
 function go(t){elapsed=Math.max(0,Math.min(stateAt(0).max,t));if(elapsed>=stateAt(0).max-.001)running=false;update()}
 $('mass').oninput=()=>{mass=+$('mass').value;running=false;elapsed=0;update()};$('elapsed').oninput=()=>{running=false;go(+$('elapsed').value)};$('play').onclick=()=>{running=true;last=0;update()};$('pause').onclick=()=>{running=false;update()};$('back10').onclick=()=>{running=false;go(elapsed-10)};$('forward10').onclick=()=>{running=false;go(elapsed+10)};$('reset').onclick=()=>{running=false;go(0)};$('chartRange').onchange=drawChart;$('showCurve').onchange=drawChart;$('showAll').onclick=()=>{$('chartRange').value='660';drawChart()};$('modelOpen').onclick=()=>$('model').showModal();$('viewReset').onclick=()=>{yaw=-.55;pitch=.24;draw3d()};
 scene.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,id:e.pointerId};scene.setPointerCapture(e.pointerId)};scene.onpointermove=e=>{if(!drag)return;yaw+=(e.clientX-drag.x)*.01;pitch=Math.max(-.1,Math.min(.7,pitch+(e.clientY-drag.y)*.005));drag.x=e.clientX;drag.y=e.clientY;draw3d()};scene.onpointerup=scene.onpointercancel=()=>drag=null;scene.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();yaw+=e.key==='ArrowLeft'?-.15:e.key==='ArrowRight'?.15:0;pitch=Math.max(-.1,Math.min(.7,pitch+(e.key==='ArrowUp'?.05:e.key==='ArrowDown'?-.05:0)));draw3d()};
