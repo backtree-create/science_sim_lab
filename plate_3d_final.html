@@ -48,9 +48,10 @@ dialog{max-width:720px;width:calc(100% - 32px);max-height:85dvh;overflow:auto;bo
 
 [hidden]{display:none!important}.modebar{display:flex;gap:5px}.modebar button{min-height:32px}.modebar [aria-pressed=true]{background:#174d69;color:white}#mechanismDiagram{width:100%;height:100%;min-height:0}.mechanism-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;font-size:12px}.mechanism-cards p{margin:4px 0;overflow-wrap:anywhere}.mechanism-cards>div{min-width:0}.mechanism-cards b{font-size:14px}#mechanismNotes{grid-row:3}header h1{font-size:18px}header{gap:8px}@media(max-width:800px){header h1{font-size:16px}.modebar button{font-size:12px;padding:4px 7px}.mechanism-cards{gap:10px;font-size:11px}.mechanism-cards b{font-size:12px}}
 </style>
+<link rel="stylesheet" href="visual-assets/home-navigation.css">
 </head>
 <body>
-<header><a href="index.html">← ラボ</a><h1>プレート境界地震</h1><div class="modebar" aria-label="観察モード"><button id="mechanismMode" aria-pressed="true">地震の発生</button><button id="waveMode" aria-pressed="false">波の伝わり方</button></div><button id="helpOpen">しくみ・使い方</button></header>
+<header><a class="lab-home-inline" href="index.html" data-lab-home aria-label="ホームへ（教材一覧）">← ホームへ</a><h1>プレート境界地震</h1><div class="modebar" aria-label="観察モード"><button id="mechanismMode" aria-pressed="true">地震の発生</button><button id="waveMode" aria-pressed="false">波の伝わり方</button></div><button id="helpOpen">しくみ・使い方</button></header>
 <main>
 <div aria-label="学習の順序" class="steps"><div aria-current="step" class="step" id="step1"><b>1</b>ひずみがたまる</div><div class="step" id="step2"><b>2</b>境界がずれる</div><div class="step" id="step3"><b>3</b>波が届く</div></div>
 <div class="work"><section aria-labelledby="stageTitle" class="stage"><div class="stagehead"><h2 id="stageTitle">陸と海を、横から見る</h2><span class="small">破線＝変形前 ／ 格子＝変形の目印</span></div>

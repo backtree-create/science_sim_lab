@@ -167,6 +167,7 @@ input[type=range]{width:100%;accent-color:var(--jet);}
 </style>
 <link rel="stylesheet" href="visual-assets/lab.css">
 <script src="visual-assets/lab3d.js"></script>
+<link rel="stylesheet" href="visual-assets/home-navigation.css">
 </head>
 <body class="visual-lab weather-lab">
 
@@ -194,7 +195,7 @@ input[type=range]{width:100%;accent-color:var(--jet);}
   </div>
 
   <div class="home-inner">
-    <a class="lab-link" href="index.html">← 理科シミュレーターラボ</a>
+    <a class="lab-link" href="index.html" data-lab-home aria-label="ホームへ（教材一覧）">← ホームへ</a>
 
     <div class="home-head">
       <div class="eyebrow">3D Interactive &middot; 中学理科「日本の天気」</div>
@@ -295,7 +296,8 @@ input[type=range]{width:100%;accent-color:var(--jet);}
 <!-- ============ 01 低気圧と高気圧 ============ -->
 <section id="sim-pressure" class="screen sim-screen hidden">
   <div class="sim-header">
-    <button class="back-btn" data-nav="home">← ホーム</button>
+    <a class="lab-home-inline" data-lab-home aria-label="ホームへ（教材一覧）" href="index.html">← ホームへ</a>
+    <button class="back-btn" data-nav="home">天気の教材選択</button>
     <h2><span class="theme-dot" style="background:var(--high)"></span>高気圧・低気圧の立体的な風の流れ</h2>
     <button class="info-toggle" data-toggle="#p-info">説明を見る</button>
   </div>
@@ -344,7 +346,8 @@ input[type=range]{width:100%;accent-color:var(--jet);}
 <!-- ============ 02 偏西風 ============ -->
 <section id="sim-jet" class="screen sim-screen hidden">
   <div class="sim-header">
-    <button class="back-btn" data-nav="home">← ホーム</button>
+    <a class="lab-home-inline" data-lab-home aria-label="ホームへ（教材一覧）" href="index.html">← ホームへ</a>
+    <button class="back-btn" data-nav="home">天気の教材選択</button>
     <h2><span class="theme-dot" style="background:var(--jet)"></span>偏西風とジェット気流</h2>
     <button class="info-toggle" data-toggle="#j-info">説明を見る</button>
   </div>
@@ -393,7 +396,8 @@ input[type=range]{width:100%;accent-color:var(--jet);}
 <!-- ============ 03 台風の進路 ============ -->
 <section id="sim-typhoon" class="screen sim-screen hidden">
   <div class="sim-header">
-    <button class="back-btn" data-nav="home">← ホーム</button>
+    <a class="lab-home-inline" data-lab-home aria-label="ホームへ（教材一覧）" href="index.html">← ホームへ</a>
+    <button class="back-btn" data-nav="home">天気の教材選択</button>
     <h2><span class="theme-dot" style="background:var(--typhoon)"></span>台風の季節ごとの軌道と偏西風</h2>
     <button class="info-toggle" data-toggle="#t-info">説明を見る</button>
   </div>
@@ -442,7 +446,8 @@ input[type=range]{width:100%;accent-color:var(--jet);}
 <!-- ============ 04 気団と季節 ============ -->
 <section id="sim-airmass" class="screen sim-screen hidden">
   <div class="sim-header">
-    <button class="back-btn" data-nav="home">← ホーム</button>
+    <a class="lab-home-inline" data-lab-home aria-label="ホームへ（教材一覧）" href="index.html">← ホームへ</a>
+    <button class="back-btn" data-nav="home">天気の教材選択</button>
     <h2><span class="theme-dot" style="background:var(--airmass)"></span>気団と季節ごとの気圧配置</h2>
     <button class="info-toggle" data-toggle="#a-info">説明を見る</button>
   </div>
@@ -488,7 +493,8 @@ input[type=range]{width:100%;accent-color:var(--jet);}
 <!-- ============ 05 台風の構造 ============ -->
 <section id="sim-structure" class="screen sim-screen hidden">
   <div class="sim-header">
-    <button class="back-btn" data-nav="home">← ホーム</button>
+    <a class="lab-home-inline" data-lab-home aria-label="ホームへ（教材一覧）" href="index.html">← ホームへ</a>
+    <button class="back-btn" data-nav="home">天気の教材選択</button>
     <h2><span class="theme-dot" style="background:var(--low)"></span>台風の立体構造</h2>
     <button class="info-toggle" data-toggle="#s-info">説明を見る</button>
   </div>

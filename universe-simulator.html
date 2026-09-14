@@ -822,8 +822,10 @@
             }
         }
     </style>
+<link rel="stylesheet" href="visual-assets/home-navigation.css">
 </head>
-<body>
+<body class="lab-universe">
+<a class="lab-home-floating" data-lab-home aria-label="ホームへ（教材一覧）" href="index.html" target="_top">← ホームへ</a>
 
     <!-- ホーム（モード選択）モーダルダイアログ -->
     <div class="home-modal-overlay" id="home-modal">
@@ -903,7 +905,7 @@
     <div class="solar-frame-container" id="solar-frame-container">
         <button class="solar-home-btn" id="solar-home-btn" onclick="closeSolarMode()">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            ホームに戻る
+            宇宙の教材選択
         </button>
         <iframe id="solar-iframe" title="太陽系3Dシミュレーター" allow="fullscreen"></iframe>
     </div>
@@ -911,7 +913,7 @@
     <!-- UI操作パネル -->
     <div class="ui-panel" tabindex="0" id="ui-panel">
         <div class="panel-header-bar">
-            <button class="home-return-btn" onclick="openHomeModal()">ホーム</button>
+            <button class="home-return-btn" onclick="openHomeModal()">宇宙の教材選択</button>
             <button class="hud-toggle-btn" id="hud-toggle-btn" onclick="toggleHudCollapse()">下部に折りたたむ</button>
             <div class="hud-hint">ホバーで拡大</div>
         </div>

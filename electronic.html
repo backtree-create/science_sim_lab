@@ -373,13 +373,14 @@
     <script src="visual-assets/vendor/OrbitControls.js"></script>
 <link rel="stylesheet" href="visual-assets/classroom-visibility.css">
 <script src="visual-assets/classroom-visibility.js"></script>
+<link rel="stylesheet" href="visual-assets/home-navigation.css">
 </head>
 <body data-lesson="electric">
+<a class="lab-home-floating lab-home-electric" data-lab-home aria-label="ホームへ（教材一覧）" href="index.html">← ホームへ</a>
     <div id="canvas-container"></div>
     <div id="atmosphere"></div>
 
     <div id="home-screen">
-        <a class="lab-link" href="index.html">← SCIENCE SIM LAB</a>
         <div class="home-title">中学理科 電気分野 3D LAB</div>
         <div class="home-sub">INTERACTIVE CIRCUIT SIMULATOR &amp; SCHEMATIC CAD</div>
         <div class="grid-cards">
@@ -417,7 +418,7 @@
     </div>
 
     <div id="nav-panel">
-        <button class="back-btn" id="btn-home-return" style="display:none;" onclick="switchMode('home')">＜ ホームに戻る</button>
+        <button class="back-btn" id="btn-home-return" style="display:none;" onclick="switchMode('home')">＜ 電気の教材選択</button>
     </div>
 
     <div id="ui-panel" style="display:none;"><div id="controls-content"></div></div>
