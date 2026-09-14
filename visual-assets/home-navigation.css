@@ -1,0 +1,18 @@
+/* Native links work even when a simulator script or remote 3D resource fails. */
+a[data-lab-home]{text-decoration:none;white-space:nowrap;touch-action:manipulation;cursor:pointer}
+a[data-lab-home]:focus-visible{outline:3px solid #df8900;outline-offset:3px}
+a.lab-home-floating,a.lab-home-inline{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 14px;border:1px solid #7f9bb0;border-radius:9px;background:#fff;color:#123f5d;font:600 14px/1.3 Arial,"Noto Sans JP",sans-serif;box-sizing:border-box}
+a.lab-home-floating{position:fixed;top:max(12px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));z-index:10020;box-shadow:0 2px 12px #0003}
+a.lab-home-floating:hover,a.lab-home-inline:hover{background:#e3f1fb;color:#003f6d}
+a.lab-home-electric{left:max(18px,env(safe-area-inset-left));right:auto;top:18px}
+body[data-lesson=electric] #nav-panel{top:72px}
+body[data-lesson=electric] #home-screen{padding-top:78px}
+/* Keep the floating home control clear of the centered universe selection card. */
+body.lab-universe .home-modal-overlay{padding-top:72px}
+body.lab-universe .home-card{max-height:calc(100dvh - 96px);overflow-y:auto}
+@media(max-width:600px){a.lab-home-floating{right:12px;top:12px}a.lab-home-electric{left:12px;right:auto}body[data-lesson=electric] #nav-panel{top:66px}}
+
+/* A loading/error overlay must never trap the learner inside a lesson. */
+body.lab-paleoglobe>header{z-index:60}
+a.lab-home-compact{min-height:32px;padding:4px 12px;font-size:13px}
+body:is([data-lesson=solubility],[data-lesson=humidity],[data-lesson=phase_change])>header{align-items:center}
